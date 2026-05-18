@@ -9,7 +9,8 @@
 		{ path: '/app/classe', label: 'Classe' },
 		{ path: '/app/anne-scolaire', label: 'anne-scolaire' },
 		{ path: '/app/prof', label: 'Prof' },
-		{ path: '/app/surveillant', label: 'Surveillant' }
+		{ path: '/app/surveillant', label: 'Surveillant' },
+		{ path: '/app/parametre', label: 'Parametre' }
 	];
 	
 	// Vérifier si le lien est actif (correspondance exacte ou préfixe pour les routes imbriquées)

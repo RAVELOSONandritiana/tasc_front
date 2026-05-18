@@ -11,7 +11,6 @@
 		{ path: `/app/anne-scolaire/${id}`, label: 'Surveillant' ,comment: 'faire regner la loi'},
 		{ path: `/app/anne-scolaire/${id}/prof`, label: 'Professeur' ,comment: 'espace professeur'},
 		{ path: `/app/anne-scolaire/${id}/classe`, label: 'Classe' ,comment: 'gerer les classes'},
-		{ path: `/app/anne-scolaire/${id}/parametre`, label: 'Paramètre' ,comment: 'modifier les parametres selon votre besoin'}
 	];
 </script>
 
