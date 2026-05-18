@@ -10,7 +10,6 @@
 		{ path: `/app/anne-scolaire/${id}`, label: 'Surveillant' },
 		{ path: `/app/anne-scolaire/${id}/prof`, label: 'Professeur' },
 		{ path: `/app/anne-scolaire/${id}/classe`, label: 'Classe' },
-		{ path: `/app/anne-scolaire/${id}/personne`, label: 'Personne' },
 		{ path: `/app/anne-scolaire/${id}/parametre`, label: 'Paramètre' }
 	];
 </script>
