@@ -1,51 +1,76 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Icon from '@iconify/svelte';
-
+	import * as Card from '$lib/components/ui/card';
+	import * as Avatar from '$lib/components/ui/avatar';
+	import { cn } from '$lib/utils';
 	let {
 		name,
 		lastname,
 		image,
-		sexe,
+        poste,
 		header,
 		children,
-		footer
+		footer,
+		class: className
 	}: {
 		name: string;
 		lastname: string;
+        poste: string;
 		image?: string;
-		sexe: number;
 		header?: Snippet;
 		children?: Snippet;
 		footer?: Snippet;
+		class?: string;
 	} = $props();
 </script>
 
-<div>
+<Card.Root
+	class={cn('w-full max-w-sm overflow-hidden transition-shadow hover:shadow-lg', className)}
+>
 	{#if header}
 		{@render header()}
 	{:else}
-		<div>
-			{#if image}
-				<img src={image} alt={image} />
-			{:else if sexe == 0}
-				<Icon icon="lucide:mars" class="h-6 w-6 text-blue-500" />
-			{:else}
-				<Icon icon="lucide:venus" class="h-6 w-6 text-pink-500" />
-			{/if}
+		<Card.Header class="flex flex-row items-center gap-4 pb-4">
+			<Avatar.Root class="h-16 w-16 border">
+				{#if image}
+					<Avatar.Image src={image} alt={name} class="object-cover" />
+				{/if}
+				<Avatar.Fallback class="bg-muted font-bold text-muted-foreground">
+					{name.charAt(0)}{lastname.charAt(0)}
+				</Avatar.Fallback>
+			</Avatar.Root>
 
-			<div>
-				<h1>{name}</h1>
-				<h3>{lastname}</h3>
+			<div class="flex flex-1 flex-col gap-1">
+				<div class="flex items-center justify-between">
+					<Card.Title class="text-xl leading-none font-bold">
+						{name}
+						{lastname}
+					</Card.Title>
+				</div>
+				<Card.Description class="text-sm text-muted-foreground">
+					{poste}
+				</Card.Description>
 			</div>
-		</div>
+		</Card.Header>
 	{/if}
 
+	<!-- 2. CONTENU PRINCIPAL (Children) -->
 	{#if children}
-		{@render children()}
+		<Card.Content class="pt-0">
+			{@render children()}
+		</Card.Content>
 	{/if}
 
+	<!-- 3. FOOTER PERSONNALISÉ OU DÉFAULT (Actions) -->
 	{#if footer}
 		{@render footer()}
+	{:else}
+		<!-- Footer par défaut avec des boutons d'action factices -->
+		<Card.Footer class="flex justify-between border-t bg-muted/30 pt-4">
+			<button class="text-sm font-medium text-primary hover:underline"> Voir le profil </button>
+			<button class="text-sm font-medium text-muted-foreground hover:text-foreground">
+				Contacter
+			</button>
+		</Card.Footer>
 	{/if}
-</div>
+</Card.Root>
