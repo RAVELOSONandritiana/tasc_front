@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
 
-	let checked = $state(false);
+	let checked = $state(true);
 
 	$effect(() => {
 		document.documentElement.classList.toggle('dark', checked);
