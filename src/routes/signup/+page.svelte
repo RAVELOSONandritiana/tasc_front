@@ -40,7 +40,7 @@
 				</div>
 
 				<div class="relative h-10 py-2">
-					<a href="/" class="absolute right-0">Aller vers connexion</a>
+					<a href="/" class="absolute right-0 hover:underline">Aller vers connexion</a>
 				</div>
 				<Button class="w-full" type="submit">Creer compte</Button>
 			</CardContent>

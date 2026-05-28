@@ -35,7 +35,7 @@
 				</div>
 
 				<div class="relative h-10 py-2">
-					<a href="/signup" class="absolute right-0">Create account</a>
+					<a href="/signup" class="absolute right-0 hover:underline">Create account</a>
 				</div>
 				<Button class="w-full" type="submit">Se connecter</Button>
 			</CardContent>
