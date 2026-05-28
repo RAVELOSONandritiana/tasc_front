@@ -4,6 +4,90 @@
 	import { Input } from '$lib/components/ui/input';
 	import { buttonVariants } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
+	import CardEmploye from '$lib/components/user/CardEmploye.svelte';
+
+	let surveillant = [
+		{
+			id: 0,
+			name: 'Lalaina',
+			lastname: 'RAKOTO',
+			poste: 'Surveillant Général',
+			sexe: 1, // Homme
+			image: 'https://i.pravatar.cc/150?u=0'
+		},
+		{
+			id: 1,
+			name: 'Soa',
+			lastname: 'ANDRIANIRINA',
+			poste: 'Surveillante Principale',
+			sexe: 2, // Femme
+			image: 'https://i.pravatar.cc/150?u=1'
+		},
+		{
+			id: 2,
+			name: 'Mamy',
+			lastname: 'RAZAFIMBELO',
+			poste: "Surveillant d'Externes",
+			sexe: 1,
+			image: 'https://i.pravatar.cc/150?u=2'
+		},
+		{
+			id: 3,
+			name: 'Kanto',
+			lastname: 'RANDRIANARISOA',
+			poste: 'Surveillant de Quartier',
+			sexe: 1,
+			image: 'https://i.pravatar.cc/150?u=3'
+		},
+		{
+			id: 4,
+			name: 'Tahina',
+			lastname: 'RABEARIMANANA',
+			poste: "Surveillante d'Internat",
+			sexe: 2,
+			image: 'https://i.pravatar.cc/150?u=4'
+		},
+		{
+			id: 5,
+			name: 'Fara',
+			lastname: 'RATIARISON',
+			poste: 'Surveillant de Permanence',
+			sexe: 1,
+			image: 'https://i.pravatar.cc/150?u=5'
+		},
+		{
+			id: 6,
+			name: 'Vololona',
+			lastname: 'ANDRIAMAHEFA',
+			poste: 'Surveillante Générale Adjointe',
+			sexe: 2,
+			image: 'https://i.pravatar.cc/150?u=6'
+		},
+		{
+			id: 7,
+			name: 'Heritiana',
+			lastname: 'RAKOTOMALALA',
+			poste: 'Surveillant de Cour',
+			sexe: 1,
+			image: 'https://i.pravatar.cc/150?u=7'
+		},
+		{
+			id: 8,
+			name: 'Sarobidy',
+			lastname: 'RANDRIAMBOLOLONA',
+			poste: 'Surveillante de Study Hall',
+			sexe: 2,
+			image: 'https://i.pravatar.cc/150?u=8'
+		},
+		{
+			id: 9,
+			name: 'Andry',
+			lastname: 'RAZAFINDRAIBE',
+			poste: 'Surveillant de Nuit',
+			sexe: 1,
+			image: 'https://i.pravatar.cc/150?u=9'
+		}
+	];
 </script>
 
 <main class="m-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
@@ -57,5 +141,16 @@
 				</Dialog.Content>
 			</form>
 		</Dialog.Root>
+	</div>
+
+	<div class="my-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 overflow-scroll">
+		{#each surveillant as s (s.id)}
+			<CardEmploye
+				lastname={s.lastname}
+				name={s.name}
+				poste={s.poste}
+				image={s.image}
+			/>
+		{/each}
 	</div>
 </main>
