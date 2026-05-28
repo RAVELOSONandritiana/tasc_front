@@ -2,6 +2,10 @@
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
 
 	let checked = $state(false);
+
+	$effect(() => {
+		document.documentElement.classList.toggle('dark', checked);
+	});
 </script>
 
 <div class="p-4 bg-sidebar text-sidebar-foreground">

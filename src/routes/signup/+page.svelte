@@ -9,17 +9,17 @@
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
 
-    function gotoApp(event: Event){
+    function gotoSignin(event: Event){
         event.preventDefault();
-        goto('/app');
+        goto('/');
     }
 </script>
 
 <div class="flex min-h-screen items-center justify-center px-4">
-	<form class="w-full max-w-sm md:max-w-lg" onsubmit={gotoApp}>
+	<form class="w-full max-w-sm md:max-w-lg" onsubmit={gotoSignin}>
 		<Card class="w-full">
 			<CardHeader>
-				<CardTitle class="mx-auto font-bold my-3">Connexion à Tasc</CardTitle>
+				<CardTitle class="mx-auto font-bold my-3">Cree un compte sur Tasc</CardTitle>
 				<CardDescription>
 					Veuillez entrer vos informations de compte
 				</CardDescription>
@@ -45,8 +45,8 @@
 						required
 					/>
 				</div>
-				<a href="/signup" class="my-2 text-right">Create account</a>
-                <Button class="w-full" type="submit">Se connecter</Button>
+				<a href="/signup" class="my-2 text-right">Aller vers connexion</a>
+                <Button class="w-full" type="submit">Creer compte</Button>
 			</CardContent>
 		</Card>
 	</form>
