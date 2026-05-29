@@ -31,16 +31,15 @@
 	{#if header}
 		{@render header()}
 	{:else}
-		<Card.Header class="flex flex-row items-center gap-4 pb-4">
-			<Avatar.Root class="h-16 w-16 border">
-				{#if image}
-					<Avatar.Image src={image} alt={name} class="object-cover" />
-				{/if}
-				<Avatar.Fallback class="bg-muted font-bold text-muted-foreground">
-					{name.charAt(0)}{lastname.charAt(0)}
-				</Avatar.Fallback>
-			</Avatar.Root>
-
+				<Card.Header class="flex flex-row items-center gap-4 pb-4">
+					<Avatar.Root class="h-16 w-16 border cursor-pointer">
+						{#if image}
+							<Avatar.Image src={image} alt={name} class="object-cover" />
+						{/if}
+						<Avatar.Fallback class="bg-muted font-bold text-muted-foreground">
+							{name.charAt(0)}{lastname.charAt(0)}
+						</Avatar.Fallback>
+					</Avatar.Root>
 			<div class="flex flex-1 flex-col gap-1">
 				<div class="flex items-center justify-between">
 					<Card.Title class="text-xl leading-none font-bold">

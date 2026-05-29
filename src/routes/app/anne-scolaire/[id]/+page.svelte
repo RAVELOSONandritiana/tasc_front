@@ -98,7 +98,7 @@
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'outline' })}>
 					Creer
 				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
+				<Dialog.Content class="sm:max-w-106.25">
 					<Dialog.Header>
 						<Dialog.Title>Ajouter un collegue</Dialog.Title>
 						<Dialog.Description>Avoir des collaborateurs est essentiel</Dialog.Description>

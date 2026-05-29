@@ -14,7 +14,6 @@
 		{ path: '/app/parametre', label: 'Parametre' }
 	];
 	
-	// Vérifier si le lien est actif (correspondance exacte ou préfixe pour les routes imbriquées)
 	const isActive = (linkPath: string) => {
 		if (linkPath === '/app') {
 			return $page.url.pathname === '/app';
@@ -52,7 +51,7 @@
 			</Sidebar.Footer>
 		</Sidebar.Root>
 		<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
-			<header class="flex items-center justify-between gap-4 border-b border-sidebar-border bg-sidebar p-4 text-sidebar-foreground">
+			<header class="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-sidebar-border bg-sidebar p-4 text-sidebar-foreground">
 				<div class="flex items-center space-x-2">
 					<Sidebar.Trigger />
 					<h2 class="text-lg font-semibold">{pageTitle.toUpperCase()}</h2>
@@ -61,7 +60,9 @@
 					<Profil />
 				</div>
 			</header>
-			{@render children()}
+			<div class="flex-1 flex flex-col overflow-hidden">
+				{@render children()}
+			</div>
 		</div>
 	</div>
 </Sidebar.Provider>

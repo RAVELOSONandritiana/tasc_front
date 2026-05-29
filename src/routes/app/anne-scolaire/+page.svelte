@@ -26,8 +26,9 @@
 	);
 </script>
 
-<main class="m-4 bg-sidebar text-sidebar-foreground">
-	<div class="flex justify-between">
+<main class="flex flex-col h-full m-4 bg-sidebar text-sidebar-foreground">
+	<div class="sticky top-0 z-20 bg-sidebar py-2">
+		<div class="flex justify-between items-center">
 		<Input
 			type="search"
 			placeholder="Rechercher anne scolaire"
@@ -80,9 +81,11 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
-		{#each filteredScolaire as ans (ans.id)}
-			<AnneScolaire creator={ans.creator} label={ans.label} id={ans.id} image={ans.image} />
-		{/each}
+	<div class="mt-4 flex-1 overflow-auto">
+		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
+			{#each filteredScolaire as ans (ans.id)}
+				<AnneScolaire creator={ans.creator} label={ans.label} id={ans.id} image={ans.image} />
+			{/each}
+		</div>
 	</div>
 </main>
