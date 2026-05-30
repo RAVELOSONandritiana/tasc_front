@@ -14,7 +14,7 @@
 	];
 </script>
 
-<header class="border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
+<header class="border-b border-sidebar-border bg-sidebar text-sidebar-foreground sticky z-50 top-16 ">
 	<nav class="py-3">
 		<ul class="mx-4 flex items-center gap-2">
 			{#each links as link (link.label)}

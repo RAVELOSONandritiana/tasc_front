@@ -7,14 +7,14 @@
 </script>
 
 <main class="m-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="flex justify-between">
+	<div class="flex justify-between sticky top-0 z-50">
 		<Input type="search" placeholder="Rechercher une classe" class="max-w-md" />
 		<Dialog.Root>
 			<form>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'outline' })}>
 					Creer
 				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
+				<Dialog.Content class="sm:max-w-106.25">
 					<Dialog.Header>
 						<Dialog.Title>Creer une classe</Dialog.Title>
 						<Dialog.Description>

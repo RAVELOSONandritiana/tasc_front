@@ -90,7 +90,7 @@
 	];
 </script>
 
-<main class="m-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+<main class="my-4 px-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
 	<div class="flex justify-between">
 		<Input type="search" placeholder="Rechercher anne scolaire" class="max-w-md" />
 		<Dialog.Root>
@@ -140,6 +140,7 @@
 			</form>
 		</Dialog.Root>
 	</div>
+	
 	<div class="my-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
 		{#each surveillant as s (s.id)}
 			<CardEmploye

@@ -51,7 +51,7 @@
 			</Sidebar.Footer>
 		</Sidebar.Root>
 		<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
-			<header class="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-sidebar-border bg-sidebar p-4 text-sidebar-foreground">
+			<header class="flex items-center justify-between gap-4 border-b border-sidebar-border bg-sidebar p-4 text-sidebar-foreground sticky top-0 z-50 h-16">
 				<div class="flex items-center space-x-2">
 					<Sidebar.Trigger />
 					<h2 class="text-lg font-semibold">{pageTitle.toUpperCase()}</h2>
@@ -60,7 +60,7 @@
 					<Profil />
 				</div>
 			</header>
-			<div class="flex-1 flex flex-col overflow-hidden">
+			<div class="flex-1 flex flex-col">
 				{@render children()}
 			</div>
 		</div>

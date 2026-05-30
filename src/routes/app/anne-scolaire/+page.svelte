@@ -27,7 +27,7 @@
 </script>
 
 <main class="flex flex-col h-full m-4 bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-0 z-20 bg-sidebar py-2">
+	<div class="bg-sidebar py-2">
 		<div class="flex justify-between items-center">
 		<Input
 			type="search"
@@ -40,7 +40,7 @@
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'outline' })}>
 					Creer
 				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
+				<Dialog.Content class="sm:max-w-106.25">
 					<Dialog.Header>
 						<Dialog.Title>Creer anne scolaire</Dialog.Title>
 						<Dialog.Description>
@@ -80,8 +80,9 @@
 			</form>
 		</Dialog.Root>
 	</div>
+	</div>
 
-	<div class="mt-4 flex-1 overflow-auto">
+	<div class="mt-4 flex-1">
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
 			{#each filteredScolaire as ans (ans.id)}
 				<AnneScolaire creator={ans.creator} label={ans.label} id={ans.id} image={ans.image} />

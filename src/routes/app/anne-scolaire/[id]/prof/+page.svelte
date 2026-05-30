@@ -13,7 +13,8 @@
 			lastname: 'RAKOTO',
 			poste: 'Surveillant Général',
 			sexe: 1, // Homme
-			image: 'https://i.pravatar.cc/150?u=0'
+			image: 'https://i.pravatar.cc/150?u=0',
+			connected: true
 		},
 		{
 			id: 1,
@@ -21,7 +22,8 @@
 			lastname: 'ANDRIANIRINA',
 			poste: 'Surveillante Principale',
 			sexe: 2, // Femme
-			image: 'https://i.pravatar.cc/150?u=1'
+			image: 'https://i.pravatar.cc/150?u=1',
+			connected: true
 		},
 		{
 			id: 2,
@@ -29,7 +31,8 @@
 			lastname: 'RAZAFIMBELO',
 			poste: "Surveillant d'Externes",
 			sexe: 1,
-			image: 'https://i.pravatar.cc/150?u=2'
+			image: 'https://i.pravatar.cc/150?u=2',
+			connected: true
 		},
 		{
 			id: 3,
@@ -37,7 +40,8 @@
 			lastname: 'RANDRIANARISOA',
 			poste: 'Surveillant de Quartier',
 			sexe: 1,
-			image: 'https://i.pravatar.cc/150?u=3'
+			image: 'https://i.pravatar.cc/150?u=3',
+			connected: false
 		},
 		{
 			id: 4,
@@ -90,7 +94,7 @@
 	];
 </script>
 
-<main class="m-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+<main class="my-4 px-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
 	<div class="flex justify-between">
 		<Input type="search" placeholder="Rechercher un professeur" class="max-w-md" />
 		<Dialog.Root>
@@ -98,7 +102,7 @@
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'outline' })}>
 					Creer
 				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
+				<Dialog.Content class="sm:max-w-106.25">
 					<Dialog.Header>
 						<Dialog.Title>Ajouter un professeur</Dialog.Title>
 						<Dialog.Description>
@@ -143,13 +147,14 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="my-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 overflow-scroll">
+	<div class="my-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
 		{#each surveillant as s (s.id)}
 			<CardEmploye
 				lastname={s.lastname}
 				name={s.name}
 				poste={s.poste}
 				image={s.image}
+				connected={s.connected}
 			/>
 		{/each}
 	</div>
