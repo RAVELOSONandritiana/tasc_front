@@ -4,8 +4,41 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
+	import Badge from '$lib/components/ui/badge/badge.svelte';
+	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
 
-	const listSurveillant = $state([
+	type Personne = {
+		name: string;
+		lastname: string;
+		domicile: string;
+		fokontany: string;
+		commune: string;
+		phone: string;
+		email: string;
+		connected: boolean;
+	};
+
+	const personnes: Personne[] = [
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329204',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		},
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329205',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		},
 		{
 			name: 'RAKOTO',
 			lastname: 'Soa Beva',
@@ -17,6 +50,30 @@
 			connected: true
 		},
 		{
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329207',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		}
+	];
+
+	const listSurveillant = $state([
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329206',
+			email: 'hgbmichel@gmail.com',
+			connected: true,
+			poste: 'Surveillant General'
+		},
+		{
 			name: 'RAKOTO',
 			lastname: 'Soa Beva',
 			domicile: 'Lot C125',
@@ -24,7 +81,8 @@
 			commune: 'Alasora',
 			phone: '0337329207',
 			email: 'hgbmichel@gmail.com',
-			connected: true
+			connected: true,
+			poste: 'Surveillant Principale Seconde'
 		}
 	]);
 
@@ -37,6 +95,19 @@
 				.includes(searchText.toLowerCase())
 		)
 	);
+
+	let searchPersonnes = $state('');
+
+	const findPersonnes = $derived(personnes.filter((p) => p.email == searchPersonnes));
+
+	let setPerson: Personne | null = $state(null);
+	function setPersonne(personne: Personne) {
+		setPerson = personne;
+	}
+
+	function removeFindPersonne(){
+		setPerson = null;
+	}
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
@@ -59,17 +130,40 @@
 					</Dialog.Header>
 					<div class="grid gap-4">
 						<div class="grid gap-3">
-							<Label for="cin">Name</Label>
+							<Label for="email">Email</Label>
 							<Input
-								id="cin"
-								type="number"
-								name="cin"
-								placeholder="entrer votre cin ici"
-								minlength={10}
-								maxlength={10}
+								id="email"
+								name="email"
+								type="email"
+								placeholder="entrer votre email"
 								required
+								bind:value={searchPersonnes}
 							/>
 						</div>
+
+						<div class="space-y-2">
+							{#if setPerson == null}
+								{#each findPersonnes as fp (fp.phone)}
+									<button class="w-full" onclick={() => setPersonne(fp)}>
+										<FindPersonne name={fp.name} lastname={fp.lastname} />
+									</button>
+								{/each}
+							{/if}
+						</div>
+
+						{#if setPerson != null}
+							<div class="space-y-4 rounded-md p-4 border">
+								<div class="grid gap-3">
+									<Label for="email">Nom</Label>
+									<Input id="nom" name="nom" required defaultValue={setPerson.name} />
+								</div>
+								<div class="grid gap-3">
+									<Label for="email">Prenom</Label>
+									<Input id="prenom" name="prenom" required defaultValue={setPerson.lastname} />
+								</div>
+								<Button onclick={removeFindPersonne}>Supprimer personne</Button>
+							</div>
+						{/if}
 					</div>
 					<Dialog.Footer>
 						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
@@ -93,7 +187,9 @@
 				phone={p.phone}
 				email={p.email}
 				connected={p.connected}
-			/>
+			>
+				<Badge variant="secondary">{p.poste}</Badge>
+			</SurveillantProfil>
 		{/each}
 	</div>
 </main>

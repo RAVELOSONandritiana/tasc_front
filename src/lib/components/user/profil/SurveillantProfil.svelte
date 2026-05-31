@@ -3,6 +3,7 @@
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import Button from '$lib/components/ui/button/button.svelte';
+	import type { Snippet } from 'svelte';
 	const {
 		name,
 		lastname,
@@ -11,7 +12,8 @@
 		commune,
 		phone,
 		email,
-		connected
+		connected,
+		children
 	}: {
 		name: string;
 		lastname: string;
@@ -21,8 +23,10 @@
 		phone: string;
 		email: string;
 		connected: boolean;
+		children?: Snippet;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally
 	const fallback = name[0].toUpperCase().concat(lastname[0].toUpperCase());
 </script>
 
@@ -45,6 +49,11 @@
 		{email}<br />
 		{phone}
 	</Card.Description>
+	{#if children}
+		<Card.Content>
+			{@render children()}
+		</Card.Content>
+	{/if}
 	<Card.CardFooter class="flex justify-between">
 		<div></div>
 		<Button>Voir profil</Button>
