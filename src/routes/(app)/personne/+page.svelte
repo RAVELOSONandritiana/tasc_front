@@ -1,36 +1,28 @@
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { buttonVariants } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
+	import { goto } from "$app/navigation";
+	import { Button } from "$lib/components/ui/button";
+	import { Input } from "$lib/components/ui/input";
+
+
 </script>
 
 <main class="m-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
 	<div class="flex justify-between sticky top-0 z-50">
 		<Input type="search" placeholder="Rechercher une personne" class="max-w-md" />
-		<Dialog.Root>
+		<Button onclick={() => goto('personne/new')}>Creer</Button>
+		<!-- <Dialog.Root>
 			<form>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'outline' })}>
 					Creer
 				</Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-106.25">
 					<Dialog.Header>
-						<Dialog.Title>Creer une personne</Dialog.Title>
+						<Dialog.Title>Creer un personnel</Dialog.Title>
 						<Dialog.Description>
-							Ceci va vous permettre apres de creer des personnes au sein de votre equipe
+							Ceci va vous permettre apres de creer de donner des roles a ces personnes
 						</Dialog.Description>
 					</Dialog.Header>
-					<div class="grid gap-4">
-						<div class="grid gap-3">
-							<Label for="name">Nom</Label>
-							<Input id="name" defaultValue="2026-2027" />
-						</div>
-						<div class="grid gap-3">
-							<Label for="level">Niveau</Label>
-							<Input id="level" defaultValue="2" />
-						</div>
-					</div>
+					
 					<Dialog.Footer>
 						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
 							Cancel
@@ -56,6 +48,6 @@
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>
-		</Dialog.Root>
+		</Dialog.Root> -->
 	</div>
 </main>
