@@ -7,11 +7,18 @@
 	let { children } = $props();
 	const path = [
 		{ path: '/dashboard', label: 'Dashboard' },
-		{ path: '/classe', label: 'Classe' },
-		{ path: '/prof', label: 'Prof' },
 		{ path: '/surveillant', label: 'Surveillant' },
-		{ path: '/personne', label: 'Personnes' },
-		{ path: '/parametre', label: 'Parametre' }
+		{ path: '/prof', label: 'Professeurs' },
+		{ path: '/personne', label: 'Personnels' },
+		{ path: '/eleves', label: 'Eleves' },
+		{ path: '/classe', label: 'Classe' },
+		{ path: '/edt', label: 'Emploi Du Temps' },
+		{ path: '/cours', label: 'Cours' },
+		{ path: '/examen', label: 'Examen' },
+		{ path: '/incidents', label: 'Incidents' },
+		{ path: '/parametre', label: 'Paramere' },
+		{ path: '/profil', label: 'Profil' },
+		{ path: '/salle', label: 'Salle' },
 	];
 	
 	const isActive = (linkPath: string) => {
