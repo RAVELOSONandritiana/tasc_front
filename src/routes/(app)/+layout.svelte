@@ -5,7 +5,6 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import Profil from '$lib/components/user/Profil.svelte';
 	let { children } = $props();
-	import Icon from '@iconify/svelte';
 	const path = [
 		{ path: '/dashboard', label: 'Dashboard' },
 		{ path: '/surveillant', label: 'Surveillant' },
@@ -56,7 +55,6 @@
 					<Sidebar.Trigger />
 				</div>
 				<div class="flex items-center justify-center">
-					<Icon icon="tabler:rocket"/>
 					<Profil />
 				</div>
 			</header>
