@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 </script>
 
-<div class="sticky top-0 z-50 flex justify-between m-4">
+<div class="flex justify-between p-4">
 	<Input type="search" placeholder="Rechercher un serverillant" class="max-w-md" />
 	<Dialog.Root>
 		<form>
