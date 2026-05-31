@@ -11,7 +11,7 @@
 
 	function gotoApp(event: Event) {
 		event.preventDefault();
-		goto('/app');
+		goto('/dashboard');
 	}
 </script>
 

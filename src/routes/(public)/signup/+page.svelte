@@ -11,7 +11,7 @@
 
 	function gotoSignin(event: Event) {
 		event.preventDefault();
-		goto('/');
+		goto('/signin');
 	}
 </script>
 
