@@ -18,14 +18,14 @@
 
 <main class="m-4">
 	<div class="my-4 space-y-4">
-		<Label class="text-xl">Creer un personnel</Label>
-		<p>Ceci va vous permettre apres de creer de donner des roles a ces personnes</p>
+		<Label class="text-xl font-bold">Creer un personnel</Label>
+		<p class="text-gray-500">Ceci va vous permettre apres de creer de donner des roles a ces personnes</p>
 	</div>
 	<form>
 		<div class="grid gap-4">
 			<Accordion.Root type="single">
 				<Accordion.Item value="item-1">
-					<Accordion.Trigger>Informations personnelles</Accordion.Trigger>
+					<Accordion.Trigger class="font-bold text-lg">Informations personnelles</Accordion.Trigger>
 					<Accordion.Content>
 						<div class="grid grid-cols-1 gap-4 rounded-sm border p-4 md:grid-cols-3">
 							<div class="grid gap-3">
@@ -63,41 +63,40 @@
 								</Popover.Root>
 							</div>
 						</div>
-					</Accordion.Content>
-				</Accordion.Item>
-			</Accordion.Root>
-
-			<Accordion.Root type="single">
-				<Accordion.Item value="item-2">
-					<Accordion.Trigger>Lieu de naissance</Accordion.Trigger>
-					<Accordion.Content>
-						<div class="grid gap-3 rounded-sm border p-4">
-							<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-								<div class="grid gap-y-3">
-									<Label for="lieu">Lieu</Label>
-									<Input id="lieu" defaultValue="lieu" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="commune">Commune</Label>
-									<Input id="commune" defaultValue="Alasora" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="region">Region</Label>
-									<Input id="region" defaultValue="region" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="province">Province</Label>
-									<Input id="province" defaultValue="province" />
-								</div>
-							</div>
-						</div>
+						<Accordion.Root type="single" class="pl-10 border-l mt-4 border-blue-500">
+							<Accordion.Item value="item-2">
+								<Accordion.Trigger>Lieu de naissance</Accordion.Trigger>
+								<Accordion.Content>
+									<div class="grid gap-3 rounded-sm border p-4">
+										<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+											<div class="grid gap-y-3">
+												<Label for="lieu">Lieu</Label>
+												<Input id="lieu" defaultValue="lieu" />
+											</div>
+											<div class="grid gap-y-3">
+												<Label for="commune">Commune</Label>
+												<Input id="commune" defaultValue="Alasora" />
+											</div>
+											<div class="grid gap-y-3">
+												<Label for="region">Region</Label>
+												<Input id="region" defaultValue="region" />
+											</div>
+											<div class="grid gap-y-3">
+												<Label for="province">Province</Label>
+												<Input id="province" defaultValue="province" />
+											</div>
+										</div>
+									</div>
+								</Accordion.Content>
+							</Accordion.Item>
+						</Accordion.Root>
 					</Accordion.Content>
 				</Accordion.Item>
 			</Accordion.Root>
 
 			<Accordion.Root type="single">
 				<Accordion.Item value="item-3">
-					<Accordion.Trigger>Adresse exacte</Accordion.Trigger>
+					<Accordion.Trigger class="font-bold text-lg">Adresse exacte</Accordion.Trigger>
 					<Accordion.Content>
 						<div class="grid gap-3 rounded-sm border p-4">
 							<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -123,58 +122,33 @@
 								</div>
 							</div>
 						</div>
-					</Accordion.Content>
-				</Accordion.Item>
-			</Accordion.Root>
 
-
-            <Accordion.Root type="single">
-				<Accordion.Item value="item-3">
-					<Accordion.Trigger>Information professionnel</Accordion.Trigger>
-					<Accordion.Content>
-						<div class="grid gap-3 rounded-sm border p-4">
-							<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-								<div class="grid gap-y-3">
-									<Label for="domicile">Contact</Label>
-									<Input id="domicile" defaultValue="Lot C234" />
-								</div>
-                                <div class="grid gap-y-3">
-									<Label for="domicile">CIN</Label>
-									<Input id="domicile" defaultValue="Lot C234" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="fokontany">Matricule</Label>
-									<Input id="fokontany" defaultValue="Ambatomalaza" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="commune_res">Date de prise de service</Label>
-									<Input id="commune_res" defaultValue="Alasora" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="region_res">Corps</Label>
-									<Input id="region_res" defaultValue="Analamanga" />
-								</div>
-								<div class="grid gap-y-3">
-									<Label for="province_res">Grade</Label>
-									<Input id="province_res" defaultValue="Antananarivo" />
-								</div>
-                                <div class="grid gap-y-3">
-									<Label for="province_res">Situation actuel</Label>
-									<Input id="province_res" defaultValue="Antananarivo" />
-								</div>
-                                <div class="grid gap-y-3">
-									<Label for="province_res">Personnel</Label>
-									<Input id="province_res" defaultValue="Antananarivo" />
-								</div>
-							</div>
-						</div>
+						<Accordion.Root type="single" class="pl-10 mt-4 border-l border-blue-500">
+							<Accordion.Item value="item-3">
+								<Accordion.Trigger>Contact</Accordion.Trigger>
+								<Accordion.Content>
+									<div class="grid gap-3 rounded-sm border p-4">
+										<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+											<div class="grid gap-y-3">
+												<Label for="domicile">Numero telephone</Label>
+												<Input id="domicile" defaultValue="Lot C234" type="number" maxlength={10} minlength={10}/>
+											</div>
+											<div class="grid gap-y-3">
+												<Label for="domicile">Email</Label>
+												<Input id="domicile" defaultValue="example@gmail.com" type="email"/>
+											</div>
+										</div>
+									</div>
+								</Accordion.Content>
+							</Accordion.Item>
+						</Accordion.Root>
 					</Accordion.Content>
 				</Accordion.Item>
 			</Accordion.Root>
 		</div>
 
 		<div class="flex items-center space-x-4">
-            <Button type="reset">Effacer information</Button>
+			<Button type="reset">Effacer information</Button>
 			<AlertDialog.Root>
 				<AlertDialog.Trigger class={buttonVariants({ variant: 'outline' })}>
 					Creer personnel
