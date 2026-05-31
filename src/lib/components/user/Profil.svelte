@@ -15,12 +15,12 @@
         <DropdownMenu.Separator/>
         <DropdownMenu.Item>
             {#snippet child({props})}
-                <a href="/" {...props}>Profil</a>
+                <a href="/profil" {...props}>Profil</a>
             {/snippet}
         </DropdownMenu.Item>
         <DropdownMenu.Item>
             {#snippet child({props})}
-                <a href="/" {...props}>Parametres</a>
+                <a href="/parametre" {...props}>Parametres</a>
             {/snippet}
         </DropdownMenu.Item>
         <DropdownMenu.Item>

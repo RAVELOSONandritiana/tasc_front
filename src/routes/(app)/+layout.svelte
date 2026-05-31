@@ -25,14 +25,14 @@
 		if (linkPath === '/') {
 			return $page.url.pathname === '/';
 		}
-		return $page.url.pathname.startsWith(linkPath);
+		return $page.url.pathname == linkPath;
 	};
 </script>
 
 <Sidebar.Provider>
 	<div class="flex min-h-screen w-full">
 		<Sidebar.Root>
-			<Sidebar.Header>Tasc</Sidebar.Header>
+			<Sidebar.Header class="p-6">Tasc</Sidebar.Header>
 			<Sidebar.Content>
 				<Sidebar.Group>
 					<Sidebar.Menu>
