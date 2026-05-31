@@ -27,7 +27,7 @@
 </script>
 
 <Card.Root>
-	<Card.Header class="flex items-center justify-between">
+	<Card.Header class="flex items-start justify-between">
 		<div class="flex items-center justify-start space-x-4">
 			<Avatar.Root>
 				<Avatar.Image src="https://github.com/shadcn.png" alt="@shadcn" />
