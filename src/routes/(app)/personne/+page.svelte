@@ -1,14 +1,84 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
-	import { Button } from "$lib/components/ui/button";
-	import { Input } from "$lib/components/ui/input";
+	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
+	const personnes = [
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329204',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		},
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329205',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		},
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329206',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		},
+		{
+			name: 'RAKOTO',
+			lastname: 'Soa Beva',
+			domicile: 'Lot C125',
+			fokontany: 'Ambtatomalaza',
+			commune: 'Alasora',
+			phone: '0337329207',
+			email: 'hgbmichel@gmail.com',
+			connected: true
+		}
+	];
 
+	let searchText = $state('');
 
+	const filteredPersonnel = $derived(
+		personnes.filter((p) =>
+			`${p.name}${p.lastname}${p.email}${p.domicile}${p.fokontany}${p.commune}${p.phone}`
+				.toLowerCase()
+				.includes(searchText.toLowerCase())
+		)
+	);
 </script>
 
-<main class="p-4 min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+<main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
 	<div class="flex justify-between">
-		<Input type="search" placeholder="Rechercher une personne" class="max-w-md" />
+		<Input
+			type="search"
+			placeholder="Rechercher une personne"
+			class="max-w-md"
+			bind:value={searchText}
+		/>
 		<Button onclick={() => goto('personne/new')}>Creer</Button>
+	</div>
+	<div class="grid-cols-1 grid gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
+		{#each filteredPersonnel as p (p.phone)}
+			<SurveillantProfil
+				name={p.name}
+				lastname={p.lastname}
+				domicile={p.domicile}
+				fokontany={p.fokontany}
+				commune={p.commune}
+				phone={p.phone}
+				email={p.email}
+				connected={p.connected}
+			/>
+		{/each}
 	</div>
 </main>

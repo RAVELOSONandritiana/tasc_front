@@ -19,13 +19,15 @@
 <main class="m-4">
 	<div class="my-4 space-y-4">
 		<Label class="text-xl font-bold">Creer un personnel</Label>
-		<p class="text-gray-500">Ceci va vous permettre apres de creer de donner des roles a ces personnes</p>
+		<p class="text-gray-500">
+			Ceci va vous permettre apres de creer de donner des roles a ces personnes
+		</p>
 	</div>
 	<form>
 		<div class="grid gap-4">
 			<Accordion.Root type="single">
 				<Accordion.Item value="item-1">
-					<Accordion.Trigger class="font-bold text-lg">Informations personnelles</Accordion.Trigger>
+					<Accordion.Trigger class="text-lg font-bold">Informations personnelles</Accordion.Trigger>
 					<Accordion.Content>
 						<div class="grid grid-cols-1 gap-4 rounded-sm border p-4 md:grid-cols-3">
 							<div class="grid gap-3">
@@ -63,7 +65,7 @@
 								</Popover.Root>
 							</div>
 						</div>
-						<Accordion.Root type="single" class="pl-10 border-l mt-4 border-blue-500">
+						<Accordion.Root type="single" class="mt-4 border-l border-blue-500 pl-10">
 							<Accordion.Item value="item-2">
 								<Accordion.Trigger>Lieu de naissance</Accordion.Trigger>
 								<Accordion.Content>
@@ -96,34 +98,34 @@
 
 			<Accordion.Root type="single">
 				<Accordion.Item value="item-3">
-					<Accordion.Trigger class="font-bold text-lg">Adresse exacte</Accordion.Trigger>
+					<Accordion.Trigger class="text-lg font-bold">Adresse exacte</Accordion.Trigger>
 					<Accordion.Content>
 						<div class="grid gap-3 rounded-sm border p-4">
 							<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
 								<div class="grid gap-y-3">
 									<Label for="domicile">Domicile</Label>
-									<Input id="domicile" defaultValue="Lot C234" />
+									<Input id="domicile" defaultValue="Lot C234" required/>
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="fokontany">Fokontany</Label>
-									<Input id="fokontany" defaultValue="Ambatomalaza" />
+									<Input id="fokontany" defaultValue="Ambatomalaza" required/>
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="commune_res">Commune</Label>
-									<Input id="commune_res" defaultValue="Alasora" />
+									<Input id="commune_res" defaultValue="Alasora" required/>
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="region_res">Region</Label>
-									<Input id="region_res" defaultValue="Analamanga" />
+									<Input id="region_res" defaultValue="Analamanga" required/>
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="province_res">Province</Label>
-									<Input id="province_res" defaultValue="Antananarivo" />
+									<Input id="province_res" defaultValue="Antananarivo" required/>
 								</div>
 							</div>
 						</div>
 
-						<Accordion.Root type="single" class="pl-10 mt-4 border-l border-blue-500">
+						<Accordion.Root type="single" class="mt-4 border-l border-blue-500 pl-10">
 							<Accordion.Item value="item-3">
 								<Accordion.Trigger>Contact</Accordion.Trigger>
 								<Accordion.Content>
@@ -131,11 +133,22 @@
 										<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
 											<div class="grid gap-y-3">
 												<Label for="domicile">Numero telephone</Label>
-												<Input id="domicile" defaultValue="Lot C234" type="number" maxlength={10} minlength={10}/>
+												<Input
+													id="domicile"
+													defaultValue="Lot C234"
+													type="number"
+													maxlength={10}
+													minlength={10}
+													required
+												/>
 											</div>
 											<div class="grid gap-y-3">
 												<Label for="domicile">Email</Label>
-												<Input id="domicile" defaultValue="example@gmail.com" type="email"/>
+												<Input id="domicile" defaultValue="example@gmail.com" type="email" required/>
+											</div>
+											<div class="grid gap-y-3">
+												<Label for="domicile">CIN</Label>
+												<Input id="domicile" placeholder="entrer votre cin ici" type="number" required/>
 											</div>
 										</div>
 									</div>
