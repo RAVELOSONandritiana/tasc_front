@@ -23,10 +23,7 @@
 	];
 	
 	const isActive = (linkPath: string) => {
-		if (linkPath === '/') {
-			return $page.url.pathname === '/';
-		}
-		return $page.url.pathname == linkPath;
+		return $page.url.pathname.startsWith(linkPath);
 	};
 </script>
 
