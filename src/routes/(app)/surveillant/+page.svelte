@@ -6,7 +6,7 @@
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
-
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	type Personne = {
 		name: string;
 		lastname: string;
@@ -55,7 +55,7 @@
 			domicile: 'Lot C125',
 			fokontany: 'Ambtatomalaza',
 			commune: 'Alasora',
-			phone: '0337329207',
+			phone: '0337329209',
 			email: 'hgbmichel@gmail.com',
 			connected: true
 		}
@@ -105,8 +105,15 @@
 		setPerson = personne;
 	}
 
-	function removeFindPersonne(){
+	function removeFindPersonne() {
 		setPerson = null;
+	}
+
+	let poste = $state('Surveillant');
+
+	function onSubmit() {
+		const personne: Personne = { ...(setPerson as Personne) };
+		listSurveillant.push({ ...personne, poste: poste, connected: false });
 	}
 </script>
 
@@ -119,7 +126,7 @@
 			bind:value={searchText}
 		/>
 		<Dialog.Root>
-			<form>
+			<form onsubmit={onSubmit}>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 					Nouveau
 				</Dialog.Trigger>
@@ -152,16 +159,39 @@
 						</div>
 
 						{#if setPerson != null}
-							<div class="space-y-4 rounded-md p-4 border">
+							<div class="space-y-4 rounded-md border p-4">
 								<div class="grid gap-3">
 									<Label for="email">Nom</Label>
-									<Input id="nom" name="nom" required defaultValue={setPerson.name} />
+									<Input id="nom" name="nom" required defaultValue={setPerson.name} disabled />
 								</div>
 								<div class="grid gap-3">
 									<Label for="email">Prenom</Label>
-									<Input id="prenom" name="prenom" required defaultValue={setPerson.lastname} />
+									<Input
+										id="prenom"
+										name="prenom"
+										required
+										defaultValue={setPerson.lastname}
+										disabled
+									/>
 								</div>
 								<Button onclick={removeFindPersonne}>Supprimer personne</Button>
+							</div>
+
+							<div class="flex space-x-4">
+								<div class="grid gap-3">
+									<Label for="matricule">Matricule</Label>
+									<Input id="matricule" name="matricule" />
+								</div>
+
+								<div class="grid gap-3">
+									<Label for="poste">Poste</Label>
+									<NativeSelect.Root bind:value={poste}>
+										<NativeSelect.Option value="Surveillant">Surveillant</NativeSelect.Option>
+										<NativeSelect.Option value="Surveillant General"
+											>Surveillant General</NativeSelect.Option
+										>
+									</NativeSelect.Root>
+								</div>
 							</div>
 						{/if}
 					</div>
@@ -169,7 +199,7 @@
 						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
 							Annuler
 						</Dialog.Close>
-						<Button type="submit">Confirmer</Button>
+						<Button onclick={onSubmit}>Confirmer</Button>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>
