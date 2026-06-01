@@ -71,7 +71,7 @@ export const load: PageServerLoad = async () => {
     ];
 
     return {
-        personne: personnes,
+        personnes: personnes,
         professeur: listProfesseur
     }
 }

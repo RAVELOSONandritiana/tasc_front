@@ -8,20 +8,14 @@
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
-	import type { Personne, Professeur } from '$lib/types/Personne.type';
+	import type { Personne } from '$lib/types/Personne.type';
+	import type { PageProps } from './$types';
 
-	const {
-		data
-	}: {
-		data: {
-			personne: Personne[];
-			professeur: Professeur[];
-		};
-	} = $props();
+	const { data }: PageProps = $props();
 
-	const personnes = data.personne;
+	const { personnes } = data;
 
-	const listProfesseur = $state<Professeur[]>(data.professeur);
+	const listProfesseur = $state(data.professeur);
 
 	let searchText = $state('');
 
