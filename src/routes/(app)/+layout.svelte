@@ -16,7 +16,7 @@
 		{ path: '/cours', label: 'Cours' },
 		{ path: '/examen', label: 'Examen' },
 		{ path: '/incidents', label: 'Incidents' },
-		{ path: '/parametre', label: 'Paramere' },
+		{ path: '/parametre', label: 'Parametre' },
 		{ path: '/profil', label: 'Profil' },
 		{ path: '/salle', label: 'Salle' },
 	];

@@ -9,85 +9,13 @@
 	// import TagsInput from '$lib/components/ui/tags-input';
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
-	type Professeur = {
-		name: string;
-		lastname: string;
-		domicile: string;
-		fokontany: string;
-		commune: string;
-		phone: string;
-		email: string;
-		connected: boolean;
-		matiere: string[];
-	};
+	import type { Personne, Professeur } from '$lib/types/Personne.type';
+	
+	const {data} = $props();
 
-	type Personne = {
-		name: string;
-		lastname: string;
-		domicile: string;
-		fokontany: string;
-		commune: string;
-		phone: string;
-		email: string;
-		connected: boolean;
-	};
+	const personnes = data.personne;
 
-	const personnes: Personne[] = [
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329204',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329205',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329206',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329209',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		}
-	];
-
-	// const matieresOptions = [
-	// 	'Mathématiques',
-	// 	'Physique',
-	// 	'Chimie',
-	// 	'Biologie',
-	// 	'Histoire',
-	// 	'Géographie',
-	// 	'Français',
-	// 	'Anglais',
-	// 	'EPS'
-	// ];
-
-const listProfesseur: Professeur[] = $state([
+	const listProfesseur: Professeur[] = $state([
 		{
 			name: 'RAKOTO',
 			lastname: 'Soa Beva',
@@ -137,7 +65,6 @@ const listProfesseur: Professeur[] = $state([
 	}
 
 	function onSubmit() {
-		// event.preventDefault();
 		const personne: Personne = { ...(setPerson as Personne) };
 		listProfesseur.push({ ...personne, matiere: matiere, connected: false });
 		close();
@@ -216,10 +143,6 @@ const listProfesseur: Professeur[] = $state([
 
 								<div class="grid gap-3">
 									<Label for="matiere">Matières</Label>
-									<!-- <TagsInput options={matieresOptions} bind:values={matiere} placeholder="Sélectionner des matières" /> -->
-
-
-
 								</div>
 							</div>
 						{/if}
