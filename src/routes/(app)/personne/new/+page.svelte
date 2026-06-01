@@ -131,48 +131,47 @@
 									</NativeSelect.Root>
 								</div>
 							</div>
-						</div>
-
-						<Accordion.Root type="single" class="mt-4 border-l border-blue-500 pl-10">
-							<Accordion.Item value="item-3">
-								<Accordion.Trigger>Contact</Accordion.Trigger>
-								<Accordion.Content>
-									<div class="grid gap-3 rounded-sm border p-4">
-										<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-											<div class="grid gap-y-3">
-												<Label for="domicile">Numero telephone</Label>
-												<Input
-													id="domicile"
-													defaultValue="Lot C234"
-													type="number"
-													maxlength={10}
-													minlength={10}
-													required
-												/>
-											</div>
-											<div class="grid gap-y-3">
-												<Label for="domicile">Email</Label>
-												<Input
-													id="domicile"
-													defaultValue="example@gmail.com"
-													type="email"
-													required
-												/>
-											</div>
-											<div class="grid gap-y-3">
-												<Label for="domicile">CIN</Label>
-												<Input
-													id="domicile"
-													placeholder="entrer votre cin ici"
-													type="number"
-													required
-												/>
+							<Accordion.Root type="single" class="mt-4 border-l border-blue-500 pl-10">
+								<Accordion.Item value="item-3">
+									<Accordion.Trigger>Contact</Accordion.Trigger>
+									<Accordion.Content>
+										<div class="grid gap-3 rounded-sm border p-4">
+											<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+												<div class="grid gap-y-3">
+													<Label for="domicile">Numero telephone</Label>
+													<Input
+														id="domicile"
+														defaultValue="Lot C234"
+														type="number"
+														maxlength={10}
+														minlength={10}
+														required
+													/>
+												</div>
+												<div class="grid gap-y-3">
+													<Label for="domicile">Email</Label>
+													<Input
+														id="domicile"
+														defaultValue="example@gmail.com"
+														type="email"
+														required
+													/>
+												</div>
+												<div class="grid gap-y-3">
+													<Label for="domicile">CIN</Label>
+													<Input
+														id="domicile"
+														placeholder="entrer votre cin ici"
+														type="number"
+														required
+													/>
+												</div>
 											</div>
 										</div>
-									</div>
-								</Accordion.Content>
-							</Accordion.Item>
-						</Accordion.Root>
+									</Accordion.Content>
+								</Accordion.Item>
+							</Accordion.Root>
+						</div>
 					</Accordion.Content>
 				</Accordion.Item>
 			</Accordion.Root>
