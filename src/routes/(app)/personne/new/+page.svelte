@@ -10,18 +10,10 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as NativeSelect from '$lib/components/ui/native-select';
+	import { provincesVariable } from '$lib/variables/territoire';
 
 	let open = $state(false);
 	let value = $state<CalendarDate | undefined>();
-
-	const provinces = [
-		'Antananarivo',
-		'Antsiranana',
-		'Mahajanga',
-		'Toamasina',
-		'Fianarantsoa',
-		'Toliara'
-	];
 </script>
 
 <main class="m-4">
@@ -94,7 +86,7 @@
 											<div class="grid gap-y-3">
 												<Label for="province">Province</Label>
 												<NativeSelect.Root>
-													{#each provinces as p (p)}
+													{#each provincesVariable as p (p)}
 														<NativeSelect.Option value={p.toLowerCase()}>{p}</NativeSelect.Option>
 													{/each}
 												</NativeSelect.Root>
@@ -133,7 +125,7 @@
 								<div class="grid gap-y-3">
 									<Label for="province_res">Province</Label>
 									<NativeSelect.Root>
-										{#each provinces as p (p)}
+										{#each provincesVariable as p (p)}
 											<NativeSelect.Option value={p.toLowerCase()}>{p}</NativeSelect.Option>
 										{/each}
 									</NativeSelect.Root>
