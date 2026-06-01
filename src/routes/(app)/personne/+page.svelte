@@ -67,7 +67,7 @@
 		/>
 		<Button onclick={() => goto('personne/new')}>Creer</Button>
 	</div>
-	<div class="grid-cols-1 grid gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each filteredPersonnel as p (p.phone)}
 			<SurveillantProfil
 				name={p.name}

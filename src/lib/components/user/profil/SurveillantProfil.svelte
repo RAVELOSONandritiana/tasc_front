@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { Snippet } from 'svelte';
+	import { Separator } from '$lib/components/ui/separator';
 	const {
 		name,
 		lastname,
@@ -30,11 +31,11 @@
 	const fallback = name[0].toUpperCase().concat(lastname[0].toUpperCase());
 </script>
 
-<Card.Root>
+<Card.Root class="shadow-md">
 	<Card.Header class="flex items-start justify-between">
-		<div class="flex items-center justify-start space-x-4">
-			<Avatar.Root>
-				<Avatar.Image src="https://github.com/shadcn.png" alt="@shadcn" />
+		<div class="flex items-start justify-start space-x-4">
+			<Avatar.Root class="h-20 w-20 ring ring-4 ring-black/10">
+				<Avatar.Image src="http://localhost:8000/photo.png" alt="@shadcn" />
 				<Avatar.Fallback>{fallback}</Avatar.Fallback>
 			</Avatar.Root>
 			<Card.Title>
@@ -44,6 +45,7 @@
 		</div>
 		<Badge class={connected ? 'bg-green-500' : 'bg-gray-800'}></Badge>
 	</Card.Header>
+	<Separator />
 	<Card.Description class="px-8">
 		{domicile}-{fokontany}-{commune}<br />
 		{email}<br />

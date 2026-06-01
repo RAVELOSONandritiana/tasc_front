@@ -20,6 +20,10 @@
 		connected: boolean;
 	};
 
+	type Surveillant = Personne & {
+		poste: string;
+	};
+
 	const personnes: Personne[] = [
 		{
 			name: 'RAKOTO',
@@ -63,7 +67,7 @@
 		}
 	];
 
-	const listSurveillant = $state([
+	const listSurveillant = $state<Surveillant[]>([
 		{
 			name: 'RAKOTO',
 			lastname: 'Soa Beva',
@@ -183,7 +187,6 @@
 								</div>
 								<Button onclick={removeFindPersonne}>Supprimer personne</Button>
 							</div>
-
 							<div class="flex space-x-4">
 								<div class="grid gap-3">
 									<Label for="matricule">Matricule</Label>
