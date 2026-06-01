@@ -8,7 +8,7 @@
 	const path = [
 		{ path: '/dashboard', label: 'Dashboard' },
 		{ path: '/surveillant', label: 'Surveillant' },
-		{ path: '/prof', label: 'Professeurs' },
+		{ path: '/enseignant', label: 'Professeurs' },
 		{ path: '/personne', label: 'Personnels' },
 		{ path: '/eleves', label: 'Eleves' },
 		{ path: '/classe', label: 'Classe' },
@@ -17,7 +17,7 @@
 		{ path: '/examen', label: 'Examen' },
 		{ path: '/incidents', label: 'Incidents' },
 		{ path: '/parametre', label: 'Parametre' },
-		{ path: '/enseignant', label: 'Profil' },
+		{ path: '/profil', label: 'Profil' },
 		{ path: '/salle', label: 'Salle' },
 	];
 	
