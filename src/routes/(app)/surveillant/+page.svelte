@@ -9,88 +9,14 @@
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
-	type Personne = {
-		name: string;
-		lastname: string;
-		domicile: string;
-		fokontany: string;
-		commune: string;
-		phone: string;
-		email: string;
-		connected: boolean;
-	};
+	import type { PageProps } from './$types';
+	import type { Personne } from '$lib/types/Personne.type';
 
-	type Surveillant = Personne & {
-		poste: string;
-	};
+	const { data }: PageProps = $props();
 
-	const personnes: Personne[] = [
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329204',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329205',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329206',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329209',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		}
-	];
+	const listSurveillant = $state(data.listSurveillant);
 
-	const listSurveillant = $state<Surveillant[]>([
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329206',
-			email: 'hgbmichel@gmail.com',
-			connected: true,
-			poste: 'Surveillant General'
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329207',
-			email: 'hgbmichel@gmail.com',
-			connected: true,
-			poste: 'Surveillant Principale Seconde'
-		}
-	]);
+	const { personnes } = data;
 
 	let searchText = $state('');
 

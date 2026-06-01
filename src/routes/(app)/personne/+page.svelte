@@ -3,11 +3,12 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
-	import type { Personne } from '$lib/types/Personne.type';
+	import type { PageProps } from './$types';
 
-	const {data} = $props();
+	const {data} : PageProps = $props();
 
-	const personnes: Personne[] = data.personnes;
+	// svelte-ignore state_referenced_locally
+	const {personnes} = data;
 
 	let searchText = $state('');
 

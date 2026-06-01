@@ -20,3 +20,7 @@ export type Personne = {
     email: string;
     connected: boolean;
 };
+
+export type Surveillant = Personne & {
+    poste: string;
+};
