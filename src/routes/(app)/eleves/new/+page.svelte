@@ -11,6 +11,9 @@
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { provincesVariable } from '$lib/variables/territoire';
+	import { Switch } from '@skeletonlabs/skeleton-svelte';
+
+	let checked = $state(false);
 
 	let open = $state(false);
 	let value = $state<CalendarDate | undefined>();
@@ -213,27 +216,37 @@
 								</div>
 							</div>
 
-							<Accordion.Root type="single" class="mt-4 border-l border-blue-500 pl-10">
-								<Accordion.Item value="item-2">
-									<Accordion.Trigger>Informations tuteur(trice)</Accordion.Trigger>
-									<Accordion.Content>
-										<div class="grid grid-cols-1 gap-4 rounded-sm border p-4 md:grid-cols-3">
-											<div class="grid gap-3">
-												<Label for="name_tuteur">Nom du tuteur(trice)</Label>
-												<Input id="name_tuteur" defaultValue="RAKOTO" />
+							<Switch {checked} onCheckedChange={(details) => (checked = details.checked)}>
+								<Switch.Label><h3 class="text-md">Ajouter tuteur</h3></Switch.Label>
+								<Switch.Control>
+									<Switch.Thumb />
+								</Switch.Control>
+								<Switch.HiddenInput />
+							</Switch>
+
+							{#if checked}
+								<Accordion.Root type="single" class="mt-4 border-l border-blue-500 pl-10">
+									<Accordion.Item value="item-2">
+										<Accordion.Trigger>Informations tuteur(trice)</Accordion.Trigger>
+										<Accordion.Content>
+											<div class="grid grid-cols-1 gap-4 rounded-sm border p-4 md:grid-cols-3">
+												<div class="grid gap-3">
+													<Label for="name_tuteur">Nom du tuteur(trice)</Label>
+													<Input id="name_tuteur" defaultValue="RAKOTO" />
+												</div>
+												<div class="grid gap-3">
+													<Label for="lastname_tuteur">Prenom du tuteur(trice)</Label>
+													<Input id="lastname_tuteur" defaultValue="Boay Kely" />
+												</div>
+												<div class="grid gap-3">
+													<Label for="contact_tuteur">Numero du tuteur(trice)</Label>
+													<Input id="contact_tuteur" type="number" placeholder="+261...." />
+												</div>
 											</div>
-											<div class="grid gap-3">
-												<Label for="lastname_tuteur">Prenom du tuteur(trice)</Label>
-												<Input id="lastname_tuteur" defaultValue="Boay Kely" />
-											</div>
-											<div class="grid gap-3">
-												<Label for="contact_tuteur">Numero du tuteur(trice)</Label>
-												<Input id="contact_tuteur" type="number" placeholder="+261...." />
-											</div>
-										</div>
-									</Accordion.Content>
-								</Accordion.Item>
-							</Accordion.Root>
+										</Accordion.Content>
+									</Accordion.Item>
+								</Accordion.Root>
+							{/if}
 						</div>
 					</Accordion.Content>
 				</Accordion.Item>
