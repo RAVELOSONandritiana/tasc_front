@@ -44,7 +44,7 @@
 		</div>
 		<Badge class={connected ? 'bg-green-500' : 'bg-gray-800'}></Badge>
 	</Card.Header>
-	<Card.Description class="space-y-4 px-8">
+	<Card.Description class="px-8">
 		{domicile}-{fokontany}-{commune}<br />
 		{email}<br />
 		{phone}

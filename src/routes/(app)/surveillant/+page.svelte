@@ -7,6 +7,8 @@
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
+	import * as InputGroup from '$lib/components/ui/input-group/index.js';
+	import SearchIcon from '@lucide/svelte/icons/search';
 	type Personne = {
 		name: string;
 		lastname: string;
@@ -114,17 +116,22 @@
 	function onSubmit() {
 		const personne: Personne = { ...(setPerson as Personne) };
 		listSurveillant.push({ ...personne, poste: poste, connected: false });
+		close();
 	}
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
 	<div class="flex justify-between">
-		<Input
-			type="search"
-			placeholder="Rechercher un serverillant"
-			class="max-w-md"
-			bind:value={searchText}
-		/>
+		<InputGroup.Root class="max-w-md">
+			<InputGroup.Input
+				type="search"
+				placeholder="Rechercher un serverillant"
+				bind:value={searchText}
+			/>
+			<InputGroup.Addon>
+				<SearchIcon />
+			</InputGroup.Addon>
+		</InputGroup.Root>
 		<Dialog.Root>
 			<form onsubmit={onSubmit}>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
@@ -199,7 +206,9 @@
 						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
 							Annuler
 						</Dialog.Close>
-						<Button onclick={onSubmit}>Confirmer</Button>
+						<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={onSubmit}
+							>Confirmer</Dialog.Close
+						>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>
