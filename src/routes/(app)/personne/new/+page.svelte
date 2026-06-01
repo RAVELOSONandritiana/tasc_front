@@ -93,7 +93,11 @@
 											</div>
 											<div class="grid gap-y-3">
 												<Label for="province">Province</Label>
-												<Input id="province" defaultValue="province" />
+												<NativeSelect.Root>
+													{#each provinces as p (p)}
+														<NativeSelect.Option value={p.toLowerCase()}>{p}</NativeSelect.Option>
+													{/each}
+												</NativeSelect.Root>
 											</div>
 										</div>
 									</div>
