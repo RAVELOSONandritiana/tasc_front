@@ -1,7 +1,7 @@
-import type { Personne, Professeur } from "$lib/types/Personne.type";
-import type { PageServerLoad } from "./$types";
+import type { Personne } from "$lib/types/Personne.type";
+import type { ServerLoad } from "@sveltejs/kit";
 
-export const load: PageServerLoad = async () => {
+export const load: ServerLoad = async () => {
     const personnes: Personne[] = [
         {
             name: 'RAKOTO',
@@ -34,30 +34,6 @@ export const load: PageServerLoad = async () => {
             connected: true
         },
         {
-            name: 'RAVELOSON',
-            lastname: 'Andritiana Michel',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329209',
-            email: 'hgbmichel@gmail.com',
-            connected: true
-        }
-    ];
-
-    const listProfesseur: Professeur[] = [
-        {
-            name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329206',
-            email: 'hgbmichel@gmail.com',
-            connected: true,
-            matiere: []
-        },
-        {
             name: 'RAKOTO',
             lastname: 'Soa Beva',
             domicile: 'Lot C125',
@@ -65,13 +41,10 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329207',
             email: 'hgbmichel@gmail.com',
-            connected: true,
-            matiere: []
+            connected: true
         }
     ];
-
     return {
-        personne: personnes,
-        professeur: listProfesseur
+        personnes
     }
 }

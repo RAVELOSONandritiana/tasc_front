@@ -9,11 +9,19 @@
 	import * as Accordion from '$lib/components/ui/accordion/index.js';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
-
-	const id = $props.id();
+	import * as NativeSelect from '$lib/components/ui/native-select';
 
 	let open = $state(false);
 	let value = $state<CalendarDate | undefined>();
+
+	const provinces = [
+		'Antananarivo',
+		'Antsiranana',
+		'Mahajanga',
+		'Toamasina',
+		'Fianarantsoa',
+		'Toliara'
+	];
 </script>
 
 <main class="m-4">
@@ -41,7 +49,7 @@
 							<div class="grid gap-3">
 								<Label for="birth">Date de naissance</Label>
 								<Popover.Root bind:open>
-									<Popover.Trigger id="{id}-date">
+									<Popover.Trigger>
 										{#snippet child({ props })}
 											<Button {...props} variant="outline" class="w-48 justify-between font-normal">
 												{value
@@ -104,23 +112,27 @@
 							<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
 								<div class="grid gap-y-3">
 									<Label for="domicile">Domicile</Label>
-									<Input id="domicile" defaultValue="Lot C234" required/>
+									<Input id="domicile" defaultValue="Lot C234" required />
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="fokontany">Fokontany</Label>
-									<Input id="fokontany" defaultValue="Ambatomalaza" required/>
+									<Input id="fokontany" defaultValue="Ambatomalaza" required />
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="commune_res">Commune</Label>
-									<Input id="commune_res" defaultValue="Alasora" required/>
+									<Input id="commune_res" defaultValue="Alasora" required />
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="region_res">Region</Label>
-									<Input id="region_res" defaultValue="Analamanga" required/>
+									<Input id="region_res" defaultValue="Analamanga" required />
 								</div>
 								<div class="grid gap-y-3">
 									<Label for="province_res">Province</Label>
-									<Input id="province_res" defaultValue="Antananarivo" required/>
+									<NativeSelect.Root>
+										{#each provinces as p (p)}
+											<NativeSelect.Option value={p.toLowerCase()}>{p}</NativeSelect.Option>
+										{/each}
+									</NativeSelect.Root>
 								</div>
 							</div>
 						</div>
@@ -144,11 +156,21 @@
 											</div>
 											<div class="grid gap-y-3">
 												<Label for="domicile">Email</Label>
-												<Input id="domicile" defaultValue="example@gmail.com" type="email" required/>
+												<Input
+													id="domicile"
+													defaultValue="example@gmail.com"
+													type="email"
+													required
+												/>
 											</div>
 											<div class="grid gap-y-3">
 												<Label for="domicile">CIN</Label>
-												<Input id="domicile" placeholder="entrer votre cin ici" type="number" required/>
+												<Input
+													id="domicile"
+													placeholder="entrer votre cin ici"
+													type="number"
+													required
+												/>
 											</div>
 										</div>
 									</div>

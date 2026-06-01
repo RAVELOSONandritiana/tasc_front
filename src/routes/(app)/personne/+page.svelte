@@ -3,48 +3,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
-	const personnes = [
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329204',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329205',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329206',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329207',
-			email: 'hgbmichel@gmail.com',
-			connected: true
-		}
-	];
+	import type { Personne } from '$lib/types/Personne.type';
+
+	const {data} = $props();
+
+	const personnes: Personne[] = data.personnes;
 
 	let searchText = $state('');
 
@@ -65,7 +28,7 @@
 			class="max-w-md"
 			bind:value={searchText}
 		/>
-		<Button onclick={() => goto('personne/new')}>Creer</Button>
+		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
 	</div>
 	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each filteredPersonnel as p (p.phone)}

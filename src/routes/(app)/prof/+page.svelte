@@ -6,39 +6,22 @@
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
-	// import TagsInput from '$lib/components/ui/tags-input';
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import type { Personne, Professeur } from '$lib/types/Personne.type';
-	
-	const {data} = $props();
+
+	const {
+		data
+	}: {
+		data: {
+			personne: Personne[];
+			professeur: Professeur[];
+		};
+	} = $props();
 
 	const personnes = data.personne;
 
-	const listProfesseur: Professeur[] = $state([
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329206',
-			email: 'hgbmichel@gmail.com',
-			connected: true,
-			matiere: []
-		},
-		{
-			name: 'RAKOTO',
-			lastname: 'Soa Beva',
-			domicile: 'Lot C125',
-			fokontany: 'Ambtatomalaza',
-			commune: 'Alasora',
-			phone: '0337329207',
-			email: 'hgbmichel@gmail.com',
-			connected: true,
-			matiere: []
-		}
-	]);
+	const listProfesseur = $state<Professeur[]>(data.professeur);
 
 	let searchText = $state('');
 
