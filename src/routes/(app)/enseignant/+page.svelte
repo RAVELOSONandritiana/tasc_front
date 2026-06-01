@@ -13,8 +13,10 @@
 
 	const { data }: PageProps = $props();
 
+	// svelte-ignore state_referenced_locally
 	const { personnes } = data;
 
+	// svelte-ignore state_referenced_locally
 	const listProfesseur = $state(data.professeur);
 
 	let searchText = $state('');
