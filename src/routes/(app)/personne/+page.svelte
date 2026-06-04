@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
 	import type { PageProps } from './$types';
+	import * as InputGroup from '$lib/components/ui/input-group/index.js';
+	import SearchIcon from '@lucide/svelte/icons/search';
 
-	const {data} : PageProps = $props();
+	const { data }: PageProps = $props();
 
 	// svelte-ignore state_referenced_locally
-	const {personnes} = data;
+	const { personnes } = data;
 
 	let searchText = $state('');
 
@@ -23,12 +24,16 @@
 
 <main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
 	<div class="flex justify-between">
-		<Input
-			type="search"
-			placeholder="Rechercher une personne"
-			class="max-w-md"
-			bind:value={searchText}
-		/>
+		<InputGroup.Root class="max-w-md">
+			<InputGroup.Input
+				type="search"
+				placeholder="Rechercher une personne"
+				bind:value={searchText}
+			/>
+			<InputGroup.Addon>
+				<SearchIcon />
+			</InputGroup.Addon>
+		</InputGroup.Root>
 		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
 	</div>
 	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
