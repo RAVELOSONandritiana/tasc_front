@@ -6,7 +6,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 	import type { PageProps } from './$types';
-	import Classe from '$lib/components/user/classe/Classe.svelte';
+	import Salle from '$lib/components/user/classe/Salle.svelte';
 
 	const { data }: PageProps = $props();
 </script>
@@ -66,9 +66,9 @@
 	</div>
 
 	<div class="grid grid-cols-4 gap-4 pt-4">
-		{#if data.list_classe.length > 0}
-			{#each data.list_classe as classe (classe.id)}
-				<Classe {classe} />
+		{#if data.list_salle.length > 0}
+			{#each data.list_salle as salle (salle.id)}
+				<Salle {salle}/>
 			{/each}
 		{/if}
 	</div>

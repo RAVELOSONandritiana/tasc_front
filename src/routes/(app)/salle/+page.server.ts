@@ -1,8 +1,8 @@
-import type { Classe } from "$lib/types/Materiel.type";
+import type { Salle } from "$lib/types/Materiel.type";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async () => {
-    let list_classe: Classe[] = [
+    let list_salle: Salle[] = [
         {
             id: 1,
             num: 5,
@@ -29,8 +29,8 @@ export const load: PageServerLoad = async () => {
             place: 50
         }
     ];
-    list_classe = list_classe.sort((a, b) => a.num - b.num);
+    list_salle = list_salle.sort((a, b) => a.num - b.num);
     return {
-        list_classe
+        list_salle
     }
 }
