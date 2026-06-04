@@ -19,6 +19,16 @@
 				<SearchIcon />
 			</InputGroup.Addon>
 		</InputGroup.Root>
+		<div class="flex items-center justify-center space-x-6">
+			<div class="flex gap-3">
+				<span class="h-4 w-4 bg-purple-500 rounded-full"></span>
+				<Label>Occupe</Label>
+			</div>
+			<div class="flex gap-3">
+				<span class="h-4 w-4 bg-green-600 rounded-full"></span>
+				<Label>Libre</Label>
+			</div>
+		</div>
 		<Dialog.Root>
 			<form>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
@@ -55,10 +65,10 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="grid grid-cols-3">
+	<div class="grid grid-cols-4 gap-4 pt-4">
 		{#if data.list_classe.length > 0}
 			{#each data.list_classe as classe (classe.id)}
-				<Classe />
+				<Classe {classe} />
 			{/each}
 		{/if}
 	</div>

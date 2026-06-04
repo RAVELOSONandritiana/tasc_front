@@ -11,7 +11,8 @@ export const load: PageServerLoad = async () => {
         {
             id: 2,
             num: 6,
-            place: 50
+            place: 50,
+            used: true,
         },
         {
             id: 3,

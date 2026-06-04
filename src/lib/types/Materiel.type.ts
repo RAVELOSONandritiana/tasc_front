@@ -1,5 +1,6 @@
 export type Classe = {
     id: number;
     num: number;
-    place: number
+    place: number;
+    used?: boolean
 }
