@@ -10,6 +10,7 @@
 		{ path: '/surveillant', label: 'Surveillant' },
 		{ path: '/enseignant', label: 'Professeurs' },
 		{ path: '/personne', label: 'Personnels' },
+		{ path: '/eleves', label: 'Eleves Informations' },
 		{ path: '/classe', label: 'Classe' },
 		{ path: '/incidents', label: 'Incidents' },
 		{ path: '/parametre', label: 'Parametre' },
