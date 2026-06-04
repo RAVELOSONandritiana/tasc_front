@@ -25,8 +25,8 @@
 
 			<CardContent class="space-y-4">
 				<div class="space-y-2">
-					<Label for="email">Email</Label>
-					<Input id="email" type="email" placeholder="exemple@email.com" required />
+					<Label for="matricule">Matricule</Label>
+					<Input id="matricule" type="number" placeholder="059875" required />
 				</div>
 
 				<div class="space-y-2">
