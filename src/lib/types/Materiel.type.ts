@@ -9,4 +9,5 @@ export type Classe = {
     id: number;
     niveau: number;
     name: string;
+    eleves: number;
 }
