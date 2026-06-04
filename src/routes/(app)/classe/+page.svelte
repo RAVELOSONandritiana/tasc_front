@@ -1,2 +1,1 @@
-<main class="flex-1 p-6 bg-sidebar text-sidebar-foreground">
-</main>
+<main class="flex-1 bg-sidebar p-6 text-sidebar-foreground">Je suis dans classe</main>
