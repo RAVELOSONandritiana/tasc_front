@@ -98,14 +98,14 @@
 						{#if setPerson != null}
 							<div class="space-y-4 rounded-md border p-4">
 								<div class="grid gap-3">
-									<Label for="email">Nom</Label>
-									<Input id="nom" name="nom" required defaultValue={setPerson.name} disabled />
+									<Label for="name">Nom</Label>
+									<Input id="name" name="name" required defaultValue={setPerson.name} disabled />
 								</div>
 								<div class="grid gap-3">
-									<Label for="email">Prenom</Label>
+									<Label for="lastname">Prenom</Label>
 									<Input
-										id="prenom"
-										name="prenom"
+										id="lastname"
+										name="lastname"
 										required
 										defaultValue={setPerson.lastname}
 										disabled
