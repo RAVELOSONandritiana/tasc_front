@@ -31,7 +31,15 @@
 
 	let searchPersonnes = $state('');
 
-	const findPersonnes = $derived(personnes.filter((p) => p.email == searchPersonnes));
+	const findPersonnes = $derived(
+		personnes.filter((p) =>
+			`${p.name}${p.lastname}`
+				.split(' ')
+				.join('')
+				.toLowerCase()
+				.startsWith(searchPersonnes.split(' ').join('').toLowerCase())
+		)
+	);
 
 	let setPerson: Personne | null = $state(null);
 	function setPersonne(personne: Personne) {
@@ -66,19 +74,18 @@
 					</Dialog.Header>
 					<div class="grid gap-4">
 						<div class="grid gap-3">
-							<Label for="email">Email</Label>
+							<Label for="n">Nom complet</Label>
 							<Input
-								id="email"
-								name="email"
-								type="email"
-								placeholder="entrer votre email"
+								id="n"
+								name="n"
+								placeholder="entrer votre nom complet"
 								required
 								bind:value={searchPersonnes}
 							/>
 						</div>
 
 						<div class="space-y-2">
-							{#if setPerson == null}
+							{#if setPerson == null && searchPersonnes.length > 2}
 								{#each findPersonnes as fp (fp.phone)}
 									<button class="w-full" onclick={() => setPersonne(fp)}>
 										<FindPersonne name={fp.name} lastname={fp.lastname} />

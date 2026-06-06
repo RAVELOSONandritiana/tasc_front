@@ -36,7 +36,7 @@ export const load: PageServerLoad = async () => {
             domicile: 'Lot C125',
             fokontany: 'Ambtatomalaza',
             commune: 'Alasora',
-            phone: '0337329209',
+            phone: '0337329289',
             email: 'hgbmichel@gmail.com',
         }
     ];
@@ -84,7 +84,7 @@ export const load: PageServerLoad = async () => {
     ];
 
     return {
-        personnes: personnes,
+        personnes,
         professeur: listProfesseur
     }
 }
