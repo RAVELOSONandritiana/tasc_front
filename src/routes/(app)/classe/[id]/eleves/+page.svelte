@@ -6,6 +6,58 @@
 	import { Label } from '$lib/components/ui/label';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import * as Table from '$lib/components/ui/table/index.js';
+
+	const student = [
+		{
+			id: 1,
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			status: 0,
+			age: 17,
+			absence: 19
+		},
+		{
+			id: 2,
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			status: 0,
+			age: 17,
+			absence: 19
+		},
+		{
+			id: 3,
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			status: 0,
+			age: 17,
+			absence: 19
+		},
+		{
+			id: 4,
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			status: 0,
+			age: 17,
+			absence: 19
+		},
+		{
+			id: 5,
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			status: 0,
+			age: 17,
+			absence: 19
+		},
+		{
+			id: 6,
+			name: 'RAVELOSON',
+			lastname: 'Andritiana Michel',
+			status: 0,
+			age: 17,
+			absence: 19
+		}
+	];
 
 	type EleveInformation = { id: number; name: string; lastname: string };
 	let searchText = $state('');
@@ -41,7 +93,7 @@
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="flex justify-between sticky top-29 z-50 p-4">
+	<div class="sticky top-29 z-50 flex justify-between bg-sidebar p-4">
 		<InputGroup.Root class="max-w-md">
 			<InputGroup.Input type="search" placeholder="Rechercher un eleve" bind:value={searchText} />
 			<InputGroup.Addon>
@@ -84,22 +136,28 @@
 
 									{#if setPerson != null}
 										<div class="space-y-4 rounded-md border p-4">
-								<div class="grid gap-3">
-									<Label for="name">Nom</Label>
-									<Input id="name" name="name" required defaultValue={setPerson.name} disabled />
-								</div>
-								<div class="grid gap-3">
-									<Label for="lastname">Prenom</Label>
-									<Input
-										id="lastname"
-										name="lastname"
-										required
-										defaultValue={setPerson.lastname}
-										disabled
-									/>
-								</div>
-								<Button onclick={removePersonne}>Supprimer personne</Button>
-							</div>
+											<div class="grid gap-3">
+												<Label for="name">Nom</Label>
+												<Input
+													id="name"
+													name="name"
+													required
+													defaultValue={setPerson.name}
+													disabled
+												/>
+											</div>
+											<div class="grid gap-3">
+												<Label for="lastname">Prenom</Label>
+												<Input
+													id="lastname"
+													name="lastname"
+													required
+													defaultValue={setPerson.lastname}
+													disabled
+												/>
+											</div>
+											<Button onclick={removePersonne}>Supprimer personne</Button>
+										</div>
 									{/if}
 								</div>
 							{/if}
@@ -114,5 +172,30 @@
 				</Dialog.Content>
 			</form>
 		</Dialog.Root>
+	</div>
+
+	<div class="p-4">
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>Nom</Table.Head>
+					<Table.Head>Prenom</Table.Head>
+					<Table.Head>Age</Table.Head>
+					<Table.Head>Absence</Table.Head>
+					<Table.Head>Status</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each student as s (s.id)}
+					<Table.Row>
+						<Table.Cell>{s.name}</Table.Cell>
+						<Table.Cell>{s.lastname}</Table.Cell>
+						<Table.Cell>{s.age}</Table.Cell>
+						<Table.Cell>{s.absence}</Table.Cell>
+						<Table.Cell>{s.status}</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
 	</div>
 </main>

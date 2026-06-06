@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { buttonVariants } from '$lib/components/ui/button';
+	import { goto } from '$app/navigation';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -7,6 +8,7 @@
 	import Cours from '$lib/components/user/classe/Cours.svelte';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { matiere } from '$lib/variables/territoire';
+	import { page } from '$app/stores';
 
 	const listCours = [
 		{
@@ -106,6 +108,7 @@
 				<Label>Cours: {lc.name}</Label>
 				<Label>Coefficient: {lc.coeff}</Label>
 				<Label>Prof: {lc.prof}</Label>
+				<Button class="w-full" onclick={() => goto($page.url.pathname + '/details')}>Enter</Button>
 			</Cours>
 		{/each}
 	</div>
