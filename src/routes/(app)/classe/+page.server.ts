@@ -5,28 +5,24 @@ export const load: PageServerLoad = async () => {
     const listClasse = [
         {
             id: 1,
-            name: '2nd',
-            niveau: 2,
-            eleves: 50
+            niveau: '1',
+            series: 's',
+            titulaire: 'RAVELOSON Andritiana Michel',
+            eleves: 40
         },
         {
             id: 2,
-            name: '2nd',
-            niveau: 2,
-            eleves: 60
+            niveau: 't',
+            titulaire: 'RAVELOSON Andritiana Michel',
+            eleves: 45,
+            series: 's',
         },
         {
             id: 3,
-            name: '1ere',
-            niveau: 1,
-            eleves: 29
+            niveau: '2',
+            titulaire: 'RAVELOSON Andritiana Michel',
+            eleves: 50
         },
-        {
-            id: 4,
-            name: 'Ts',
-            niveau: 3,
-            eleves: 47
-        }
     ];
 
     return {

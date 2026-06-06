@@ -1,22 +1,27 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Label } from '$lib/components/ui/label';
-	import type { Classe } from '$lib/types/Materiel.type';
-	const { classe }: { classe: Classe } = $props();
+	const { classe } = $props();
 
 	function onClick() {
 		goto(`/classe/${classe.id}/cours`);
 	}
 
-	let color = $state('border-l-blue-600');
+	let color = $state('');
+	let niveau = $state('');
 	// svelte-ignore state_referenced_locally
 	switch (classe.niveau) {
-		case 2:
+		case '2':
 			color = 'border-l-orange-600';
+			niveau = '2nd';
 			break;
-		case 1:
+		case '1':
 			color = 'border-l-green-600';
+			niveau = '1ere';
 			break;
+		case 't':
+			color = 'border-l-blue-600';
+			niveau = 'Tle'
 	}
 </script>
 
@@ -27,7 +32,7 @@
     border-l-5 p-4 shadow-black/50 transition-all duration-300 hover:-translate-y-2 hover:cursor-pointer hover:shadow-lg {color}"
 	onclick={onClick}
 >
-	<Label class="text-2xl hover:cursor-pointer">Classe - {classe.name}</Label>
+	<Label class="text-2xl hover:cursor-pointer">Classe - {niveau} {classe.series?.toUpperCase()}</Label>
 	<Label class="hover:cursor-pointer">Nombre d'eleves: {classe.eleves}</Label>
-	<Label class="hover:cursor-pointer">Niveau : {classe.niveau}</Label>
+	<Label class="hover:cursor-pointer">Titulaire : {classe.titulaire}</Label>
 </div>
