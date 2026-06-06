@@ -27,7 +27,7 @@
 		<SearchInput placeholder="Rechercher une personne" bind:value={searchText} />
 		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
 	</div>
-	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-8 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each filteredPersonnel as p (p.phone)}
 			<PesonnelProfil>
 				<div class="space-y-2">

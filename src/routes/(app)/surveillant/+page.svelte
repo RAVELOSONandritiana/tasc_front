@@ -13,8 +13,10 @@
 
 	const { data }: PageProps = $props();
 
+	// svelte-ignore state_referenced_locally
 	const listSurveillant = $state(data.listSurveillant);
 
+	// svelte-ignore state_referenced_locally
 	const { personnes } = data;
 
 	let searchText = $state('');
@@ -133,7 +135,7 @@
 			</form>
 		</Dialog.Root>
 	</div>
-	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-8 py-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each listFiltered as p (p.phone)}
 			<PesonnelProfil>
 				<div class="space-y-2">

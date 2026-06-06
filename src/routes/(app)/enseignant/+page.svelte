@@ -129,7 +129,7 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-8 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each listFiltered as p (p.phone)}
 			<PesonnelProfil>
 				<div class="space-y-2">
