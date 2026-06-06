@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
-	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
+	import PesonnelProfil from '$lib/components/user/profil/PesonnelProfil.svelte';
 	import type { PageProps } from './$types';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Label } from '$lib/components/ui/label';
@@ -29,14 +29,14 @@
 	</div>
 	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each filteredPersonnel as p (p.phone)}
-			<SurveillantProfil>
+			<PesonnelProfil>
 				<div class="space-y-2">
 					<Label>Nom : {p.name}</Label>
 					<Label>Prenom : {p.lastname}</Label>
 					<Label>Phone : {p.phone}</Label>
 					<Label>Email : {p.email}</Label>
 				</div>
-			</SurveillantProfil>
+			</PesonnelProfil>
 		{/each}
 	</div>
 </main>

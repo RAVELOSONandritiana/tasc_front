@@ -3,7 +3,7 @@
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
+	import PesonnelProfil from '$lib/components/user/profil/PesonnelProfil.svelte';
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
@@ -44,7 +44,7 @@
 
 	function onSubmit() {
 		const personne: Personne = { ...(setPerson as Personne) };
-		listSurveillant.push({ ...personne, poste: poste, connected: false });
+		listSurveillant.push({ ...personne, poste: poste });
 		close();
 	}
 </script>
@@ -135,7 +135,7 @@
 	</div>
 	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each listFiltered as p (p.phone)}
-			<SurveillantProfil>
+			<PesonnelProfil>
 				<div class="space-y-2">
 					<Label>Nom : {p.name}</Label>
 					<Label>Prenom : {p.lastname}</Label>
@@ -144,7 +144,7 @@
 				</div>
 
 				<Badge variant="secondary">{p.poste}</Badge>
-			</SurveillantProfil>
+			</PesonnelProfil>
 		{/each}
 	</div>
 </main>
