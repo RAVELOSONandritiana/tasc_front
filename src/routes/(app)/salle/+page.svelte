@@ -10,8 +10,8 @@
 	const { data }: PageProps = $props();
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
-	<div class="flex justify-between">
+<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+	<div class="flex justify-between p-4 top-16 sticky z-50 bg-sidebar">
 		<SearchInput placeholder="Rechercher une salle" />
 		<div class="flex items-center justify-center space-x-6">
 			<div class="flex gap-3">
@@ -59,7 +59,7 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="grid grid-cols-4 gap-8 pt-8">
+	<div class="grid grid-cols-3 gap-8 p-4">
 		{#if data.list_salle.length > 0}
 			{#each data.list_salle as salle (salle.id)}
 				<Salle {salle} />
