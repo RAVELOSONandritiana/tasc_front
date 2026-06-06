@@ -13,7 +13,8 @@
 
 	const navigation = [
 		{ path: `/classe/${id}/cours`, label: 'Cours', number: 0 },
-		{ path: `/classe/${id}/eleves`, label: 'Eleve', number: 1 }
+		{ path: `/classe/${id}/eleves`, label: 'Eleve', number: 1 },
+		{ path: `/classe/${id}/edt`, label: 'Emploi du temps', number: 2 }
 	];
 
 	let activePath = $state(0);

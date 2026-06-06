@@ -40,8 +40,8 @@
 	}
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
-	<div class="flex justify-between">
+<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+	<div class="flex justify-between sticky top-29 z-50 p-4">
 		<InputGroup.Root class="max-w-md">
 			<InputGroup.Input type="search" placeholder="Rechercher un eleve" bind:value={searchText} />
 			<InputGroup.Addon>

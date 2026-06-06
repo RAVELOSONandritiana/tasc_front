@@ -4,12 +4,64 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
+	import Cours from '$lib/components/user/classe/Cours.svelte';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { matiere } from '$lib/variables/territoire';
+
+	const listCours = [
+		{
+			id: 1,
+			name: 'Mathematique',
+			coeff: 6,
+			prof: 'Voahangy Soa'
+		},
+		{
+			id: 2,
+			name: 'Physique',
+			coeff: 6,
+			prof: 'Peter kely'
+		},
+		{
+			id: 3,
+			name: 'Mathematique',
+			coeff: 6,
+			prof: 'Voahangy Soa'
+		},
+		{
+			id: 4,
+			name: 'Physique',
+			coeff: 6,
+			prof: 'Peter kely'
+		},
+		{
+			id: 5,
+			name: 'Mathematique',
+			coeff: 6,
+			prof: 'Voahangy Soa'
+		},
+		{
+			id: 6,
+			name: 'Physique',
+			coeff: 6,
+			prof: 'Peter kely'
+		},
+		{
+			id: 7,
+			name: 'Mathematique',
+			coeff: 6,
+			prof: 'Voahangy Soa'
+		},
+		{
+			id: 8,
+			name: 'Physique',
+			coeff: 6,
+			prof: 'Peter kely'
+		}
+	];
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
-	<div class="sticky top-33 z-50 flex justify-between">
+<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+	<div class="sticky top-29 z-50 flex justify-between bg-sidebar p-4">
 		<SearchInput placeholder="Rechercher un cours" />
 
 		<Dialog.Root>
@@ -25,7 +77,7 @@
 					<div class="grid gap-4">
 						<div class="grid gap-3">
 							<Label for="coursname">Nom cours</Label>
-							<NativeSelect.Root>
+							<NativeSelect.Root class="w-full">
 								{#each matiere as m (m)}
 									<NativeSelect.Option value={m}>{m}</NativeSelect.Option>
 								{/each}
@@ -46,5 +98,15 @@
 				</Dialog.Content>
 			</form>
 		</Dialog.Root>
+	</div>
+
+	<div class="grid grid-cols-1 gap-8 p-4 md:grid-cols-3">
+		{#each listCours as lc (lc.id)}
+			<Cours>
+				<Label>Cours: {lc.name}</Label>
+				<Label>Coefficient: {lc.coeff}</Label>
+				<Label>Prof: {lc.prof}</Label>
+			</Cours>
+		{/each}
 	</div>
 </main>

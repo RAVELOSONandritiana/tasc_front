@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import Button from '$lib/components/ui/button/button.svelte';
 	import type { Snippet } from 'svelte';
 	import ImageSalle from '$lib/assets/images/530476.jpg';
 	const {
@@ -23,9 +22,5 @@
 		{#if children}
 			{@render children()}
 		{/if}
-		<div class="flex w-full items-center justify-between">
-			<div></div>
-			<Button>Voir profil</Button>
-		</div>
 	</Card.Footer>
 </Card.Root>
