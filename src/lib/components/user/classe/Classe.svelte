@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Label } from '$lib/components/ui/label';
+	import ImageSalle from '$lib/assets/images/1342060.jpeg';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Button } from '$lib/components/ui/button';
+	import { Separator } from '$lib/components/ui/separator';
 	const { classe } = $props();
 
 	function onClick() {
@@ -9,30 +13,39 @@
 
 	let color = $state('');
 	let niveau = $state('');
+
 	// svelte-ignore state_referenced_locally
 	switch (classe.niveau) {
 		case '2':
-			color = 'border-l-orange-600';
+			color = 'bg-orange-600';
 			niveau = '2nd';
 			break;
 		case '1':
-			color = 'border-l-green-600';
+			color = 'bg-green-600';
 			niveau = '1ere';
 			break;
 		case 't':
-			color = 'border-l-blue-600';
-			niveau = 'Tle'
+			color = 'bg-blue-600';
+			niveau = 'Tle';
 	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-	class="} space-y-2 rounded-md border
-    border-l-5 p-4 shadow-black/50 transition-all duration-300 hover:-translate-y-2 hover:cursor-pointer hover:shadow-lg {color}"
+<Card.Root
+	class="transition-duration m-0 gap-y-0 p-0 hover:cursor-pointer"
 	onclick={onClick}
 >
-	<Label class="text-2xl hover:cursor-pointer">Classe - {niveau} {classe.series?.toUpperCase()}</Label>
-	<Label class="hover:cursor-pointer">Nombre d'eleves: {classe.eleves}</Label>
-	<Label class="hover:cursor-pointer">Titulaire : {classe.titulaire}</Label>
-</div>
+	<Card.Content class="m-0 p-0">
+		<!-- svelte-ignore a11y_img_redundant_alt -->
+		<img src={ImageSalle} alt="image salle" class="h-full w-full object-cover transitio-all duration-400 hover:grayscale-75" />
+	</Card.Content>
+	<Separator class={color}/>
+	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
+		<Label>Classe - {niveau} {classe.series?.toUpperCase()}</Label>
+		<Label>Nombre d'eleves - {classe.eleves}</Label>
+		<Label>Titulaire - {classe.titulaire}</Label>
+		<div class="flex w-full flex-row items-center justify-between">
+			<Button variant="outline">Modifier Salle</Button>
+			<Button>Modifier image</Button>
+		</div>
+	</Card.Footer>
+</Card.Root>

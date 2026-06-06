@@ -11,7 +11,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329204',
             email: 'hgbmichel@gmail.com',
-            connected: true
         },
         {
             name: 'RAKOTO',
@@ -21,7 +20,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329205',
             email: 'hgbmichel@gmail.com',
-            connected: true
         },
         {
             name: 'RAKOTO',
@@ -31,7 +29,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329206',
             email: 'hgbmichel@gmail.com',
-            connected: true
         },
         {
             name: 'RAVELOSON',
@@ -41,7 +38,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329209',
             email: 'hgbmichel@gmail.com',
-            connected: true
         }
     ];
 
@@ -54,7 +50,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329206',
             email: 'hgbmichel@gmail.com',
-            connected: true,
             matiere: []
         },
         {
@@ -65,7 +60,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329207',
             email: 'hgbmichel@gmail.com',
-            connected: true,
             matiere: []
         }, {
             name: 'RAKOTO',
@@ -75,7 +69,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329208',
             email: 'hgbmichel@gmail.com',
-            connected: true,
             matiere: []
         },
         {
@@ -86,7 +79,6 @@ export const load: PageServerLoad = async () => {
             commune: 'Alasora',
             phone: '0337329209',
             email: 'hgbmichel@gmail.com',
-            connected: true,
             matiere: []
         }
     ];

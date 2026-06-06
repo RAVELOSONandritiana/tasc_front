@@ -6,7 +6,6 @@ export type Professeur = {
     commune: string;
     phone: string;
     email: string;
-    connected: boolean;
     matiere: string[];
 };
 
@@ -18,7 +17,6 @@ export type Personne = {
     commune: string;
     phone: string;
     email: string;
-    connected: boolean;
 };
 
 export type Surveillant = Personne & {

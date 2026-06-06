@@ -44,7 +44,7 @@
 
 	function onSubmit() {
 		const personne: Personne = { ...(setPerson as Personne) };
-		listProfesseur.push({ ...personne, matiere: matiere, connected: false });
+		listProfesseur.push({ ...personne, matiere: matiere });
 		close();
 	}
 </script>
@@ -131,16 +131,13 @@
 
 	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each listFiltered as p (p.phone)}
-			<SurveillantProfil
-				name={p.name}
-				lastname={p.lastname}
-				domicile={p.domicile}
-				fokontany={p.fokontany}
-				commune={p.commune}
-				phone={p.phone}
-				email={p.email}
-				connected={p.connected}
-			>
+			<SurveillantProfil>
+				<div class="space-y-2">
+					<Label>Nom : {p.name}</Label>
+					<Label>Prenom : {p.lastname}</Label>
+					<Label>Phone : {p.phone}</Label>
+					<Label>Email : {p.email}</Label>
+				</div>
 				{#if p.matiere.length > 0}
 					{#each p.matiere as m (m)}
 						<Badge>{m}</Badge>

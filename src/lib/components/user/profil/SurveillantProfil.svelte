@@ -1,63 +1,31 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Avatar from '$lib/components/ui/avatar/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { Snippet } from 'svelte';
-	import { Separator } from '$lib/components/ui/separator';
+	import ImageSalle from '$lib/assets/images/530476.jpg';
 	const {
-		name,
-		lastname,
-		domicile,
-		fokontany,
-		commune,
-		phone,
-		email,
-		connected,
 		children
 	}: {
-		name: string;
-		lastname: string;
-		domicile: string;
-		fokontany: string;
-		commune: string;
-		phone: string;
-		email: string;
-		connected: boolean;
 		children?: Snippet;
 	} = $props();
-
-	// svelte-ignore state_referenced_locally
-	const fallback = name[0].toUpperCase().concat(lastname[0].toUpperCase());
 </script>
 
-<Card.Root class="shadow-md">
-	<Card.Header class="flex items-start justify-between">
-		<div class="flex items-start justify-start space-x-4">
-			<Avatar.Root class="h-20 w-20 ring ring-4 ring-black/10">
-				<Avatar.Image src="http://localhost:8000/photo.png" alt="@shadcn" />
-				<Avatar.Fallback>{fallback}</Avatar.Fallback>
-			</Avatar.Root>
-			<Card.Title>
-				{name}<br />
-				{lastname}
-			</Card.Title>
-		</div>
-		<Badge class={connected ? 'bg-green-500' : 'bg-gray-800'}></Badge>
-	</Card.Header>
-	<Separator />
-	<Card.Description class="px-8">
-		{domicile}-{fokontany}-{commune}<br />
-		{email}<br />
-		{phone}
-	</Card.Description>
-	{#if children}
-		<Card.Content>
+<Card.Root class="transition-duration m-0 gap-y-0 p-0 hover:cursor-pointer">
+	<Card.Content class="m-0 p-0">
+		<!-- svelte-ignore a11y_img_redundant_alt -->
+		<img
+			src={ImageSalle}
+			alt="image salle"
+			class="transitio-all h-full w-full object-cover duration-400 hover:grayscale-75"
+		/>
+	</Card.Content>
+	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
+		{#if children}
 			{@render children()}
-		</Card.Content>
-	{/if}
-	<Card.CardFooter class="flex justify-between">
-		<div></div>
-		<Button>Voir profil</Button>
-	</Card.CardFooter>
+		{/if}
+		<div class="flex w-full items-center justify-between">
+			<div></div>
+			<Button>Voir profil</Button>
+		</div>
+	</Card.Footer>
 </Card.Root>

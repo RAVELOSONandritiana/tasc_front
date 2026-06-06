@@ -4,6 +4,7 @@
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
 	import type { PageProps } from './$types';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import { Label } from '$lib/components/ui/label';
 
 	const { data }: PageProps = $props();
 
@@ -22,22 +23,20 @@
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="p-4 flex justify-between sticky top-16 z-50 bg-sidebar">
-		<SearchInput placeholder="Rechercher une personne" bind:value={searchText}/>
+	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4">
+		<SearchInput placeholder="Rechercher une personne" bind:value={searchText} />
 		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
 	</div>
-	<div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each filteredPersonnel as p (p.phone)}
-			<SurveillantProfil
-				name={p.name}
-				lastname={p.lastname}
-				domicile={p.domicile}
-				fokontany={p.fokontany}
-				commune={p.commune}
-				phone={p.phone}
-				email={p.email}
-				connected={p.connected}
-			/>
+			<SurveillantProfil>
+				<div class="space-y-2">
+					<Label>Nom : {p.name}</Label>
+					<Label>Prenom : {p.lastname}</Label>
+					<Label>Phone : {p.phone}</Label>
+					<Label>Email : {p.email}</Label>
+				</div>
+			</SurveillantProfil>
 		{/each}
 	</div>
 </main>
