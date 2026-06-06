@@ -30,21 +30,22 @@
 	}
 </script>
 
-<Card.Root
-	class="transition-duration m-0 gap-y-0 p-0 hover:cursor-pointer"
-	onclick={onClick}
->
+<Card.Root class="transition-duration m-0 gap-y-0 p-0">
 	<Card.Content class="m-0 p-0">
 		<!-- svelte-ignore a11y_img_redundant_alt -->
-		<img src={ImageSalle} alt="image salle" class="h-full w-full object-cover transitio-all duration-400 hover:grayscale-75" />
+		<img
+			src={ImageSalle}
+			alt="image salle"
+			class="transitio-all h-full w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
+		/>
 	</Card.Content>
-	<Separator class={color}/>
+	<Separator class={color} />
 	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
 		<Label>Classe - {niveau} {classe.series?.toUpperCase()}</Label>
 		<Label>Nombre d'eleves - {classe.eleves}</Label>
 		<Label>Titulaire - {classe.titulaire}</Label>
 		<div class="flex w-full flex-row items-center justify-between">
-			<Button variant="outline">Modifier Salle</Button>
+			<Button variant="outline" onclick={onClick}>Configurer Classe</Button>
 			<Button>Modifier image</Button>
 		</div>
 	</Card.Footer>
