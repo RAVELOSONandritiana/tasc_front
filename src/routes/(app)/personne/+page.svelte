@@ -22,8 +22,8 @@
 	);
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
-	<div class="flex justify-between">
+<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+	<div class="p-4 flex justify-between sticky top-16 z-50 bg-sidebar">
 		<InputGroup.Root class="max-w-md">
 			<InputGroup.Input
 				type="search"
@@ -36,7 +36,7 @@
 		</InputGroup.Root>
 		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
 	</div>
-	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each filteredPersonnel as p (p.phone)}
 			<SurveillantProfil
 				name={p.name}

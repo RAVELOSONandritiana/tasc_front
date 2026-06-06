@@ -50,8 +50,8 @@
 	}
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
-	<div class="flex justify-between">
+<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
+	<div class="p-4 flex justify-between sticky top-16 z-50 bg-sidebar">
 		<InputGroup.Root class="max-w-md">
 			<InputGroup.Input
 				type="search"
@@ -139,7 +139,7 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each listFiltered as p (p.phone)}
 			<SurveillantProfil
 				name={p.name}

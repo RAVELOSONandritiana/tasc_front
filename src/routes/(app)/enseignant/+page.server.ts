@@ -67,6 +67,27 @@ export const load: PageServerLoad = async () => {
             email: 'hgbmichel@gmail.com',
             connected: true,
             matiere: []
+        }, {
+            name: 'RAKOTO',
+            lastname: 'Soa Beva',
+            domicile: 'Lot C125',
+            fokontany: 'Ambtatomalaza',
+            commune: 'Alasora',
+            phone: '0337329208',
+            email: 'hgbmichel@gmail.com',
+            connected: true,
+            matiere: []
+        },
+        {
+            name: 'RAKOTO',
+            lastname: 'Soa Beva',
+            domicile: 'Lot C125',
+            fokontany: 'Ambtatomalaza',
+            commune: 'Alasora',
+            phone: '0337329209',
+            email: 'hgbmichel@gmail.com',
+            connected: true,
+            matiere: []
         }
     ];
 
