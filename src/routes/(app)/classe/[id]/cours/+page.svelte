@@ -2,19 +2,15 @@
 	import { buttonVariants } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import { Label } from '$lib/components/ui/label';
-	import SearchIcon from '@lucide/svelte/icons/search';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import { matiere } from '$lib/variables/territoire';
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
-	<div class="flex justify-between sticky top-33 z-50">
-		<InputGroup.Root class="max-w-md">
-			<InputGroup.Input type="search" placeholder="Rechercher un eleve" />
-			<InputGroup.Addon>
-				<SearchIcon />
-			</InputGroup.Addon>
-		</InputGroup.Root>
+	<div class="sticky top-33 z-50 flex justify-between">
+		<SearchInput placeholder="Rechercher un cours" />
 
 		<Dialog.Root>
 			<form>
@@ -29,24 +25,16 @@
 					<div class="grid gap-4">
 						<div class="grid gap-3">
 							<Label for="coursname">Nom cours</Label>
-							<Input
-								id="coursname"
-								name="coursname"
-								type="text"
-								placeholder="Mathematique..."
-								required
-							/>
+							<NativeSelect.Root>
+								{#each matiere as m (m)}
+									<NativeSelect.Option value={m}>{m}</NativeSelect.Option>
+								{/each}
+							</NativeSelect.Root>
 						</div>
 
 						<div class="grid gap-3">
 							<Label for="coeff">Coefficient</Label>
-							<Input
-								id="coeff"
-								name="coeff"
-								type="number"
-								defaultValue={6}
-								required
-							/>
+							<Input id="coeff" name="coeff" type="number" defaultValue={6} required />
 						</div>
 					</div>
 					<Dialog.Footer>

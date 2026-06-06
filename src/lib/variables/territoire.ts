@@ -6,3 +6,11 @@ export const provincesVariable = [
     'Fianarantsoa',
     'Toliara'
 ];
+
+export const matiere = [
+    'Mathematique',
+    'Malagasy',
+    'Philosophie',
+    'Anglais',
+    'Russe'
+]
