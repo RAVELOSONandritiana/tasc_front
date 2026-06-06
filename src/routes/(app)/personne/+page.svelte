@@ -3,8 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
 	import type { PageProps } from './$types';
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
 
 	const { data }: PageProps = $props();
 
@@ -24,16 +23,7 @@
 
 <main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
 	<div class="p-4 flex justify-between sticky top-16 z-50 bg-sidebar">
-		<InputGroup.Root class="max-w-md">
-			<InputGroup.Input
-				type="search"
-				placeholder="Rechercher une personne"
-				bind:value={searchText}
-			/>
-			<InputGroup.Addon>
-				<SearchIcon />
-			</InputGroup.Addon>
-		</InputGroup.Root>
+		<SearchInput placeholder="Rechercher une personne" bind:value={searchText}/>
 		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
 	</div>
 	<div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

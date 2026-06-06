@@ -1,31 +1,25 @@
 <script lang="ts">
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { buttonVariants } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 	import type { PageProps } from './$types';
 	import Salle from '$lib/components/user/classe/Salle.svelte';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
 
 	const { data }: PageProps = $props();
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
 	<div class="flex justify-between">
-		<InputGroup.Root class="max-w-md">
-			<InputGroup.Input type="search" placeholder="Rechercher une salle" />
-			<InputGroup.Addon>
-				<SearchIcon />
-			</InputGroup.Addon>
-		</InputGroup.Root>
+		<SearchInput placeholder="Rechercher une salle" />
 		<div class="flex items-center justify-center space-x-6">
 			<div class="flex gap-3">
-				<span class="h-4 w-4 bg-purple-500 rounded-full"></span>
+				<span class="h-4 w-4 rounded-full bg-purple-500"></span>
 				<Label>Occupe</Label>
 			</div>
 			<div class="flex gap-3">
-				<span class="h-4 w-4 bg-green-600 rounded-full"></span>
+				<span class="h-4 w-4 rounded-full bg-green-600"></span>
 				<Label>Libre</Label>
 			</div>
 		</div>
@@ -68,7 +62,7 @@
 	<div class="grid grid-cols-4 gap-8 pt-8">
 		{#if data.list_salle.length > 0}
 			{#each data.list_salle as salle (salle.id)}
-				<Salle {salle}/>
+				<Salle {salle} />
 			{/each}
 		{/if}
 	</div>

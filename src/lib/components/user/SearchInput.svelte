@@ -5,7 +5,7 @@
 </script>
 
 <InputGroup.Root class="max-w-md">
-	<InputGroup.Input {...rest} type="search" placeholder="Rechercher un eleve" bind:value />
+	<InputGroup.Input {...rest} type="search" bind:value />
 	<InputGroup.Addon>
 		<SearchIcon />
 	</InputGroup.Addon>

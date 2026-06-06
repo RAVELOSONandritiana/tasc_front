@@ -7,10 +7,9 @@
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
 	import type { PageProps } from './$types';
 	import type { Personne } from '$lib/types/Personne.type';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
 
 	const { data }: PageProps = $props();
 
@@ -52,16 +51,8 @@
 
 <main class="min-h-full rounded-md bg-sidebar p-4 text-sidebar-foreground">
 	<div class="flex justify-between">
-		<InputGroup.Root class="max-w-md">
-			<InputGroup.Input
-				type="search"
-				placeholder="Rechercher un serverillant"
-				bind:value={searchText}
-			/>
-			<InputGroup.Addon>
-				<SearchIcon />
-			</InputGroup.Addon>
-		</InputGroup.Root>
+		
+		<SearchInput bind:value={searchText} placeholder="Rechercher un serverillant"/>
 		<Dialog.Root>
 			<form onsubmit={onSubmit}>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>

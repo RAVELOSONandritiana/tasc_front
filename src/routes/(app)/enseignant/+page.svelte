@@ -6,10 +6,9 @@
 	import SurveillantProfil from '$lib/components/user/profil/SurveillantProfil.svelte';
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
 	import type { Personne } from '$lib/types/Personne.type';
 	import type { PageProps } from './$types';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
 
 	const { data }: PageProps = $props();
 
@@ -51,17 +50,8 @@
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="p-4 flex justify-between sticky top-16 z-50 bg-sidebar">
-		<InputGroup.Root class="max-w-md">
-			<InputGroup.Input
-				type="search"
-				placeholder="Rechercher un professeur"
-				bind:value={searchText}
-			/>
-			<InputGroup.Addon>
-				<SearchIcon />
-			</InputGroup.Addon>
-		</InputGroup.Root>
+	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4">
+		<SearchInput placeholder="Rechercher un professeur" bind:value={searchText} />
 		<Dialog.Root>
 			<form onsubmit={onSubmit}>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
