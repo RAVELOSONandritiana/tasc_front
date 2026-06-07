@@ -2,7 +2,8 @@ export type Salle = {
     id: number;
     num: number;
     place: number;
-    used?: boolean
+    used?: boolean,
+    url?: string
 }
 
 export type Classe = {
