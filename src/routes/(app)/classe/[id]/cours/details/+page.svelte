@@ -78,8 +78,8 @@
 <main class="p-4">
 	<div class="flex items-start justify-between">
 		<div class="space-y-4">
-			<Label>Prof Titulaire: RAKOTO BE</Label>
-			<Label>Coefficient: 6</Label>
+			<Label>Prof : RAKOTO BE</Label>
+			<Label>Coefficient : 6</Label>
 		</div>
 		<div class="flex items-center justify-center space-x-4">
 			<Button onclick={() => startCourse()} disabled={coursEnd}
