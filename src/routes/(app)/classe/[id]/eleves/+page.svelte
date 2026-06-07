@@ -51,8 +51,8 @@
 		},
 		{
 			id: 6,
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
+			name: 'RAKOTO',
+			lastname: 'Zafykely',
 			status: 0,
 			age: 17,
 			absence: 19
@@ -82,6 +82,15 @@
 			}
 		];
 	}
+
+	let filteredStudent = $derived(
+		student.filter((e) =>
+			`${e.name}${e.lastname}`
+				.replaceAll(' ', '')
+				.toLowerCase()
+				.startsWith(searchText.replaceAll(' ', '').toLowerCase())
+		)
+	);
 
 	function removePersonne() {
 		setPerson = null;
@@ -186,7 +195,7 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each student as s (s.id)}
+				{#each filteredStudent as s (s.id)}
 					<Table.Row>
 						<Table.Cell>{s.name}</Table.Cell>
 						<Table.Cell>{s.lastname}</Table.Cell>
