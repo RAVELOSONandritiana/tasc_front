@@ -20,15 +20,15 @@
 	let open = $state(false);
 	let files = $state<FileList | null>(null);
 	switch (c.niveau) {
-		case '2':
+		case 0:
 			color = 'bg-orange-600';
 			niveau = '2nd';
 			break;
-		case '1':
+		case 1:
 			color = 'bg-green-600';
 			niveau = '1ere';
 			break;
-		case 't':
+		case 2:
 			color = 'bg-blue-600';
 			niveau = 'Tle';
 	}

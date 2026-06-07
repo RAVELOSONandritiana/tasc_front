@@ -29,9 +29,9 @@
 						<div class="grid gap-3">
 							<Label for="niveau">Niveau</Label>
 							<NativeSelect.Root required class="w-full">
-								<NativeSelect.Option value="2">2nd</NativeSelect.Option>
-								<NativeSelect.Option value="1">1ere</NativeSelect.Option>
-								<NativeSelect.Option value="t">Terminale</NativeSelect.Option>
+								<NativeSelect.Option value=0>2nd</NativeSelect.Option>
+								<NativeSelect.Option value=1>1ere</NativeSelect.Option>
+								<NativeSelect.Option value=2>Terminale</NativeSelect.Option>
 							</NativeSelect.Root>
 						</div>
 
