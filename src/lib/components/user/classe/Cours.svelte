@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import type { Snippet } from 'svelte';
-	import ImageSalle from '$lib/assets/images/530476.jpg';
 	const {
 		children
 	}: {
@@ -13,7 +13,7 @@
 	<Card.Content class="m-0 p-0 h-40">
 		<!-- svelte-ignore a11y_img_redundant_alt -->
 		<img
-			src={ImageSalle}
+			src={env.PUBLIC_DEFAULT_IMAGE}
 			alt="image salle"
 			class="transitio-all h-full w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
 		/>

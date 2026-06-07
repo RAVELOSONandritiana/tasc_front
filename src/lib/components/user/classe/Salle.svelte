@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import UploadFile from '../form/UploadFile.svelte';
 	import pb from '$lib/pocketbase/pocketbase';
+	import { env } from '$env/dynamic/public';
 
 	const { salle }: { salle: Salle } = $props();
 
@@ -30,8 +31,7 @@
 	<Card.Content class="m-0 p-0">
 		<!-- svelte-ignore a11y_img_redundant_alt -->
 		<img
-			src={sl.url ??
-				'http://127.0.0.1:8090/api/files/pbc_2737510288/9k76pvudya1tu4k/1333324_sj3bdcj31d.png'}
+			src={sl.url ?? env.PUBLIC_DEFAULT_IMAGE}
 			alt="image salle"
 			class="h-50 w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
 		/>

@@ -6,6 +6,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import UploadFile from '../form/UploadFile.svelte';
 	import pb from '$lib/pocketbase/pocketbase';
+	import { env } from '$env/dynamic/public';
 	const { classe: cl } = $props();
 
 	// svelte-ignore state_referenced_locally
@@ -49,8 +50,7 @@
 	<Card.Content class="m-0 p-0">
 		<!-- svelte-ignore a11y_img_redundant_alt -->
 		<img
-			src={c.url ??
-				'http://127.0.0.1:8090/api/files/pbc_2737510288/3s14kdd8yi793b5/629544_353euyexr9.jpg'}
+			src={c.url ?? env.PUBLIC_DEFAULT_IMAGE}
 			alt="image salle"
 			class="transitio-all h-50 w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
 		/>
