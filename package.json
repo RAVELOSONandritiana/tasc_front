@@ -68,6 +68,7 @@
 		"@uppy/core": "^5.2.0",
 		"@uppy/dashboard": "^5.1.1",
 		"@uppy/xhr-upload": "^5.2.0",
+		"pocketbase": "^0.27.0",
 		"zod": "^4.4.3"
 	}
 }

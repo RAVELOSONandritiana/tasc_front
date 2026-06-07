@@ -12,7 +12,7 @@
 </script>
 
 <main class="flex-1 bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex justify-between p-4">
+	<div class="sticky top-16 z-50 bg-sidebar flex justify-between p-4">
 		<SearchInput placeholder="Rechercher un cours" />
 
 		<Dialog.Root>

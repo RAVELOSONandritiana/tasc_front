@@ -1,21 +1,25 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Label } from '$lib/components/ui/label';
-	import ImageSalle from '$lib/assets/images/1342060.jpeg';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
-	const { classe } = $props();
+	import UploadFile from '../form/UploadFile.svelte';
+	import pb from '$lib/pocketbase/pocketbase';
+	const { classe: cl } = $props();
+
+	// svelte-ignore state_referenced_locally
+	let c = $state(cl);
 
 	function onClick() {
-		goto(`/classe/${classe.id}/cours`);
+		goto(`/classe/${c.id}/cours`);
 	}
 
 	let color = $state('');
 	let niveau = $state('');
-
-	// svelte-ignore state_referenced_locally
-	switch (classe.niveau) {
+	let open = $state(false);
+	let files = $state<FileList | null>(null);
+	switch (c.niveau) {
 		case '2':
 			color = 'bg-orange-600';
 			niveau = '2nd';
@@ -28,25 +32,40 @@
 			color = 'bg-blue-600';
 			niveau = 'Tle';
 	}
+
+	async function handleSubmit() {
+		if (files) {
+			const formdata = new FormData();
+			formdata.append('file', files[0]);
+			const record = await pb.collection('tasc_statics').create(formdata);
+			c.url = pb.files.getURL(record, record.file);
+			console.log(record);
+		}
+		open = false;
+	}
 </script>
 
 <Card.Root class="transition-duration m-0 gap-y-0 p-0">
 	<Card.Content class="m-0 p-0">
 		<!-- svelte-ignore a11y_img_redundant_alt -->
 		<img
-			src={ImageSalle}
+			src={c.url ??
+				'http://127.0.0.1:8090/api/files/pbc_2737510288/3s14kdd8yi793b5/629544_353euyexr9.jpg'}
 			alt="image salle"
-			class="transitio-all h-full w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
+			class="transitio-all h-50 w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
 		/>
 	</Card.Content>
 	<Separator class={color} />
 	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
-		<Label>Classe - {niveau} {classe.series?.toUpperCase()}</Label>
-		<Label>Nombre d'eleves - {classe.eleves}</Label>
-		<Label>Titulaire - {classe.titulaire}</Label>
+		<Label>Classe - {niveau} {c.series?.toUpperCase()}</Label>
+		<Label>Nombre d'eleves - {c.eleves}</Label>
+		<Label>Titulaire - {c.titulaire}</Label>
 		<div class="flex w-full flex-row items-center justify-between">
 			<Button variant="outline" onclick={onClick}>Configurer Classe</Button>
-			<Button>Modifier image</Button>
+			<Button variant="default" onclick={() => (open = true)}>Modifier image</Button>
+			<UploadFile bind:open bind:files>
+				<Button onclick={handleSubmit}>Envoyer</Button>
+			</UploadFile>
 		</div>
 	</Card.Footer>
 </Card.Root>
