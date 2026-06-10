@@ -1,11 +1,20 @@
 <script lang="ts">
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Upload } from '@lucide/svelte';
+	import type { Snippet } from 'svelte';
+
 	let {
 		open = $bindable(false),
 		header = 'uploader image',
 		children,
-		files = $bindable<FileList | null>(null)
+		files = $bindable<FileList | null>(null),
+		onSubmit
+	}: {
+		open?: boolean;
+		header?: string;
+		children?: Snippet;
+		files?: FileList | null;
+		onSubmit?: () => void;
 	} = $props();
 	let previewUrl = $state('');
 
@@ -33,9 +42,14 @@
 				<Upload size={80} />
 			{/if}
 		</label>
+
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel onclick={() => (previewUrl = '')}>Annuler</AlertDialog.Cancel>
-			{@render children?.()}
+			{#if children}
+				{@render children()}
+			{:else if onSubmit}
+				<AlertDialog.Action onclick={onSubmit}>Envoyer</AlertDialog.Action>
+			{/if}
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>

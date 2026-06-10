@@ -60,10 +60,7 @@
 				<Button size="sm" variant="default" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={() => (open = true)}>
 					Modifier image
 				</Button>
-				<UploadFile bind:open bind:files>
-					<button type="button" class={buttonVariants({ variant: 'outline', size: 'sm' })} onclick={handleSubmit}>
-						Envoyer
-					</button>
+				<UploadFile bind:open bind:files onSubmit={handleSubmit}>
 				</UploadFile>
 			</div>
 		</div>

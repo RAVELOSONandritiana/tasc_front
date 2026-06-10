@@ -61,9 +61,7 @@
 			<Button variant="outline" size="sm" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={onClick}>Configurer classe</Button>
 			<div class="flex flex-1 gap-2">
 				<Button size="sm" variant="default" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={() => (open = true)}>Modifier image</Button>
-				<UploadFile bind:open bind:files>
-					<Button size="sm" variant="secondary" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={handleSubmit}>Envoyer</Button>
-				</UploadFile>
+			<UploadFile bind:open bind:files onSubmit={handleSubmit} />
 			</div>
 		</div>
 	</div>
