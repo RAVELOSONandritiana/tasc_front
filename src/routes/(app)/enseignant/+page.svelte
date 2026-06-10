@@ -55,7 +55,7 @@
 
 	function onSubmit() {
 		if (!setPerson) return;
-		const personne: Personne = { ...setPerson, matiere };
+		const personne: Professeur = { ...setPerson, matiere };
 		listProfesseur.push({ ...personne, domicile: setPerson.domicile || '', fokontany: setPerson.fokontany || '', commune: setPerson.commune || '', connected: setPerson.connected ?? false } as Professeur);
 		setPerson = null;
 		matiere = [];
