@@ -11,55 +11,49 @@
 </script>
 
 <main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="flex justify-between p-4 top-16 sticky z-50 bg-sidebar">
+	<div class="flex flex-wrap items-center justify-between gap-4 p-4 top-16 sticky z-50 bg-sidebar">
 		<SearchInput placeholder="Rechercher une salle" />
-		<div class="flex items-center justify-center space-x-6">
-			<div class="flex gap-3">
-				<span class="h-4 w-4 rounded-full bg-purple-500"></span>
-				<Label>Occupe</Label>
+		<div class="flex items-center gap-6">
+			<div class="flex items-center gap-2">
+				<span class="h-3 w-3 rounded-full bg-purple-500"></span>
+				<Label class="text-sm">Occupée</Label>
 			</div>
-			<div class="flex gap-3">
-				<span class="h-4 w-4 rounded-full bg-green-600"></span>
-				<Label>Libre</Label>
+			<div class="flex items-center gap-2">
+				<span class="h-3 w-3 rounded-full bg-green-600"></span>
+				<Label class="text-sm">Libre</Label>
 			</div>
 		</div>
 		<Dialog.Root>
 			<form>
-				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
-					Nouveau
-				</Dialog.Trigger>
+				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', size: 'sm' })}> Nouveau </Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-[425px]">
 					<Dialog.Header>
-						<Dialog.Title>Ajouter des salles pour enseigner</Dialog.Title>
-						<Dialog.Description
-							>Ces salles pourront apres etre utiliser pour affecter des cours</Dialog.Description
-						>
+						<Dialog.Title>Ajouter une salle</Dialog.Title>
+						<Dialog.Description>Cette salle pourra ensuite être affectée à des cours.</Dialog.Description>
 					</Dialog.Header>
 
 					<div class="grid gap-4">
 						<div class="grid gap-3">
-							<Label for="num_salle">Numero de Salle</Label>
+							<Label for="num_salle">Numéro de salle</Label>
 							<Input id="num_salle" name="num_salle" type="number" placeholder="ex: 7" />
 						</div>
 
 						<div class="grid gap-3">
-							<Label for="nplace">Nombre de place</Label>
+							<Label for="nplace">Nombre de places</Label>
 							<Input id="nplace" name="nplace" type="number" placeholder="ex: 59" />
 						</div>
 					</div>
 
 					<Dialog.Footer>
-						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
-							Annuler
-						</Dialog.Close>
-						<Dialog.Close class={buttonVariants({ variant: 'default' })}>Confirmer</Dialog.Close>
+						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}> Annuler </Dialog.Close>
+						<Dialog.Close class={buttonVariants({ variant: 'default' })}> Confirmer </Dialog.Close>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>
 		</Dialog.Root>
 	</div>
 
-	<div class="grid grid-cols-3 gap-8 p-4">
+	<div class="grid grid-cols-1 gap-6 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#if data.list_salle.length > 0}
 			{#each data.list_salle as salle (salle.id)}
 				<Salle {salle} />
