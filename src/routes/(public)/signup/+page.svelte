@@ -9,40 +9,82 @@
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
 
-	function gotoSignin(event: Event) {
-		event.preventDefault();
+	let matricule = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+
+	function handleSubmit() {
+		goto('/signin');
+	}
+
+	function switchToSignin() {
 		goto('/signin');
 	}
 </script>
 
 <div class="flex min-h-screen items-center justify-center px-4">
-	<form class="w-full max-w-sm md:max-w-lg" onsubmit={gotoSignin}>
+	<form class="w-full max-w-sm md:max-w-lg" onsubmit={handleSubmit}>
 		<Card class="w-full">
 			<CardHeader>
-				<CardTitle class="mx-auto my-3 font-bold">Cree un compte sur Tasc</CardTitle>
-				<CardDescription>Veuillez entrer vos informations de compte</CardDescription>
+				<CardTitle class="mx-auto my-3 text-center text-2xl font-bold">
+					Créer un compte sur Tasc
+				</CardTitle>
+				<CardDescription class="text-center">
+					Veuillez entrer vos informations de compte
+				</CardDescription>
 			</CardHeader>
 
 			<CardContent class="space-y-4">
 				<div class="space-y-2">
 					<Label for="matricule">Matricule</Label>
-					<Input id="matricule" type="number" placeholder="09567" required minlength={6} maxlength={6}/>
+					<Input
+						id="matricule"
+						bind:value={matricule}
+						type="number"
+						inputmode="numeric"
+						placeholder="09567"
+						required
+						autocomplete="username"
+					/>
 				</div>
 
 				<div class="space-y-2">
 					<Label for="password">Mot de passe</Label>
-					<Input id="password" type="password" placeholder="********" required />
+					<Input
+						id="password"
+						bind:value={password}
+						type="password"
+						placeholder="********"
+						required
+						autocomplete="new-password"
+					/>
 				</div>
 
 				<div class="space-y-2">
-					<Label for="password">Confirmer mot de passe</Label>
-					<Input id="password" type="password" placeholder="********" required />
+					<Label for="confirm-password">Confirmer le mot de passe</Label>
+					<Input
+						id="confirm-password"
+						bind:value={confirmPassword}
+						type="password"
+						placeholder="********"
+						required
+						autocomplete="new-password"
+					/>
 				</div>
 
-				<div class="relative h-10 py-2">
-					<a href="/" class="absolute right-0 hover:underline">Aller vers connexion</a>
+				<Button class="w-full" type="submit">Créer un compte</Button>
+
+				<div class="text-center text-sm">
+					Déjà un compte ?
+					<Button
+						type="button"
+						variant="link"
+						class="h-auto p-0 text-sm"
+						onclick={switchToSignin}
+					>
+						Se connecter
+					</Button>
 				</div>
-				<Button class="w-full" type="submit">Creer compte</Button>
 			</CardContent>
 		</Card>
 	</form>

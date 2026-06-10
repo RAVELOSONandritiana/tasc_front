@@ -8,36 +8,82 @@
 	import Card from '$lib/components/ui/card/card.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
+	import Checkbox from '$lib/components/ui/checkbox/checkbox.svelte';
 
-	function gotoApp(event: Event) {
+	let matricele = $state('');
+	let password = $state('');
+
+	function handleSubmit(event: Event) {
 		event.preventDefault();
 		goto('/dashboard');
+	}
+
+	function switchToSignup() {
+		goto('/signup');
 	}
 </script>
 
 <div class="flex min-h-screen items-center justify-center px-4">
-	<form class="w-full max-w-sm md:max-w-lg" onsubmit={gotoApp}>
+	<form class="w-full max-w-sm md:max-w-lg" onsubmit={handleSubmit}>
 		<Card class="w-full">
 			<CardHeader>
-				<CardTitle class="mx-auto my-3 font-bold">Connexion à Tasc</CardTitle>
-				<CardDescription>Veuillez entrer vos informations de compte</CardDescription>
+				<CardTitle class="mx-auto my-3 text-center text-2xl font-bold">
+					Connexion à Tasc
+				</CardTitle>
+				<CardDescription class="text-center">
+					Veuillez entrer vos informations de compte
+				</CardDescription>
 			</CardHeader>
 
 			<CardContent class="space-y-4">
 				<div class="space-y-2">
 					<Label for="matricule">Matricule</Label>
-					<Input id="matricule" type="number" placeholder="059875" required />
+					<Input
+						id="matricule"
+						bind:value={matricele}
+						type="number"
+						inputmode="numeric"
+						placeholder="059875"
+						required
+						autocomplete="username"
+					/>
 				</div>
 
 				<div class="space-y-2">
 					<Label for="password">Mot de passe</Label>
-					<Input id="password" type="password" placeholder="********" required />
+					<Input
+						id="password"
+						bind:value={password}
+						type="password"
+						placeholder="********"
+						required
+						autocomplete="current-password"
+					/>
 				</div>
 
-				<div class="relative h-10 py-2">
-					<a href="/signup" class="absolute right-0 hover:underline">Create account</a>
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<Checkbox id="remember" />
+						<Label for="remember" class="text-sm">Se souvenir de moi</Label>
+					</div>
+					<Button type="button" variant="link" class="h-auto p-0 text-sm">
+						Mot de passe oublié ?
+					</Button>
 				</div>
+
 				<Button class="w-full" type="submit">Se connecter</Button>
+
+				<div class="text-center text-sm">
+					Pas encore de compte ?
+					<Button
+						type="button"
+						variant="link"
+						class="h-auto p-0 text-sm"
+						onclick={switchToSignup}
+					>
+						Créer un compte
+					</Button>
+				</div>
 			</CardContent>
 		</Card>
 	</form>
