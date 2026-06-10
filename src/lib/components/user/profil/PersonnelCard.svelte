@@ -15,14 +15,12 @@
 		personne,
 		role,
 		matieres,
-		hrefProfil = '/enseignant',
-		hrefContact = '#'
+		hrefProfil = '/enseignant'
 	}: {
 		personne: Personne;
 		role: string;
 		matieres?: string[];
 		hrefProfil?: string;
-		hrefContact?: string;
 	} = $props();
 
 	const initial = $derived(
@@ -32,8 +30,8 @@
 
 <CardUI>
 	<div class="relative h-20 w-full">
-		<div class="absolute inset-0 bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20" />
-		<div class="absolute inset-0 bg-gradient-to-b from-transparent to-sidebar/80" />
+		<div class="absolute inset-0 bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"></div>
+		<div class="absolute inset-0 bg-gradient-to-b from-transparent to-sidebar/80"></div>
 	</div>
 	<div class="px-8 pb-5 pt-0">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">
@@ -64,7 +62,7 @@
 					<Mail class="size-3.5" />
 					<span class="truncate">{personne.email || '—'}</span>
 				</span>
-				<span class="hidden h-3 w-px bg-sidebar-border sm:block" />
+				<span class="hidden h-3 w-px bg-sidebar-border sm:block"></span>
 				<span class="inline-flex items-center gap-2">
 					<Phone class="size-3.5" />
 					<span class="truncate">{personne.phone || '—'}</span>
@@ -82,31 +80,7 @@
 	</div>
 
 	<div class="border-t border-sidebar-border bg-sidebar/40 px-8 py-3 sm:flex sm:items-center sm:justify-between">
-		<div class="mb-2 sm:mb-0">
-			{#if personne.connected}
-				<span class="inline-flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
-					<span class="relative inline-flex size-2 rounded-full bg-emerald-500">
-						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-						<span class="relative inline-flex size-2 rounded-full bg-emerald-500" />
-					</span>
-					Connecté
-				</span>
-			{:else}
-				<span class="inline-flex items-center gap-2 text-xs text-muted-foreground">
-					<span class="inline-flex size-2 rounded-full bg-muted-foreground/60" />
-					Hors ligne
-				</span>
-			{/if}
-		</div>
 		<div class="flex items-center gap-2">
-			<Button
-				variant="ghost"
-				size="sm"
-				class="h-8 rounded-lg px-3 text-xs"
-				onclick={() => window.open(hrefContact)}
-			>
-				Contacter
-			</Button>
 			<Button size="sm" variant="default" class="h-8 rounded-lg px-3 text-xs" onclick={() => (window.location.href = hrefProfil)}>
 				Voir profil
 			</Button>

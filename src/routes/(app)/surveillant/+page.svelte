@@ -66,7 +66,6 @@
 					personne={p}
 					tags={[p.poste]}
 					hrefProfil={`/surveillant/${encodeURIComponent(p.phone)}`}
-					hrefContact={`mailto:${p.email}`}
 				/>
 			{/each}
 		</div>

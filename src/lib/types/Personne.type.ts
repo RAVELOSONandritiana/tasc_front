@@ -10,7 +10,6 @@ export type Personne = {
     commune: string;
     phone: string;
     email: string;
-    connected?: boolean;
 };
 
 export type Surveillant = Personne & {

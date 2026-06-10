@@ -32,7 +32,7 @@
 	<div class="p-4">
 		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
 			{#each filteredPersonnel as p (p.phone)}
-				<PersonnelCard personne={p} role="Personnel" hrefContact={`mailto:${p.email}`} />
+				<PersonnelCard personne={p} role="Personnel" />
 			{/each}
 		</div>
 	</div>

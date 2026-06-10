@@ -7,6 +7,7 @@
 	import pb from '$lib/pocketbase/pocketbase';
 
 	const { salle }: { salle: Salle } = $props();
+	// svelte-ignore state_referenced_locally
 	let sl = $state(salle);
 	let open = $state(false);
 	let files = $state<FileList | null>(null);
@@ -28,13 +29,14 @@
 
 <CardUI>
 	{#if sl.url}
+		<!-- svelte-ignore a11y_img_redundant_alt -->
 		<img
 			src={sl.url}
 			alt="image salle"
 			class="h-40 w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
 		/>
 	{:else}
-		<div class="relative h-40 w-full bg-gradient-to-br from-sidebar-accent/50 via-sidebar to-sidebar-accent/30">
+		<div class="relative h-40 w-full bg-linear-to-br from-sidebar-accent/50 via-sidebar to-sidebar-accent/30">
 			<div class="absolute inset-0 flex items-center justify-center">
 				<DoorOpen class="size-10 text-sidebar-foreground/40" />
 			</div>

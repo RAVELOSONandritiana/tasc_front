@@ -10,8 +10,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Ambohimiandra',
             commune: 'Antananarivo',
             phone: '034 00 000 00',
-            email: 'tsitoarimanjakely@gmail.com',
-            connected: true
+            email: 'tsitoarimanjakely@gmail.com'
         },
         {
             name: 'RAKOTO',
@@ -20,8 +19,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Anosy',
             commune: 'Antananarivo',
             phone: '033 73 292 05',
-            email: 'fanomezamasy.rakoto@yahoo.fr',
-            connected: true
+            email: 'fanomezamasy.rakoto@yahoo.fr'
         },
         {
             name: 'ANDRIANTENAINA',
@@ -30,8 +28,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Isoraka',
             commune: 'Antananarivo',
             phone: '032 12 345 67',
-            email: 'bako.andriantenaina@orange.mg',
-            connected: false
+            email: 'bako.andriantenaina@orange.mg'
         },
         {
             name: 'RASOAMANARIVO',
@@ -40,8 +37,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Ambatonakanga',
             commune: 'Toamasina',
             phone: '034 98 765 43',
-            email: 'niris.rasoamanarivo@gmail.com',
-            connected: true
+            email: 'niris.rasoamanarivo@gmail.com'
         },
         {
             name: 'HERINDRINA',
@@ -50,8 +46,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Analakely',
             commune: 'Antananarivo',
             phone: '033 45 678 90',
-            email: 'fitahiana.herindrina@intra.ices.gov.mg',
-            connected: false
+            email: 'fitahiana.herindrina@intra.ices.gov.mg'
         },
         {
             name: 'TOEAVINA',
@@ -60,8 +55,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Betong',
             commune: 'Farafangaana',
             phone: '032 23 456 78',
-            email: 'm.tosaina@gmail.com',
-            connected: true
+            email: 'm.tosaina@gmail.com'
         },
         {
             name: 'NOMENJANAHARY',
@@ -70,8 +64,7 @@ export const load: ServerLoad = async () => {
             fokontany: 'Ankorondrano',
             commune: 'Antananarivo',
             phone: '033 56 789 01',
-            email: 'liva.nomenjanahary@edu.mg',
-            connected: true
+            email: 'liva.nomenjanahary@edu.mg'
         }
     ];
     return {

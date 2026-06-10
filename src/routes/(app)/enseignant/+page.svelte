@@ -56,7 +56,7 @@
 	function onSubmit() {
 		if (!setPerson) return;
 		const personne: Professeur = { ...setPerson, matiere };
-		listProfesseur.push({ ...personne, domicile: setPerson.domicile || '', fokontany: setPerson.fokontany || '', commune: setPerson.commune || '', connected: setPerson.connected ?? false } as Professeur);
+		listProfesseur.push({ ...personne, domicile: setPerson.domicile || '', fokontany: setPerson.fokontany || '', commune: setPerson.commune || '' });
 		setPerson = null;
 		matiere = [];
 		currentMatiere = '';
@@ -80,7 +80,6 @@
 					role="Enseignant"
 					matieres={p.matiere}
 					hrefProfil={`/enseignant/${encodeURIComponent(p.phone)}`}
-					hrefContact={`mailto:${p.email}`}
 				/>
 			{/each}
 		</div>
