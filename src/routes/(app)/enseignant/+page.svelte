@@ -172,7 +172,7 @@
 						</div>
 						{#if matiere.length}
 							<div class="flex flex-wrap gap-2 pt-1">
-								{#each matiere as m}
+								{#each matiere as m (m)}
 									<Badge variant="secondary" class="gap-1 px-2.5 py-1">
 										{m}
 										<button type="button" class="ml-1 inline-flex rounded-md p-0.5 hover:bg-sidebar-border/60" onclick={() => removeMatiere(m)}>
