@@ -28,17 +28,14 @@
 		>
 			<input type="file" name="image" id="image" class="hidden" bind:files />
 			{#if previewUrl.length > 0}
-				<img src={previewUrl} alt="preview" class="object-cover" />
+				<img src={previewUrl} alt="preview url" class="object-cover" />
 			{:else}
 				<Upload size={80} />
 			{/if}
 		</label>
-
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel onclick={() => (previewUrl = '')}>Annuler</AlertDialog.Cancel>
-			<div class="flex items-center gap-2">
-				{@render children?.()}
-			</div>
+			<AlertDialog.Cancel onclick={() => (previewUrl = '')}>Cancel</AlertDialog.Cancel>
+			{@render children?.()}
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
