@@ -21,8 +21,6 @@ export type Cours = {
 	nom: string;
 	coefficient: number;
 	professeur?: string;
-	eleves?: EleveCours[];
-	examens?: Examen[];
 };
 
 export type EleveCours = {
@@ -40,7 +38,7 @@ export type Note = {
 	coefficient: number;
 	date: string;
 	libelle: string;
-	coursId?: string;
+	coursId: string;
 	examenId?: string;
 };
 
@@ -48,8 +46,8 @@ export type Examen = {
 	id: string;
 	nom: string;
 	date: string;
-	coursId: string;
-	coefficient: number;
+	classeId: string;
+	periode?: string;
 };
 
 export type SeanceEDT = {
@@ -65,4 +63,16 @@ export type EmploiDuTemps = {
 	id: string;
 	classeId: string;
 	seances: SeanceEDT[];
+};
+
+export type EleveDetail = {
+	id: string;
+	nom: string;
+	prenom: string;
+	dateNaissance: string;
+	classe: string;
+	serie?: string;
+	notes?: Note[];
+	moyenne?: number;
+	rang?: number;
 };

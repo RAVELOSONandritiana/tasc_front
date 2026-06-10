@@ -3,16 +3,14 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { Search } from '@lucide/svelte/icons';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { matiere } from '$lib/variables/territoire';
-	import { Pencil, Users } from '@lucide/svelte/icons';
+	import { Pencil, Users, Calendar, Plus } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import type { Cours } from '$lib/types/Materiel.type';
+	import type { Cours, Examen } from '$lib/types/Materiel.type';
 
 	let searchCours = $state('');
 
@@ -31,24 +29,33 @@
 			id: '1',
 			nom: 'Mathématiques',
 			coefficient: 6,
-			professeur: 'RANDRIANANTENAINA Tsitoarimanjakely',
-			eleves: []
+			professeur: 'RANDRIANANTENAINA Tsitoarimanjakely'
 		},
 		{
 			id: '2',
 			nom: 'Physique',
 			coefficient: 4,
-			professeur: 'ANDRIANTENAINA Bako',
-			eleves: []
+			professeur: 'ANDRIANTENAINA Bako'
 		},
 		{
 			id: '3',
 			nom: 'Français',
 			coefficient: 5,
-			professeur: 'RAKOTO Fanomezamasy',
-			eleves: []
+			professeur: 'RAKOTO Fanomezamasy'
 		}
 	]);
+
+	// Examens globaux à la classe
+	let listeExamens = $state<Examen[]>([
+		{ id: 'e1', nom: 'Examen de mi-semestre', date: '2026-02-15', classeId: '1' },
+		{ id: 'e2', nom: 'Examen de fin de semestre', date: '2026-03-20', classeId: '1' }
+	]);
+
+	let nouvelExamen = $state({
+		nom: '',
+		date: '',
+		periode: ''
+	});
 
 	const coursFiltres = $derived(
 		listeCours.filter((c) => c.nom.toLowerCase().includes(searchCours.toLowerCase()) || (c.professeur?.toLowerCase() || '').includes(searchCours.toLowerCase()))
@@ -60,8 +67,7 @@
 			id: Date.now().toString(),
 			nom: nouveaCours.nom,
 			coefficient: nouveaCours.coefficient || 1,
-			professeur: nouveaCours.professeur,
-			eleves: []
+			professeur: nouveaCours.professeur
 		};
 		listeCours = [...listeCours, nouveau];
 		nouveaCours = { nom: '', coefficient: 1, professeur: '' };
@@ -78,62 +84,86 @@
 			coursSelectionne = null;
 		}
 	}
+
+	function ajouterExamen() {
+		if (!nouvelExamen.nom || !nouvelExamen.date) return;
+		const examen: Examen = {
+			id: Date.now().toString(),
+			nom: nouvelExamen.nom,
+			date: nouvelExamen.date,
+			classeId: '1',
+			periode: nouvelExamen.periode
+		};
+		listeExamens = [...listeExamens, examen];
+		nouvelExamen = { nom: '', date: '', periode: '' };
+	}
 </script>
 
 <div class="min-h-full bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4">
-		<SearchInput placeholder="Rechercher un cours" bind:value={searchCours} />
+	<div class="sticky top-16 z-50 flex flex-col gap-4 bg-sidebar p-4">
+		<div class="flex justify-between">
+			<SearchInput placeholder="Rechercher un cours" bind:value={searchCours} />
+			<Dialog.Root>
+				<form>
+					<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
+						<Calendar class="mr-1 size-4" />
+						Nouvel examen
+					</Dialog.Trigger>
+					<Dialog.Content class="sm:max-w-[425px]">
+						<Dialog.Header>
+							<Dialog.Title>Créer un examen global</Dialog.Title>
+							<Dialog.Description>
+								Cet examen pourra être utilisé par toutes les matières pour saisir les notes
+							</Dialog.Description>
+						</Dialog.Header>
+						<div class="grid gap-4 py-4">
+							<div class="grid gap-2">
+								<Label for="examen_nom">Nom de l'examen *</Label>
+								<Input
+									id="examen_nom"
+									bind:value={nouvelExamen.nom}
+									placeholder="Examen de mi-semestre"
+								/>
+							</div>
+							<div class="grid gap-2">
+								<Label for="examen_date">Date *</Label>
+								<Input
+									id="examen_date"
+									type="date"
+									bind:value={nouvelExamen.date}
+								/>
+							</div>
+							<div class="grid gap-2">
+								<Label for="examen_periode">Période</Label>
+								<Input
+									id="examen_periode"
+									bind:value={nouvelExamen.periode}
+									placeholder="Semestre 1"
+								/>
+							</div>
+						</div>
+						<Dialog.Footer>
+							<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
+								Annuler
+							</Dialog.Close>
+							<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterExamen}>
+								Créer
+							</Dialog.Close>
+						</Dialog.Footer>
+					</Dialog.Content>
+				</form>
+			</Dialog.Root>
+		</div>
 
-		<Dialog.Root>
-			<form>
-				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
-					Nouveau cours
-				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
-					<Dialog.Header>
-						<Dialog.Title>Ajouter un cours</Dialog.Title>
-						<Dialog.Description>Créez un nouveau cours pour cette classe</Dialog.Description>
-					</Dialog.Header>
-					<div class="grid gap-4 py-4">
-						<div class="grid gap-2">
-							<Label for="nom_cours">Matière *</Label>
-							<NativeSelect.Root bind:value={nouveaCours.nom}>
-								{#each matiere as m (m)}
-									<NativeSelect.Option value={m}>{m}</NativeSelect.Option>
-								{/each}
-							</NativeSelect.Root>
-						</div>
-						<div class="grid gap-2">
-							<Label for="coeff">Coefficient *</Label>
-							<Input
-								id="coeff"
-								type="number"
-								min="1"
-								max="20"
-								bind:value={nouveaCours.coefficient}
-								placeholder="Ex: 6"
-							/>
-						</div>
-						<div class="grid gap-2">
-							<Label for="prof">Professeur</Label>
-							<Input
-								id="prof"
-								bind:value={nouveaCours.professeur}
-								placeholder="Nom du professeur"
-							/>
-						</div>
-					</div>
-					<Dialog.Footer>
-						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
-							Annuler
-						</Dialog.Close>
-						<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterCours}>
-							Créer
-						</Dialog.Close>
-					</Dialog.Footer>
-				</Dialog.Content>
-			</form>
-		</Dialog.Root>
+		{#if listeExamens.length > 0}
+			<div class="flex flex-wrap gap-2">
+				{#each listeExamens as examen (examen.id)}
+					<span class="rounded-md bg-sidebar-accent/30 px-3 py-1 text-sm">
+						{examen.nom} - {examen.date}
+					</span>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
@@ -165,22 +195,32 @@
 									<span class="ml-1 font-medium truncate">{cours.professeur}</span>
 								</p>
 							{/if}
-							<p class="text-sm">
-								<span class="text-muted-foreground">Élèves :</span>
-								<span class="ml-1 font-medium">{cours.eleves?.length || 0}</span>
-							</p>
 						</div>
 					</div>
-					<div class="mt-4">
+					<div class="mt-4 flex flex-col gap-2">
 						<Button
 							size="sm"
 							variant="secondary"
 							class="w-full"
-							onclick={() => goto(`/classe/${$page.params.id}/cours/details`)}
+							onclick={() => goto(`/classe/${$page.params.id}/cours/${cours.id}`)}
 						>
 							<Users class="mr-1 size-3" />
-							Détails
+							Gérer les notes
 						</Button>
+						{#if listeExamens.length > 0}
+							<select
+								class="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+								onchange={(e) => {
+									const examenId = e.currentTarget.value;
+									if (examenId) goto(`/classe/${$page.params.id}/cours/${cours.id}?examen=${examenId}`);
+								}}
+							>
+								<option value="">Sélectionner un examen...</option>
+								{#each listeExamens as examen (examen.id)}
+									<option value={examen.id}>{examen.nom}</option>
+								{/each}
+							</select>
+						{/if}
 					</div>
 				</div>
 			</CardUI>
@@ -188,14 +228,14 @@
 	</div>
 </div>
 
-<AlertDialog.Root open={coursSelectionne !== null}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Modifier le coefficient</AlertDialog.Title>
-			<AlertDialog.Description>
+<Dialog.Root open={coursSelectionne !== null}>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Modifier le coefficient</Dialog.Title>
+			<Dialog.Description>
 				Changez le coefficient du cours {coursSelectionne?.nom}
-			</AlertDialog.Description>
-		</AlertDialog.Header>
+			</Dialog.Description>
+		</Dialog.Header>
 		<div class="py-4">
 			<Label for="new_coeff">Nouveau coefficient</Label>
 			<Input
@@ -206,13 +246,13 @@
 				bind:value={nouveauCoeff}
 			/>
 		</div>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel onclick={() => (coursSelectionne = null)}>
+		<Dialog.Footer>
+			<Dialog.Close onclick={() => (coursSelectionne = null)}>
 				Annuler
-			</AlertDialog.Cancel>
-			<AlertDialog.Action onclick={sauvegarderCoefficient}>
+			</Dialog.Close>
+			<Dialog.Close onclick={sauvegarderCoefficient}>
 				Sauvegarder
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+			</Dialog.Close>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
