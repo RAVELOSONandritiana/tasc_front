@@ -137,41 +137,43 @@
 	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each coursFiltres as cours (cours.id)}
 			<CardUI>
-				<div class="p-4">
-					<div class="flex items-start justify-between">
-						<h3 class="text-lg font-semibold">{cours.nom}</h3>
-						<div class="flex gap-1">
-							<Button
-								size="icon"
-								variant="ghost"
-								class="h-7 w-7"
-								onclick={() => modifierCoefficient(cours)}
-							>
-								<Pencil class="size-4" />
-							</Button>
+				<div class="flex h-full flex-col p-4">
+					<div class="flex-1">
+						<div class="flex items-start justify-between">
+							<h3 class="text-lg font-semibold">{cours.nom}</h3>
+							<div class="flex gap-1">
+								<Button
+									size="icon"
+									variant="ghost"
+									class="h-7 w-7"
+									onclick={() => modifierCoefficient(cours)}
+								>
+									<Pencil class="size-4" />
+								</Button>
+							</div>
+						</div>
+						<div class="mt-3 space-y-2">
+							<p class="text-sm">
+								<span class="text-muted-foreground">Coefficient :</span>
+								<span class="ml-1 font-medium">{cours.coefficient}</span>
+							</p>
+							{#if cours.professeur}
+								<p class="text-sm">
+									<span class="text-muted-foreground">Professeur :</span>
+									<span class="ml-1 font-medium truncate">{cours.professeur}</span>
+								</p>
+							{/if}
+							<p class="text-sm">
+								<span class="text-muted-foreground">Élèves :</span>
+								<span class="ml-1 font-medium">{cours.eleves?.length || 0}</span>
+							</p>
 						</div>
 					</div>
-					<div class="mt-3 space-y-2">
-						<p class="text-sm">
-							<span class="text-muted-foreground">Coefficient :</span>
-							<span class="ml-1 font-medium">{cours.coefficient}</span>
-						</p>
-						{#if cours.professeur}
-							<p class="text-sm">
-								<span class="text-muted-foreground">Professeur :</span>
-								<span class="ml-1 font-medium">{cours.professeur}</span>
-							</p>
-						{/if}
-						<p class="text-sm">
-							<span class="text-muted-foreground">Élèves :</span>
-							<span class="ml-1 font-medium">{cours.eleves?.length || 0}</span>
-						</p>
-					</div>
-					<div class="mt-4 flex gap-2">
+					<div class="mt-4">
 						<Button
 							size="sm"
 							variant="secondary"
-							class="flex-1"
+							class="w-full"
 							onclick={() => {
 								/* Voir les élèves du cours */
 							}}

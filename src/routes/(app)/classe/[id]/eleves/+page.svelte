@@ -3,9 +3,11 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { Search } from '@lucide/svelte/icons';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
-	import CardUI from '$lib/components/ui/card-ui.svelte';
+	import * as Table from '$lib/components/ui/table/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import XCircleIcon from '@lucide/svelte/icons/x-circle';
 	import type { EleveCours } from '$lib/types/Materiel.type';
@@ -122,40 +124,35 @@
 			Tous les élèves inscrits seront automatiquement affectés aux examens de chaque cours.
 		</p>
 
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-			{#each elevesFiltres as eleve (eleve.id)}
-				<CardUI>
-					<div class="p-4">
-						<div class="flex items-center justify-between">
-							<div>
-								<h3 class="font-semibold">{eleve.nom} {eleve.prenom}</h3>
-								<p class="text-xs text-muted-foreground">
-									{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : 'Date N/A'}
-								</p>
-							</div>
-							<button
-								type="button"
-								class="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors {eleve.actif ? 'bg-emerald-500/20 text-emerald-600' : 'bg-muted text-muted-foreground'}"
-								onclick={() => toggleActif(eleve.id)}
-							>
-								{#if eleve.actif}
-									<CheckCircleIcon class="size-3" />
-									Actif
-								{:else}
-									<XCircleIcon class="size-3" />
-									Inactif
-								{/if}
-							</button>
-						</div>
-						<div class="mt-3">
-							<p class="text-xs">
-								<span class="text-muted-foreground">Notes :</span>
-								<span class="ml-1 font-medium">{eleve.notes?.length || 0}</span>
-							</p>
-						</div>
-					</div>
-				</CardUI>
-			{/each}
+		<div class="overflow-x-auto rounded-md border">
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head class="w-12">Actif</Table.Head>
+						<Table.Head>Nom</Table.Head>
+						<Table.Head>Prénom</Table.Head>
+						<Table.Head>Date naissance</Table.Head>
+						<Table.Head class="text-center">Notes</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each elevesFiltres as eleve (eleve.id)}
+						<Table.Row>
+							<Table.Cell>
+								<Checkbox checked={eleve.actif} onchange={() => toggleActif(eleve.id)} />
+							</Table.Cell>
+							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
+							<Table.Cell>{eleve.prenom}</Table.Cell>
+							<Table.Cell>
+								{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.notes?.length || 0}
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
 		</div>
 	</div>
 </div>
