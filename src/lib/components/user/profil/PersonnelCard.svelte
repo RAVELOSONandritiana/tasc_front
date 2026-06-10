@@ -9,8 +9,6 @@
 	import AvatarImage from '$lib/components/ui/avatar/avatar-image.svelte';
 	import { env } from '$env/dynamic/public';
 
-	type Professeur = Personne & { matiere?: string[] };
-
 	let {
 		personne,
 		role,
@@ -30,8 +28,8 @@
 
 <CardUI>
 	<div class="relative h-20 w-full">
-		<div class="absolute inset-0 bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"></div>
-		<div class="absolute inset-0 bg-gradient-to-b from-transparent to-sidebar/80"></div>
+		<div class="absolute inset-0 bg-linear-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"></div>
+		<div class="absolute inset-0 bg-linear-to-b from-transparent to-sidebar/80"></div>
 	</div>
 	<div class="px-8 pb-5 pt-0">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">
@@ -57,12 +55,11 @@
 		</div>
 
 		<div class="space-y-3">
-			<div class="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
+			<div class="flex flex-col gap-2 text-xs text-muted-foreground">
 				<span class="inline-flex items-center gap-2">
 					<Mail class="size-3.5" />
 					<span class="truncate">{personne.email || '—'}</span>
 				</span>
-				<span class="hidden h-3 w-px bg-sidebar-border sm:block"></span>
 				<span class="inline-flex items-center gap-2">
 					<Phone class="size-3.5" />
 					<span class="truncate">{personne.phone || '—'}</span>
@@ -71,7 +68,7 @@
 
 			{#if matieres && matieres.length}
 				<div class="flex flex-wrap gap-2">
-					{#each matieres as m}
+					{#each matieres as m (m)}
 						<Badge variant="secondary" class="rounded-md px-2.5 py-1 text-xs">{m}</Badge>
 					{/each}
 				</div>

@@ -57,12 +57,11 @@
 		</div>
 
 		<div class="space-y-3">
-			<div class="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
+			<div class="flex flex-col gap-2 text-xs text-muted-foreground">
 				<span class="inline-flex items-center gap-2">
 					<Mail class="size-3.5" />
 					<span class="truncate">{personne.email || '—'}</span>
 				</span>
-				<span class="hidden h-3 w-px bg-sidebar-border sm:block"></span>
 				<span class="inline-flex items-center gap-2">
 					<Phone class="size-3.5" />
 					<span class="truncate">{personne.phone || '—'}</span>

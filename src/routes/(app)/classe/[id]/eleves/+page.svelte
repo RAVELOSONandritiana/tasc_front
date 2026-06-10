@@ -2,181 +2,115 @@
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import { Label } from '$lib/components/ui/label';
-	import FindPersonne from '$lib/components/user/profil/FindPersonne.svelte';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import * as Table from '$lib/components/ui/table/index.js';
+	import { Search } from '@lucide/svelte/icons';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import CardUI from '$lib/components/ui/card-ui.svelte';
+	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+	import XCircleIcon from '@lucide/svelte/icons/x-circle';
+	import type { EleveCours } from '$lib/types/Materiel.type';
 
-	const student = [
+	let searchEleve = $state('');
+
+	let elevesInscrits = $state<EleveCours[]>([
 		{
-			id: 1,
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			status: 0,
-			age: 17,
-			absence: 19
+			id: '1',
+			nom: 'RANDRIANANTENAINA',
+			prenom: 'Tsitoarimanjakely',
+			dateNaissance: '2008-05-15',
+			actif: true,
+			notes: []
 		},
 		{
-			id: 2,
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			status: 0,
-			age: 17,
-			absence: 19
+			id: '2',
+			nom: 'RAKOTO',
+			prenom: 'Fanomezamasy',
+			dateNaissance: '2008-03-22',
+			actif: true,
+			notes: []
 		},
 		{
-			id: 3,
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			status: 0,
-			age: 17,
-			absence: 19
-		},
-		{
-			id: 4,
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			status: 0,
-			age: 17,
-			absence: 19
-		},
-		{
-			id: 5,
-			name: 'RAVELOSON',
-			lastname: 'Andritiana Michel',
-			status: 0,
-			age: 17,
-			absence: 19
-		},
-		{
-			id: 6,
-			name: 'RAKOTO',
-			lastname: 'Zafykely',
-			status: 0,
-			age: 17,
-			absence: 19
+			id: '3',
+			nom: 'ANDRIANTENAINA',
+			prenom: 'Bako',
+			dateNaissance: '2008-07-10',
+			actif: false,
+			notes: []
 		}
-	];
+	]);
 
-	type EleveInformation = { id: number; name: string; lastname: string };
-	let searchText = $state('');
+	let nouvelEleve = $state({
+		nom: '',
+		prenom: '',
+		dateNaissance: ''
+	});
 
-	let searchPersonnes: number = $state(0);
-
-	let personnesFind = $state<EleveInformation[] | null>(null);
-
-	let setPerson = $state<EleveInformation | null>(null);
-
-	function findPersonne() {
-		personnesFind = [
-			{
-				id: 10,
-				name: 'RABE',
-				lastname: 'kely'
-			},
-			{
-				id: 15,
-				name: 'Rakoto',
-				lastname: 'Balita be'
-			}
-		];
-	}
-
-	let filteredStudent = $derived(
-		student.filter((e) =>
-			`${e.name}${e.lastname}`
-				.replaceAll(' ', '')
-				.toLowerCase()
-				.startsWith(searchText.replaceAll(' ', '').toLowerCase())
+	const elevesFiltres = $derived(
+		elevesInscrits.filter(
+			(e) =>
+				`${e.nom}${e.prenom}`
+					.toLowerCase()
+					.includes(searchEleve.toLowerCase())
 		)
 	);
 
-	function removePersonne() {
-		setPerson = null;
+	function ajouterEleve() {
+		if (!nouvelEleve.nom || !nouvelEleve.prenom || !nouvelEleve.dateNaissance) return;
+		const nouveau: EleveCours = {
+			id: Date.now().toString(),
+			nom: nouvelEleve.nom,
+			prenom: nouvelEleve.prenom,
+			dateNaissance: nouvelEleve.dateNaissance,
+			actif: true,
+			notes: []
+		};
+		elevesInscrits = [...elevesInscrits, nouveau];
+		nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
 	}
 
-	function setPersonne(p: EleveInformation) {
-		setPerson = p;
+	function toggleActif(eleveId: string) {
+		const eleve = elevesInscrits.find((e) => e.id === eleveId);
+		if (eleve) {
+			eleve.actif = !eleve.actif;
+		}
 	}
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-29 z-50 flex justify-between bg-sidebar p-4">
-		<InputGroup.Root class="max-w-md">
-			<InputGroup.Input type="search" placeholder="Rechercher un eleve" bind:value={searchText} />
-			<InputGroup.Addon>
-				<SearchIcon />
-			</InputGroup.Addon>
-		</InputGroup.Root>
+<div class="min-h-full bg-sidebar text-sidebar-foreground">
+	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4">
+		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
 		<Dialog.Root>
 			<form>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
-					Nouveau
+					Nouvel élève
 				</Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-[425px]">
 					<Dialog.Header>
-						<Dialog.Title>Ajouter un nouveau professeur</Dialog.Title>
-						<Dialog.Description>Affecter des roles a vos professeurs apres</Dialog.Description>
+						<Dialog.Title>Ajouter un élève</Dialog.Title>
+						<Dialog.Description>L'élève sera automatiquement inscrit à tous les cours</Dialog.Description>
 					</Dialog.Header>
-					<div class="grid gap-4">
-						<div class="grid gap-3">
-							<Label for="numero">Numero parents</Label>
-							<Input
-								id="numero"
-								name="numero"
-								type="number"
-								placeholder="entrer l'une des numeros des parents"
-								bind:value={searchPersonnes}
-								required
-							/>
-							{#if personnesFind == null}
-								<Button onclick={findPersonne}>Chercher</Button>
-							{:else if personnesFind.length > 0}
-								<div class="space-y-2">
-									{#if setPerson == null}
-										{#each personnesFind as fp (fp.id)}
-											<button class="w-full" onclick={() => setPersonne(fp)}>
-												<FindPersonne name={fp.name} lastname={fp.lastname} />
-											</button>
-										{/each}
-									{/if}
-
-									{#if setPerson != null}
-										<div class="space-y-4 rounded-md border p-4">
-											<div class="grid gap-3">
-												<Label for="name">Nom</Label>
-												<Input
-													id="name"
-													name="name"
-													required
-													defaultValue={setPerson.name}
-													disabled
-												/>
-											</div>
-											<div class="grid gap-3">
-												<Label for="lastname">Prenom</Label>
-												<Input
-													id="lastname"
-													name="lastname"
-													required
-													defaultValue={setPerson.lastname}
-													disabled
-												/>
-											</div>
-											<Button onclick={removePersonne}>Supprimer personne</Button>
-										</div>
-									{/if}
-								</div>
-							{/if}
+					<div class="grid gap-4 py-4">
+						<div class="grid gap-2">
+							<Label for="nom_eleve">Nom *</Label>
+							<Input id="nom_eleve" bind:value={nouvelEleve.nom} placeholder="Nom de l'élève" required />
+						</div>
+						<div class="grid gap-2">
+							<Label for="prenom_eleve">Prénom *</Label>
+							<Input id="prenom_eleve" bind:value={nouvelEleve.prenom} placeholder="Prénom de l'élève" required />
+						</div>
+						<div class="grid gap-2">
+							<Label for="date_naiss">Date de naissance *</Label>
+							<Input id="date_naiss" type="date" bind:value={nouvelEleve.dateNaissance} required />
 						</div>
 					</div>
 					<Dialog.Footer>
 						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
 							Annuler
 						</Dialog.Close>
-						<Dialog.Close class={buttonVariants({ variant: 'default' })}>Confirmer</Dialog.Close>
+						<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterEleve}>
+							Ajouter
+						</Dialog.Close>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>
@@ -184,27 +118,44 @@
 	</div>
 
 	<div class="p-4">
-		<Table.Root>
-			<Table.Header>
-				<Table.Row>
-					<Table.Head>Nom</Table.Head>
-					<Table.Head>Prenom</Table.Head>
-					<Table.Head>Age</Table.Head>
-					<Table.Head>Absence</Table.Head>
-					<Table.Head>Status</Table.Head>
-				</Table.Row>
-			</Table.Header>
-			<Table.Body>
-				{#each filteredStudent as s (s.id)}
-					<Table.Row>
-						<Table.Cell>{s.name}</Table.Cell>
-						<Table.Cell>{s.lastname}</Table.Cell>
-						<Table.Cell>{s.age}</Table.Cell>
-						<Table.Cell>{s.absence}</Table.Cell>
-						<Table.Cell>{s.status}</Table.Cell>
-					</Table.Row>
-				{/each}
-			</Table.Body>
-		</Table.Root>
+		<p class="mb-4 text-sm text-muted-foreground">
+			Tous les élèves inscrits seront automatiquement affectés aux examens de chaque cours.
+		</p>
+
+		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+			{#each elevesFiltres as eleve (eleve.id)}
+				<CardUI>
+					<div class="p-4">
+						<div class="flex items-center justify-between">
+							<div>
+								<h3 class="font-semibold">{eleve.nom} {eleve.prenom}</h3>
+								<p class="text-xs text-muted-foreground">
+									{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : 'Date N/A'}
+								</p>
+							</div>
+							<button
+								type="button"
+								class="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors {eleve.actif ? 'bg-emerald-500/20 text-emerald-600' : 'bg-muted text-muted-foreground'}"
+								onclick={() => toggleActif(eleve.id)}
+							>
+								{#if eleve.actif}
+									<CheckCircleIcon class="size-3" />
+									Actif
+								{:else}
+									<XCircleIcon class="size-3" />
+									Inactif
+								{/if}
+							</button>
+						</div>
+						<div class="mt-3">
+							<p class="text-xs">
+								<span class="text-muted-foreground">Notes :</span>
+								<span class="ml-1 font-medium">{eleve.notes?.length || 0}</span>
+							</p>
+						</div>
+					</div>
+				</CardUI>
+			{/each}
+		</div>
 	</div>
-</main>
+</div>

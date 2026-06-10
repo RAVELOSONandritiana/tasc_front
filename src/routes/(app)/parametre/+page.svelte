@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
-	import * as Alert from '$lib/components/ui/alert/index.js';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
@@ -115,13 +114,15 @@
 			<SearchInput bind:value={searchCompte} placeholder="Rechercher un compte" class="w-64" />
 		</div>
 
-		<Alert.Root variant="default" class="border-blue-500 bg-blue-500/10">
-			<AlertCircleIcon class="text-blue-500" />
-			<Alert.Title>Comptes en attente de validation</Alert.Title>
-			<Alert.Description>
+		<div class="rounded-md border border-blue-500 bg-blue-500/10 p-4">
+			<div class="flex items-center gap-2">
+				<AlertCircleIcon class="text-blue-500" />
+				<span class="font-semibold">Comptes en attente de validation</span>
+			</div>
+			<p class="mt-1 text-sm">
 				Les comptes en attente ne sont pas actifs. Vous devez les valider pour qu'ils puissent accéder à la plateforme.
-			</Alert.Description>
-		</Alert.Root>
+			</p>
+		</div>
 
 		<div class="overflow-x-auto rounded-md border">
 			<Table.Root>
@@ -195,13 +196,15 @@
 				<AlertDialog.Content>
 					<AlertDialog.Header>
 						<AlertDialog.Title>Nouvelle année scolaire</AlertDialog.Title>
-						<Alert.Root variant="destructive" class="mt-2">
-							<AlertCircleIcon />
-							<Alert.Title>L'ancienne année scolaire sera désactivée</Alert.Title>
-							<Alert.Description>
+						<div class="rounded-md border border-destructive bg-destructive/10 p-3">
+							<div class="flex items-center gap-2">
+								<AlertCircleIcon />
+								<span class="font-semibold">L'ancienne année scolaire sera désactivée</span>
+							</div>
+							<p class="mt-1 text-xs">
 								La création d'une nouvelle année scolaire effacera les classes et élèves existants.
-							</Alert.Description>
-						</Alert.Root>
+							</p>
+						</div>
 						<div class="mt-4 grid gap-3">
 							<Label>Nom de l'année scolaire</Label>
 							<Input placeholder="Ex: 2026-2027" bind:value={nouvelleAnnee} />
