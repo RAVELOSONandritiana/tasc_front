@@ -4,82 +4,127 @@ import type { PageServerLoad } from "./$types";
 export const load: PageServerLoad = async () => {
     const personnes: Personne[] = [
         {
-            name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329204',
-            email: 'hgbmichel@gmail.com',
+            name: 'RANDRIANANTENAINA',
+            lastname: 'Tsitoarimanjakely',
+            domicile: 'Lot I125 Ambohimiandra',
+            fokontany: 'Ambohimiandra',
+            commune: 'Antananarivo',
+            phone: '034 00 000 00',
+            email: 'tsitoarimanjakely@gmail.com',
+            connected: true
         },
         {
             name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329205',
-            email: 'hgbmichel@gmail.com',
+            lastname: 'Fanomezamasy',
+            domicile: 'Lot C125 Anosy',
+            fokontany: 'Anosy',
+            commune: 'Antananarivo',
+            phone: '033 73 292 05',
+            email: 'fanomezamasy.rakoto@yahoo.fr',
+            connected: false
         },
         {
-            name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329206',
-            email: 'hgbmichel@gmail.com',
+            name: 'ANDRIANTENAINA',
+            lastname: 'Bako',
+            domicile: 'Immeuble L256 Isoraka',
+            fokontany: 'Isoraka',
+            commune: 'Antananarivo',
+            phone: '032 12 345 67',
+            email: 'bako.andriantenaina@orange.mg',
+            connected: true
         },
         {
-            name: 'RAVELOSON',
-            lastname: 'Andritiana Michel',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329289',
-            email: 'hgbmichel@gmail.com',
+            name: 'RASOAMANARIVO',
+            lastname: 'Niris',
+            domicile: 'Lot M78 Ambatonakanga',
+            fokontany: 'Ambatonakanga',
+            commune: 'Toamasina',
+            phone: '034 98 765 43',
+            email: 'niris.rasoamanarivo@gmail.com',
+            connected: false
+        },
+        {
+            name: 'HERINDRINA',
+            lastname: 'Fitahiana',
+            domicile: 'Rue P345 Analakely',
+            fokontany: 'Analakely',
+            commune: 'Antananarivo',
+            phone: '033 45 678 90',
+            email: 'fitahiana.herindrina@intra.ices.gov.mg',
+            connected: true
+        },
+        {
+            name: 'TOEAVINA',
+            lastname: 'Mamy',
+            domicile: 'Lot V12 Betong',
+            fokontany: 'Betong',
+            commune: 'Farafangaana',
+            phone: '032 23 456 78',
+            email: 'm.tosaina@gmail.com',
+            connected: false
+        },
+        {
+            name: 'NOMENJANAHARY',
+            lastname: 'Liva',
+            domicile: 'Immeuble D45 Ankorondrano',
+            fokontany: 'Ankorondrano',
+            commune: 'Antananarivo',
+            phone: '033 56 789 01',
+            email: 'liva.nomenjanahary@edu.mg',
+            connected: true
         }
     ];
 
     const listProfesseur: Professeur[] = [
         {
-            name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329206',
-            email: 'hgbmichel@gmail.com',
-            matiere: []
+            name: 'RANDRIANANTENAINA',
+            lastname: 'Tsitoarimanjakely',
+            domicile: 'Lot I125 Ambohimiandra',
+            fokontany: 'Ambohimiandra',
+            commune: 'Antananarivo',
+            phone: '034 00 000 00',
+            email: 'tsitoarimanjakely@gmail.com',
+            matiere: ['Mathématiques', 'Physique']
         },
         {
             name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329207',
-            email: 'hgbmichel@gmail.com',
-            matiere: []
-        }, {
-            name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329208',
-            email: 'hgbmichel@gmail.com',
-            matiere: []
+            lastname: 'Fanomezamasy',
+            domicile: 'Lot C125 Anosy',
+            fokontany: 'Anosy',
+            commune: 'Antananarivo',
+            phone: '033 73 292 05',
+            email: 'fanomezamasy.rakoto@yahoo.fr',
+            matiere: ['Français', 'Philosophie', 'Lettres']
         },
         {
-            name: 'RAKOTO',
-            lastname: 'Soa Beva',
-            domicile: 'Lot C125',
-            fokontany: 'Ambtatomalaza',
-            commune: 'Alasora',
-            phone: '0337329209',
-            email: 'hgbmichel@gmail.com',
-            matiere: []
+            name: 'ANDRIANTENAINA',
+            lastname: 'Bako',
+            domicile: 'Immeuble L256 Isoraka',
+            fokontany: 'Isoraka',
+            commune: 'Antananarivo',
+            phone: '032 12 345 67',
+            email: 'bako.andriantenaina@orange.mg',
+            matiere: ['SVT', 'Chimie']
+        },
+        {
+            name: 'RASOAMANARIVO',
+            lastname: 'Niris',
+            domicile: 'Lot M78 Ambatonakanga',
+            fokontany: 'Ambatonakanga',
+            commune: 'Toamasina',
+            phone: '034 98 765 43',
+            email: 'niris.rasoamanarivo@gmail.com',
+            matiere: ['Histoire-Géographie', 'ECM']
+        },
+        {
+            name: 'HERINDRINA',
+            lastname: 'Fitahiana',
+            domicile: 'Rue P345 Analakely',
+            fokontany: 'Analakely',
+            commune: 'Antananarivo',
+            phone: '033 45 678 90',
+            email: 'fitahiana.herindrina@intra.ices.gov.mg',
+            matiere: ['Informatique', 'Mathématiques']
         }
     ];
 

@@ -60,7 +60,7 @@
 		setPerson = null;
 		matiere = [];
 		currentMatiere = '';
-		close();
+		open = false;
 	}
 
 	let open = $state(false);

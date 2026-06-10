@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Salle } from '$lib/types/Materiel.type';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
-	import { Label } from '$lib/components/ui/label';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/ui/button';
 	import { DoorOpen, Users } from '@lucide/svelte/icons';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import pb from '$lib/pocketbase/pocketbase';
