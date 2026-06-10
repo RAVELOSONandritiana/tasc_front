@@ -57,12 +57,14 @@
 		<Label>Classe - {niveau} {c.series?.toUpperCase()}</Label>
 		<Label>Nombre d'eleves - {c.eleves}</Label>
 		<Label>Titulaire - {c.titulaire}</Label>
-		<div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
-			<Button variant="outline" size="sm" class="h-8 rounded-lg px-3 text-xs" onclick={onClick}>Configurer classe</Button>
-			<Button size="sm" variant="default" class="h-8 rounded-lg px-3 text-xs" onclick={() => (open = true)}>Modifier image</Button>
-			<UploadFile bind:open bind:files>
-				<Button size="sm" variant="secondary" class="h-8 rounded-lg px-3 text-xs" onclick={handleSubmit}>Envoyer</Button>
-			</UploadFile>
+	<div class="flex w-full items-center justify-between gap-2">
+			<Button variant="outline" size="sm" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={onClick}>Configurer classe</Button>
+			<div class="flex flex-1 gap-2">
+				<Button size="sm" variant="default" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={() => (open = true)}>Modifier image</Button>
+				<UploadFile bind:open bind:files>
+					<Button size="sm" variant="secondary" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={handleSubmit}>Envoyer</Button>
+				</UploadFile>
+			</div>
 		</div>
 	</div>
 </CardUI>

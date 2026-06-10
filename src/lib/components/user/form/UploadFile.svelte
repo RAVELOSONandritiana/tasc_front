@@ -34,7 +34,7 @@
 			{/if}
 		</label>
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel onclick={() => (previewUrl = '')}>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Cancel onclick={() => (previewUrl = '')}>Annuler</AlertDialog.Cancel>
 			{@render children?.()}
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

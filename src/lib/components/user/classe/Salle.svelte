@@ -54,16 +54,18 @@
 				{statutLabel}
 			</span>
 		</div>
-		<div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-			<Button variant="outline" size="sm" class="h-8 rounded-lg px-3 text-xs"> Modifier salle </Button>
-			<Button size="sm" variant="default" class="h-8 rounded-lg px-3 text-xs" onclick={() => (open = true)}>
-				Modifier image
-			</Button>
-			<UploadFile bind:open bind:files>
-				<button type="button" class={buttonVariants({ variant: 'outline', size: 'sm' })} onclick={handleSubmit}>
-					Envoyer
-				</button>
-			</UploadFile>
+		<div class="flex w-full items-center justify-between gap-2">
+			<Button variant="outline" size="sm" class="h-8 flex-1 rounded-lg px-3 text-xs"> Modifier salle </Button>
+			<div class="flex flex-1 gap-2">
+				<Button size="sm" variant="default" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={() => (open = true)}>
+					Modifier image
+				</Button>
+				<UploadFile bind:open bind:files>
+					<button type="button" class={buttonVariants({ variant: 'outline', size: 'sm' })} onclick={handleSubmit}>
+						Envoyer
+					</button>
+				</UploadFile>
+			</div>
 		</div>
 	</div>
 </CardUI>
