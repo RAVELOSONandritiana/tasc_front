@@ -2,7 +2,6 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { Snippet } from 'svelte';
-	import { env } from '$env/dynamic/public';
 	const {
 		children
 	}: {
@@ -10,22 +9,32 @@
 	} = $props();
 </script>
 
-<Card.Root class="transition-duration m-0 gap-y-0 p-0">
-	<Card.Content class="m-0 h-40 p-0">
-		<!-- svelte-ignore a11y_img_redundant_alt -->
-		<img
-			src={env.PUBLIC_DEFAULT_IMAGE_PERSONNE}
-			alt="image salle"
-			class="transitio-all h-full w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
-		/>
-	</Card.Content>
-	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
-		{#if children}
-			{@render children()}
-		{/if}
-		<div class="flex w-full items-center justify-between">
-			<div></div>
-			<Button>Voir profil</Button>
+<Card.Root class="overflow-hidden rounded-2xl border border-sidebar-border bg-card/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+	<Card.Content class="m-0 p-0">
+		<div class="relative h-20 w-full bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20 bg-[url('/header-pattern.svg')] bg-cover bg-center">
+			<div class="absolute inset-0 bg-gradient-to-b from-transparent to-sidebar/80" />
 		</div>
-	</Card.Footer>
+		<div class="px-8 pb-5 pt-0">
+			<div class="relative -mt-8 flex items-end gap-4">
+				<span class="inline-flex size-12 items-center justify-center rounded-xl border-[3px] border-sidebar bg-sidebar-primary/10 text-base font-semibold text-sidebar-primary shadow-md">
+					{children}
+				</span>
+				<div class="mb-1 min-w-0">
+					<slot />
+				</div>
+			</div>
+		</div>
+	</Card.Content>
+
+	<div class="border-t border-sidebar-border bg-sidebar/40 px-8 py-3 sm:flex sm:items-center sm:justify-between">
+		<div class="mb-2 sm:mb-0">
+			<span class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+				<span class="relative inline-flex size-2 rounded-full bg-muted-foreground/60" />
+				Profil local
+			</span>
+		</div>
+		<div class="flex items-center gap-2">
+			<Button variant="ghost" size="sm" class="h-8 rounded-lg px-3 text-xs">Voir profil</Button>
+		</div>
+	</div>
 </Card.Root>

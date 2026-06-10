@@ -1,14 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import PesonnelProfil from '$lib/components/user/profil/PesonnelProfil.svelte';
-	import type { PageProps } from './$types';
+	import PersonnelCard from '$lib/components/user/profil/PersonnelCard.svelte';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
-	import { Label } from '$lib/components/ui/label';
+	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
-
-	// svelte-ignore state_referenced_locally
 	const { personnes } = data;
 
 	let searchText = $state('');
@@ -22,21 +17,16 @@
 	);
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4">
-		<SearchInput placeholder="Rechercher une personne" bind:value={searchText} />
-		<Button onclick={() => goto('personne/new')}>Nouveau</Button>
+<main class="min-h-full bg-sidebar text-sidebar-foreground">
+	<div class="flex justify-between p-4 top-16 sticky z-50 bg-sidebar">
+		<SearchInput bind:value={searchText} placeholder="Rechercher une personne" />
 	</div>
-	<div class="grid grid-cols-1 gap-8 p-4 md:grid-cols-2 lg:grid-cols-3">
-		{#each filteredPersonnel as p (p.phone)}
-			<PesonnelProfil>
-				<div class="space-y-2">
-					<Label>Nom : {p.name}</Label>
-					<Label>Prenom : {p.lastname}</Label>
-					<Label>Phone : {p.phone}</Label>
-					<Label>Email : {p.email}</Label>
-				</div>
-			</PesonnelProfil>
-		{/each}
+
+	<div class="p-4">
+		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+			{#each filteredPersonnel as p (p.phone)}
+				<PersonnelCard personne={p} role="Personnel" hrefContact={`mailto:${p.email}`} />
+			{/each}
+		</div>
 	</div>
 </main>
