@@ -3,19 +3,22 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import * as Table from '$lib/components/ui/table';
-	import * as NativeSelect from '$lib/components/ui/native-select';
-	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Calculator, Plus, Pencil, Trash2 } from '@lucide/svelte/icons';
-	import type { EleveCours, Note, Examen } from '$lib/types/Materiel.type';
+	import { Plus, Calendar } from '@lucide/svelte/icons';
+	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 
-	const coursInfo = {
+	const coursInfo: Cours = {
+		id: '1',
 		nom: 'Mathématiques',
+		coefficient: 6,
 		professeur: 'RANDRIANANTENAINA Tsitoarimanjakely',
-		coefficient: 6
+		eleves: [],
+		examens: [
+			{ id: 'e1', nom: 'Examen 1', date: '2026-02-15', coursId: '1', coefficient: 4 },
+			{ id: 'e2', nom: 'Examen 2', date: '2026-03-20', coursId: '1', coefficient: 6 }
+		]
 	};
 
 	let elevesCours = $state<EleveCours[]>([
@@ -26,8 +29,8 @@
 			dateNaissance: '2008-05-15',
 			actif: true,
 			notes: [
-				{ id: 'n1', valeur: 15, coefficient: 2, date: '2026-01-10', libelle: 'Interrogation 1' },
-				{ id: 'n2', valeur: 12, coefficient: 4, date: '2026-01-25', libelle: 'Devoir 1' }
+				{ id: 'n1', valeur: 15, coefficient: 2, date: '2026-01-10', libelle: 'Interrogation 1', coursId: '1' },
+				{ id: 'n2', valeur: 12, coefficient: 4, date: '2026-01-25', libelle: 'Devoir 1', coursId: '1' }
 			]
 		},
 		{
@@ -37,8 +40,8 @@
 			dateNaissance: '2008-03-22',
 			actif: true,
 			notes: [
-				{ id: 'n3', valeur: 18, coefficient: 2, date: '2026-01-10', libelle: 'Interrogation 1' },
-				{ id: 'n4', valeur: 14, coefficient: 4, date: '2026-01-25', libelle: 'Devoir 1' }
+				{ id: 'n3', valeur: 18, coefficient: 2, date: '2026-01-10', libelle: 'Interrogation 1', coursId: '1' },
+				{ id: 'n4', valeur: 14, coefficient: 4, date: '2026-01-25', libelle: 'Devoir 1', coursId: '1' }
 			]
 		},
 		{
@@ -58,44 +61,98 @@
 		eleveId: ''
 	});
 
-	let examenSelectionne = $state<Examen | null>(null);
-
-	let examens = $state<Examen[]>([
-		{ id: 'e1', nom: 'Examen 1', date: '2026-02-15', coursId: '1', coefficient: 4 },
-		{ id: 'e2', nom: 'Examen 2', date: '2026-03-20', coursId: '1', coefficient: 6 }
-	]);
+	let nouvelExamen = $state({
+		nom: '',
+		date: '',
+		coefficient: 1
+	});
 
 	function calculerMoyenne(eleve: EleveCours): number {
 		if (!eleve.notes || eleve.notes.length === 0) return 0;
-		const totalPoints = eleve.notes.reduce((sum, n) => sum + n.valeur * n.coefficient, 0);
-		const totalCoeff = eleve.notes.reduce((sum, n) => sum + n.coefficient, 0);
+		const notesCours = eleve.notes.filter((n) => n.coursId === coursInfo.id);
+		if (notesCours.length === 0) return 0;
+		const totalPoints = notesCours.reduce((sum, n) => sum + n.valeur * n.coefficient, 0);
+		const totalCoeff = notesCours.reduce((sum, n) => sum + n.coefficient, 0);
 		return totalCoeff > 0 ? Math.round((totalPoints / totalCoeff) * 100) / 100 : 0;
 	}
 
 	function ajouterNote() {
-		if (!nouvelleNote.eleveId || !nouvelleNote.libelle || nouvelleNote.valeur < 0 || nouvelleNote.valeur > 20) return;
+		if (!nouvelleNote.eleveId || !nouvelleNote.libelle) return;
 		const eleve = elevesCours.find((e) => e.id === nouvelleNote.eleveId);
+		const note: Note = {
+			id: Date.now().toString(),
+			valeur: nouvelleNote.valeur || 0,
+			coefficient: nouvelleNote.coefficient || 1,
+			date: new Date().toISOString().split('T')[0],
+			libelle: nouvelleNote.libelle,
+			coursId: coursInfo.id
+		};
 		if (eleve) {
-			const note: Note = {
-				id: Date.now().toString(),
-				valeur: nouvelleNote.valeur,
-				coefficient: nouvelleNote.coefficient || 1,
-				date: new Date().toISOString().split('T')[0],
-				libelle: nouvelleNote.libelle
-			};
 			if (!eleve.notes) eleve.notes = [];
 			eleve.notes = [...eleve.notes, note];
 		}
 		nouvelleNote = { valeur: 0, coefficient: 1, libelle: '', eleveId: '' };
 	}
 
-	function modifierCoefficientNote(eleveId: string, noteId: string, nouveauCoeff: number) {
+	function ajouterExamen() {
+		if (!nouvelExamen.nom || !nouvelExamen.date) return;
+		const examen: Examen = {
+			id: Date.now().toString(),
+			nom: nouvelExamen.nom,
+			date: nouvelExamen.date,
+			coursId: coursInfo.id,
+			coefficient: nouvelExamen.coefficient || 1
+		};
+		if (!coursInfo.examens) coursInfo.examens = [];
+		coursInfo.examens = [...coursInfo.examens, examen];
+		nouvelExamen = { nom: '', date: '', coefficient: 1 };
+	}
+
+	function modifierCoefficientNote(eleveId: string, noteId: string, delta: number) {
 		const eleve = elevesCours.find((e) => e.id === eleveId);
 		if (eleve) {
 			const note = eleve.notes?.find((n) => n.id === noteId);
-			if (note) {
-				note.coefficient = nouveauCoeff;
+			if (note && note.coefficient + delta >= 1) {
+				note.coefficient += delta;
 			}
+		}
+	}
+
+	// Gestion des notes d'examens
+	let noteExamenEnCours = $state<Record<string, Record<string, number>>>({});
+
+	function setNoteExamen(examenId: string, eleveId: string, valeur: number) {
+		if (!noteExamenEnCours[examenId]) noteExamenEnCours[examenId] = {};
+		noteExamenEnCours[examenId][eleveId] = valeur;
+	}
+
+	function sauvegarderNotesExamen(examenId: string) {
+		const examen = coursInfo.examens?.find((e) => e.id === examenId);
+		if (!examen) return;
+
+		Object.entries(noteExamenEnCours[examenId] || {}).forEach(([eleveId, valeur]) => {
+			const eleve = elevesCours.find((e) => e.id === eleveId);
+			if (eleve) {
+				const noteExistante = eleve.notes?.find((n) => n.examenId === examenId);
+				if (noteExistante) {
+					noteExistante.valeur = valeur;
+				} else {
+					const nouvelleNoteExamen: Note = {
+						id: Date.now().toString() + '_' + eleveId,
+						valeur,
+						coefficient: examen.coefficient,
+						date: examen.date,
+						libelle: examen.nom,
+						coursId: coursInfo.id,
+						examenId
+					};
+					eleve.notes = eleve.notes || [];
+					eleve.notes = [...eleve.notes, nouvelleNoteExamen];
+				}
+			}
+		});
+		if (noteExamenEnCours[examenId]) {
+			delete noteExamenEnCours[examenId];
 		}
 	}
 </script>
@@ -118,22 +175,22 @@
 					<Dialog.Header>
 						<Dialog.Title>Ajouter une note</Dialog.Title>
 						<Dialog.Description>
-							Les élèves inscrits seront automatiquement concernérés par les examens
+							Ajoutez une note pour un élève de ce cours
 						</Dialog.Description>
 					</Dialog.Header>
 					<div class="grid gap-4 py-4">
-<div class="grid gap-2">
-									<Label for="eleve">Élève *</Label>
-									<select
-										id="eleve"
-										class="w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
-										bind:value={nouvelleNote.eleveId}
-									>
-										{#each elevesCours as eleve (eleve.id)}
-											<option value={eleve.id}>{eleve.nom} {eleve.prenom}</option>
-										{/each}
-									</select>
-								</div>
+						<div class="grid gap-2">
+							<Label for="eleve">Élève *</Label>
+							<select
+								id="eleve"
+								class="w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
+								bind:value={nouvelleNote.eleveId}
+							>
+								{#each elevesCours as eleve (eleve.id)}
+									<option value={eleve.id}>{eleve.nom} {eleve.prenom}</option>
+								{/each}
+							</select>
+						</div>
 						<div class="grid gap-2">
 							<Label for="libelle">Libellé *</Label>
 							<Input
@@ -177,28 +234,56 @@
 				</Dialog.Content>
 			</Dialog.Root>
 
-			<AlertDialog.Root>
-				<AlertDialog.Trigger class={buttonVariants({ variant: 'secondary' })}>
-					<Plus class="mr-1 size-4" />
+			<Dialog.Root>
+				<Dialog.Trigger class={buttonVariants({ variant: 'secondary' })}>
+					<Calendar class="mr-1 size-4" />
 					Examen
-				</AlertDialog.Trigger>
-				<AlertDialog.Content>
-					<AlertDialog.Header>
-						<AlertDialog.Title>Créer un examen</AlertDialog.Title>
-						<AlertDialog.Description>
-							Tous les élèves actifs seront automatiquement inscrits à cet examen
-						</AlertDialog.Description>
-					</AlertDialog.Header>
-					<div class="py-4">
-						<Label for="examen_nom">Nom de l'examen</Label>
-						<Input id="examen_nom" placeholder="Examen final" />
+				</Dialog.Trigger>
+				<Dialog.Content class="sm:max-w-[425px]">
+					<Dialog.Header>
+						<Dialog.Title>Créer un examen</Dialog.Title>
+						<Dialog.Description>
+							Tous les élèves actifs seront automatiquement inscrits
+						</Dialog.Description>
+					</Dialog.Header>
+					<div class="grid gap-4 py-4">
+						<div class="grid gap-2">
+							<Label for="examen_nom">Nom de l'examen *</Label>
+							<Input
+								id="examen_nom"
+								bind:value={nouvelExamen.nom}
+								placeholder="Examen final"
+							/>
+						</div>
+						<div class="grid gap-2">
+							<Label for="examen_date">Date *</Label>
+							<Input
+								id="examen_date"
+								type="date"
+								bind:value={nouvelExamen.date}
+							/>
+						</div>
+						<div class="grid gap-2">
+							<Label for="examen_coeff">Coefficient *</Label>
+							<Input
+								id="examen_coeff"
+								type="number"
+								min="1"
+								max="20"
+								bind:value={nouvelExamen.coefficient}
+							/>
+						</div>
 					</div>
-					<AlertDialog.Footer>
-						<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-						<AlertDialog.Action>Créer</AlertDialog.Action>
-					</AlertDialog.Footer>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
+					<Dialog.Footer>
+						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
+							Annuler
+						</Dialog.Close>
+						<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterExamen}>
+							Créer
+						</Dialog.Close>
+					</Dialog.Footer>
+				</Dialog.Content>
+			</Dialog.Root>
 		</div>
 	</div>
 
@@ -225,39 +310,36 @@
 									<Table.Cell>
 										<div class="font-medium">{eleve.nom} {eleve.prenom}</div>
 										<div class="text-xs text-muted-foreground">
-											{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : 'Date N/A'}
+											{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
 										</div>
 									</Table.Cell>
 									<Table.Cell>
 										{#if eleve.notes && eleve.notes.length > 0}
 											<div class="flex flex-col gap-1">
 												{#each eleve.notes as note (note.id)}
-													<div class="flex items-center gap-2 text-xs">
-														<span>{note.libelle}:</span>
-														<span class="font-medium">{note.valeur}/20</span>
-														<span class="text-muted-foreground">x{note.coefficient}</span>
-														<Button
-															size="sm"
-															variant="ghost"
-															class="h-5 w-5 p-0"
-															onclick={() => {
-																const n = note.coefficient;
-																if (n > 1) note.coefficient = n - 1;
-															}}
-														>
-															-
-														</Button>
-														<Button
-															size="sm"
-															variant="ghost"
-															class="h-5 w-5 p-0"
-															onclick={() => {
-																note.coefficient = note.coefficient + 1;
-															}}
-														>
-															+
-														</Button>
-													</div>
+													{#if note.coursId === coursInfo.id}
+														<div class="flex items-center gap-2 text-xs">
+															<span class="truncate">{note.libelle}:</span>
+															<span class="font-medium">{note.valeur}/20</span>
+															<span class="text-muted-foreground">x{note.coefficient}</span>
+															<Button
+																size="sm"
+																variant="ghost"
+																class="h-5 w-5 p-0"
+																onclick={() => modifierCoefficientNote(eleve.id, note.id, -1)}
+															>
+																-
+															</Button>
+															<Button
+																size="sm"
+																variant="ghost"
+																class="h-5 w-5 p-0"
+																onclick={() => modifierCoefficientNote(eleve.id, note.id, 1)}
+															>
+																+
+															</Button>
+														</div>
+													{/if}
 												{/each}
 											</div>
 										{:else}
@@ -275,23 +357,55 @@
 			</div>
 		</CardUI>
 
-		<CardUI>
-			<div class="p-4">
-				<h2 class="mb-4 font-semibold">Examens à venir</h2>
-				<div class="space-y-3">
-					{#each examens as examen (examen.id)}
-						<div class="flex items-center justify-between rounded-md border border-sidebar-border p-3">
-							<div>
-								<p class="font-medium">{examen.nom}</p>
-								<p class="text-xs text-muted-foreground">
-									Coefficient : {examen.coefficient} • Date : {examen.date}
-								</p>
-							</div>
-							<Badge variant="secondary">{examen.date}</Badge>
+		{#if coursInfo.examens && coursInfo.examens.length > 0}
+			{#each coursInfo.examens as examen (examen.id)}
+				<CardUI>
+					<div class="p-4">
+						<div class="mb-4 flex items-center justify-between">
+							<h2 class="font-semibold">{examen.nom}</h2>
+							<span class="text-xs text-muted-foreground">{examen.date} • Coef: {examen.coefficient}</span>
 						</div>
-					{/each}
-				</div>
-			</div>
-		</CardUI>
+						<div class="overflow-x-auto">
+							<Table.Root>
+								<Table.Header>
+									<Table.Row>
+										<Table.Head>Élève</Table.Head>
+										<Table.Head class="w-20">Note</Table.Head>
+										<Table.Head class="w-20">Action</Table.Head>
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{#each elevesCours.filter((e) => e.actif) as eleve (eleve.id)}
+										{@const noteExistante = eleve.notes?.find((n) => n.examenId === examen.id)?.valeur}
+										<Table.Row>
+											<Table.Cell>
+												<div class="font-medium">{eleve.nom} {eleve.prenom}</div>
+											</Table.Cell>
+											<Table.Cell>
+												<Input
+													type="number"
+													min="0"
+													max="20"
+													step="0.25"
+													class="h-8 w-16 px-2 text-sm"
+													value={noteExistante ?? noteExamenEnCours[examen.id]?.[eleve.id] ?? ''}
+													oninput={(e) => setNoteExamen(examen.id, eleve.id, parseFloat(e.currentTarget.value))}
+													placeholder="0-20"
+												/>
+											</Table.Cell>
+											<Table.Cell>
+												<Button size="sm" onclick={() => sauvegarderNotesExamen(examen.id)}>
+													Sauvegarder
+												</Button>
+											</Table.Cell>
+										</Table.Row>
+									{/each}
+								</Table.Body>
+							</Table.Root>
+						</div>
+					</div>
+				</CardUI>
+			{/each}
+		{/if}
 	</div>
 </div>

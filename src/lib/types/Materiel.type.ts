@@ -22,6 +22,7 @@ export type Cours = {
 	coefficient: number;
 	professeur?: string;
 	eleves?: EleveCours[];
+	examens?: Examen[];
 };
 
 export type EleveCours = {
@@ -39,6 +40,8 @@ export type Note = {
 	coefficient: number;
 	date: string;
 	libelle: string;
+	coursId?: string;
+	examenId?: string;
 };
 
 export type Examen = {

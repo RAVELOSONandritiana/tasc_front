@@ -10,6 +10,8 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { matiere } from '$lib/variables/territoire';
 	import { Pencil, Users } from '@lucide/svelte/icons';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { Cours } from '$lib/types/Materiel.type';
 
 	let searchCours = $state('');
@@ -174,12 +176,10 @@
 							size="sm"
 							variant="secondary"
 							class="w-full"
-							onclick={() => {
-								/* Voir les élèves du cours */
-							}}
+							onclick={() => goto(`/classe/${$page.params.id}/cours/details`)}
 						>
 							<Users class="mr-1 size-3" />
-							Élèves
+							Détails
 						</Button>
 					</div>
 				</div>
