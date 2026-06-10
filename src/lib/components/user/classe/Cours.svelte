@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import type { Snippet } from 'svelte';
 	const {
 		children
@@ -9,18 +9,17 @@
 	} = $props();
 </script>
 
-<Card.Root class="transition-duration m-0 gap-y-0 p-0">
-	<Card.Content class="m-0 p-0 h-40">
-		<!-- svelte-ignore a11y_img_redundant_alt -->
+<CardUI>
+	<div class="h-40 w-full">
 		<img
 			src={env.PUBLIC_DEFAULT_IMAGE}
-			alt="image salle"
-			class="transitio-all h-full w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
+			alt="illustration du cours"
+			class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
 		/>
-	</Card.Content>
-	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
+	</div>
+	<div class="flex flex-col gap-2 bg-white/5 p-4">
 		{#if children}
 			{@render children()}
 		{/if}
-	</Card.Footer>
-</Card.Root>
+	</div>
+</CardUI>

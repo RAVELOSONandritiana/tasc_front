@@ -1,15 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Label } from '$lib/components/ui/label';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
 	import UploadFile from '../form/UploadFile.svelte';
 	import pb from '$lib/pocketbase/pocketbase';
 	import { env } from '$env/dynamic/public';
 	const { classe: cl } = $props();
 
-	// svelte-ignore state_referenced_locally
 	let c = $state(cl);
 
 	function onClick() {
@@ -35,37 +33,36 @@
 	}
 
 	async function handleSubmit() {
-		if (files) {
-			const formdata = new FormData();
-			formdata.append('file', files[0]);
-			const record = await pb.collection('tasc_statics').create(formdata);
+		if (!files || files.length === 0) return;
+		const formdata = new FormData();
+		formdata.append('file', files[0]);
+		const record = await pb.collection('tasc_statics').create(formdata);
+		if (record && record.file) {
 			c.url = pb.files.getURL(record, record.file);
-			console.log(record);
 		}
 		open = false;
 	}
 </script>
 
-<Card.Root class="transition-duration m-0 gap-y-0 p-0">
-	<Card.Content class="m-0 p-0">
-		<!-- svelte-ignore a11y_img_redundant_alt -->
+<CardUI>
+	<div class="h-50 w-full">
 		<img
 			src={c.url ?? env.PUBLIC_DEFAULT_IMAGE}
-			alt="image salle"
-			class="transitio-all h-50 w-full object-cover duration-400 hover:scale-105 hover:grayscale-75"
+			alt="image classe"
+			class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
 		/>
-	</Card.Content>
-	<Separator class={color} />
-	<Card.Footer class="m-0 flex flex-col items-start justify-center gap-5 bg-white/10 p-4">
+	</div>
+	<div class={color + ' h-2 w-full'} />
+	<div class="flex flex-col gap-4 bg-white/5 p-4">
 		<Label>Classe - {niveau} {c.series?.toUpperCase()}</Label>
 		<Label>Nombre d'eleves - {c.eleves}</Label>
 		<Label>Titulaire - {c.titulaire}</Label>
-		<div class="flex w-full flex-row items-center justify-between">
-			<Button variant="outline" onclick={onClick}>Configurer Classe</Button>
-			<Button variant="default" onclick={() => (open = true)}>Modifier image</Button>
+		<div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+			<Button variant="outline" size="sm" class="h-8 rounded-lg px-3 text-xs" onclick={onClick}>Configurer classe</Button>
+			<Button size="sm" variant="default" class="h-8 rounded-lg px-3 text-xs" onclick={() => (open = true)}>Modifier image</Button>
 			<UploadFile bind:open bind:files>
-				<Button onclick={handleSubmit}>Envoyer</Button>
+				<Button size="sm" variant="secondary" class="h-8 rounded-lg px-3 text-xs" onclick={handleSubmit}>Envoyer</Button>
 			</UploadFile>
 		</div>
-	</Card.Footer>
-</Card.Root>
+	</div>
+</CardUI>

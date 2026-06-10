@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card/index.js';
+	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { Personne } from '$lib/types/Personne.type';
@@ -30,57 +30,56 @@
 	const roleLabel = $derived((tags && tags[0]) || 'Surveillant');
 </script>
 
-<Card.Root class="group overflow-hidden rounded-2xl border border-sidebar-border bg-card/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-	<Card.Content class="m-0 p-0">
-		<div class="relative h-20 w-full bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20">
-			<div class="absolute inset-0 bg-gradient-to-b from-transparent to-sidebar/80" />
-		</div>
-		<div class="px-8 pb-5 pt-0">
-			<div class="relative -mt-10 mb-4 flex items-end gap-4">
-				<Avatar class="h-16 w-16 rounded-xl border-[3px] border-sidebar shadow-md">
-					{#if env.PUBLIC_DEFAULT_AVATAR}
-						<AvatarImage src={env.PUBLIC_DEFAULT_AVATAR} alt={personne.name} />
-					{/if}
-					<AvatarFallback class="rounded-xl bg-sidebar-primary/10 text-sm font-semibold text-sidebar-primary">
-						{initial || '?'}
-					</AvatarFallback>
-				</Avatar>
-				<div class="mb-2 min-w-0">
-					<div class="text-lg font-semibold leading-snug text-foreground">
-						{personne.name} {personne.lastname}
-					</div>
-					<div class="mt-1 flex flex-wrap items-center gap-2">
-						<span class="inline-flex items-center gap-2 text-xs text-muted-foreground">
-							<UserRound class="size-3.5" />
-							{roleLabel}
-						</span>
-					</div>
-				</div>
-			</div>
-
-			<div class="space-y-3">
-				<div class="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
-					<span class="inline-flex items-center gap-2">
-						<Mail class="size-3.5" />
-						<span class="truncate">{personne.email || '—'}</span>
-					</span>
-					<span class="hidden h-3 w-px bg-sidebar-border sm:block" />
-					<span class="inline-flex items-center gap-2">
-						<Phone class="size-3.5" />
-						<span class="truncate">{personne.phone || '—'}</span>
-					</span>
-				</div>
-
-				{#if tags && tags.length}
-					<div class="flex flex-wrap gap-2">
-						{#each tags as tag}
-							<Badge variant="secondary" class="rounded-md px-2.5 py-1 text-xs">{tag}</Badge>
-						{/each}
-					</div>
+<CardUI>
+	<div class="relative h-20 w-full">
+		<div class="absolute inset-0 bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20" />
+		<div class="absolute inset-0 bg-gradient-to-b from-transparent to-sidebar/80" />
+	</div>
+	<div class="px-8 pb-5 pt-0">
+		<div class="relative -mt-10 mb-4 flex items-end gap-4">
+			<Avatar class="h-16 w-16 rounded-xl border-[3px] border-sidebar shadow-md">
+				{#if env.PUBLIC_DEFAULT_AVATAR}
+					<AvatarImage src={env.PUBLIC_DEFAULT_AVATAR} alt={personne.name} />
 				{/if}
+				<AvatarFallback class="rounded-xl bg-sidebar-primary/10 text-sm font-semibold text-sidebar-primary">
+					{initial || '?'}
+				</AvatarFallback>
+			</Avatar>
+			<div class="mb-2 min-w-0">
+				<div class="text-lg font-semibold leading-snug text-foreground">
+					{personne.name} {personne.lastname}
+				</div>
+				<div class="mt-1 flex flex-wrap items-center gap-2">
+					<span class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+						<UserRound class="size-3.5" />
+						{roleLabel}
+					</span>
+				</div>
 			</div>
 		</div>
-	</Card.Content>
+
+		<div class="space-y-3">
+			<div class="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
+				<span class="inline-flex items-center gap-2">
+					<Mail class="size-3.5" />
+					<span class="truncate">{personne.email || '—'}</span>
+				</span>
+				<span class="hidden h-3 w-px bg-sidebar-border sm:block" />
+				<span class="inline-flex items-center gap-2">
+					<Phone class="size-3.5" />
+					<span class="truncate">{personne.phone || '—'}</span>
+				</span>
+			</div>
+
+			{#if tags && tags.length}
+				<div class="flex flex-wrap gap-2">
+					{#each tags as tag}
+						<Badge variant="secondary" class="rounded-md px-2.5 py-1 text-xs">{tag}</Badge>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</div>
 
 	<div class="border-t border-sidebar-border bg-sidebar/40 px-8 py-3 sm:flex sm:items-center sm:justify-between">
 		<div class="mb-2 sm:mb-0">
@@ -113,4 +112,4 @@
 			</Button>
 		</div>
 	</div>
-</Card.Root>
+</CardUI>
