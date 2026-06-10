@@ -8,7 +8,7 @@
 	import type { SeanceEDT, Cours } from '$lib/types/Materiel.type';
 	import { matiere } from '$lib/variables/territoire';
 
-	const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+	const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 	const heures = ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
 
 	let seances = $state<SeanceEDT[]>([
@@ -110,12 +110,12 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-7">
+	<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
 		{#each jours as jour (jour)}
 			<CardUI>
-				<div class="p-3">
+				<div class="flex h-full min-h-48 flex-col p-3">
 					<h3 class="mb-2 font-semibold text-foreground">{jour}</h3>
-					<div class="space-y-2">
+					<div class="flex-1 space-y-2">
 						{#each seancesParJour[jour] as seance (seance.id)}
 							<div class="rounded-md border border-sidebar-border bg-sidebar-accent/30 p-2 text-xs">
 								<p class="font-medium">{seance.heureDebut} - {seance.heureFin}</p>
