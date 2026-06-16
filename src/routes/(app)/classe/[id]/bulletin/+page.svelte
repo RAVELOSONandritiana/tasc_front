@@ -65,6 +65,7 @@
 
 	let bulletinEleve = $state<EleveCours | null>(null);
 	let bulletinExamenIds = $state<string[]>([]);
+	let bulletinTousEleves = $state(false);
 	let examensActifs = $state<string[]>(['e1']);
 
 	const notesBulletin = $derived(getNotesEleveExamens(bulletinEleve, bulletinExamenIds));
@@ -150,8 +151,21 @@
 
 	function ouvrirBulletin(e: EleveCours) {
 		if (examensActifs.length === 0) return;
+		bulletinTousEleves = false;
 		bulletinEleve = e;
 		bulletinExamenIds = [...examensActifs];
+	}
+
+	function ouvrirTousBulletins() {
+		bulletinTousEleves = true;
+		bulletinEleve = null;
+		bulletinExamenIds = [...examensActifs];
+	}
+
+	function retourListe() {
+		bulletinTousEleves = false;
+		bulletinEleve = null;
+		bulletinExamenIds = [];
 	}
 
 	function imprimerBulletin() {
@@ -159,11 +173,96 @@
 	}
 </script>
 
-{#if !bulletinEleve}
+{#snippet BulletinPrint({ eleve })}
+	<div class="max-w-3xl mx-auto">
+		<div class="mb-6 border-b pb-4">
+			<div class="flex items-center gap-3 mb-4">
+				<School class="size-8" />
+				<h1 class="text-2xl font-bold">LYCÉE TASC - BULLETIN SCOLAIRE</h1>
+			</div>
+			<div class="grid grid-cols-2 gap-4">
+				<div>
+					<p><span class="font-semibold">Élève:</span> {eleve.prenom} {eleve.nom}</p>
+					<p><span class="font-semibold">Né(e):</span> {eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}</p>
+					<p><span class="font-semibold">Classe:</span> 1ère L</p>
+					<p><span class="font-semibold">Examens inclus:</span> {getNomExamens(bulletinExamenIds)}</p>
+				</div>
+				<div class="text-right">
+					<p class="text-sm">Année scolaire: 2025-2026</p>
+				</div>
+			</div>
+		</div>
+
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>Matière</Table.Head>
+					<Table.Head class="text-center">Moyenne /20</Table.Head>
+					<Table.Head class="text-center">Coefficient</Table.Head>
+					<Table.Head class="text-center">Total</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each listeCours as cours (cours.id)}
+					{@const notesMatiere = getNotesMatiere(eleve, cours.id, bulletinExamenIds)}
+					{@const moyenneMatiere = calculerMoyenneMatiere(notesMatiere)}
+					{@const pointsMatiere = notesMatiere.length > 0 ? moyenneMatiere * cours.coefficient : undefined}
+					<Table.Row>
+						<Table.Cell>{cours.nom}</Table.Cell>
+						<Table.Cell class="text-center">
+							{notesMatiere.length > 0 ? formatNombre(moyenneMatiere) : '—'}
+						</Table.Cell>
+						<Table.Cell class="text-center">{cours.coefficient}</Table.Cell>
+						<Table.Cell class="text-center">
+							{pointsMatiere === undefined ? '—' : formatNombre(pointsMatiere)}
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+
+		<div class="mt-6 rounded-md border bg-sidebar-accent/20 p-4">
+			<div class="flex justify-between">
+				<span class="font-semibold">Moyenne générale:</span>
+				<span class="font-bold text-lg">{formatNombre(calculerMoyenneGenerale(eleve, bulletinExamenIds))}</span>
+			</div>
+			<div class="flex justify-between mt-2">
+				<span class="font-semibold">Rang:</span>
+				<span class="font-bold">{calculerRang(eleve.id, bulletinExamenIds)}</span>
+			</div>
+		</div>
+
+		<div class="mt-8 grid grid-cols-2 gap-8">
+			<div class="rounded-md border p-4">
+				<p class="mb-12 text-sm font-medium">Signature élève</p>
+				<p class="text-xs text-muted-foreground">Lu et approuvé</p>
+			</div>
+			<div class="rounded-md border p-4">
+				<p class="mb-12 text-sm font-medium">Signature administrateur</p>
+				<p class="text-xs text-muted-foreground">Cachet et signature</p>
+			</div>
+		</div>
+	</div>
+{/snippet}
+
+{#if bulletinTousEleves}
+	<div class="print-section bg-background p-8">
+		{#each elevesClasse.filter((e) => e.actif) as eleve (eleve.id)}
+			<div class="print-page">
+				{@render BulletinPrint({ eleve })}
+			</div>
+		{/each}
+		<div class="mt-6 flex gap-2">
+			<Button variant="outline" onclick={retourListe}>Retour</Button>
+			<Button onclick={imprimerBulletin}>Imprimer tous les bulletins</Button>
+		</div>
+	</div>
+{:else if !bulletinEleve}
 	<div class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
-		<div class="mb-6 flex items-center justify-between">
+		<div class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-2xl font-bold">Bulletins de la classe</h1>
-			<Dialog.Root>
+			<div class="flex items-center gap-2">
+				<Dialog.Root>
 				<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
 					<Plus class="mr-1 size-4" />
 					Nouvel examen
@@ -211,6 +310,14 @@
 					</Dialog.Footer>
 				</Dialog.Content>
 			</Dialog.Root>
+				<Button
+				variant="outline"
+				onclick={ouvrirTousBulletins}
+			>
+				<Printer class="mr-1 size-4" />
+				Imprimer tous les bulletins
+			</Button>
+			</div>
 		</div>
 
 		{#if listeExamens.length > 0}
@@ -381,7 +488,7 @@
 			</div>
 
 			<div class="mt-6 flex gap-2">
-				<Button variant="outline" onclick={() => { bulletinEleve = null; bulletinExamenIds = []; }}>
+				<Button variant="outline" onclick={retourListe}>
 					Retour
 				</Button>
 				<Button onclick={imprimerBulletin}>Imprimer</Button>
@@ -391,7 +498,23 @@
 {/if}
 
 <style>
+	.print-page {
+		page-break-after: always;
+	}
+
+	.print-page:last-child {
+		page-break-after: auto;
+	}
+
 	@media print {
+		.print-page {
+			break-after: page;
+		}
+
+		.print-page:last-child {
+			break-after: auto;
+		}
+
 		.print-section {
 			padding: 20px !important;
 			background: white !important;
