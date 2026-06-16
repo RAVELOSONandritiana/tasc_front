@@ -152,15 +152,10 @@
 		if (examensActifs.length === 0) return;
 		bulletinEleve = e;
 		bulletinExamenIds = [...examensActifs];
-		setTimeout(() => {
-			imprimerBulletin();
-		}, 100);
 	}
 
 	function imprimerBulletin() {
 		window.print();
-		bulletinEleve = null;
-		bulletinExamenIds = [];
 	}
 </script>
 
@@ -373,7 +368,12 @@
 					<span class="font-bold">{bulletinEleve ? calculerRang(bulletinEleve.id, bulletinExamenIds) : '-'}</span>
 				</div>
 			</div>
-			<Button class="mt-6" onclick={imprimerBulletin}>Imprimer</Button>
+			<div class="mt-6 flex gap-2">
+				<Button variant="outline" onclick={() => { bulletinEleve = null; bulletinExamenIds = []; }}>
+					Retour
+				</Button>
+				<Button onclick={imprimerBulletin}>Imprimer</Button>
+			</div>
 		</div>
 	</div>
 {/if}
