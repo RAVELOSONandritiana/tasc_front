@@ -368,6 +368,18 @@
 					<span class="font-bold">{bulletinEleve ? calculerRang(bulletinEleve.id, bulletinExamenIds) : '-'}</span>
 				</div>
 			</div>
+
+			<div class="mt-8 grid grid-cols-2 gap-8">
+				<div class="rounded-md border p-4">
+					<p class="mb-12 text-sm font-medium">Signature élève</p>
+					<p class="text-xs text-muted-foreground">Lu et approuvé</p>
+				</div>
+				<div class="rounded-md border p-4">
+					<p class="mb-12 text-sm font-medium">Signature administrateur</p>
+					<p class="text-xs text-muted-foreground">Cachet et signature</p>
+				</div>
+			</div>
+
 			<div class="mt-6 flex gap-2">
 				<Button variant="outline" onclick={() => { bulletinEleve = null; bulletinExamenIds = []; }}>
 					Retour
@@ -384,6 +396,10 @@
 			padding: 20px !important;
 			background: white !important;
 			color: black !important;
+		}
+
+		.print-section button {
+			display: none !important;
 		}
 	}
 </style>
