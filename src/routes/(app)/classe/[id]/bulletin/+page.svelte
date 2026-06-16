@@ -64,10 +64,10 @@
 	});
 
 	let bulletinEleve = $state<EleveCours | null>(null);
-	let bulletinExamenId = $state<string | null>(null);
-	let examenSelectionneId = $state<string>('e1');
+	let bulletinExamenIds = $state<string[]>([]);
+	let examensActifs = $state<string[]>(['e1']);
 
-	const examenSelectionne = $derived(listeExamens.find((e) => e.id === examenSelectionneId) ?? listeExamens[0] ?? null);
+	const notesBulletin = $derived(getNotesEleveExamens(bulletinEleve, bulletinExamenIds));
 
 	function ajouterExamen() {
 		if (!nouvelExamen.nom || !nouvelExamen.date) return;
@@ -79,8 +79,20 @@
 			periode: nouvelExamen.periode
 		};
 		listeExamens = [...listeExamens, examen];
-		examenSelectionneId = examen.id;
+		examensActifs = [...examensActifs, examen.id];
 		nouvelExamen = { nom: '', date: '', periode: '' };
+	}
+
+	function toggleExamen(examenId: string) {
+		if (examensActifs.includes(examenId)) {
+			examensActifs = examensActifs.filter((id) => id !== examenId);
+		} else {
+			examensActifs = [...examensActifs, examenId];
+		}
+	}
+
+	function getExamen(examenId: string): Examen | undefined {
+		return listeExamens.find((e) => e.id === examenId);
 	}
 
 	function getCoefficientCours(coursId: string): number {
@@ -91,16 +103,23 @@
 		return note.coefficient || getCoefficientCours(note.coursId);
 	}
 
-	function getNotePoints(note: Note | undefined): number | undefined {
-		if (!note) return undefined;
-		return note.valeur * getNoteCoefficient(note);
+	function formatNombre(valeur: number): string {
+		return Number.isInteger(valeur) ? valeur.toString() : valeur.toFixed(2);
 	}
 
-	function calculerMoyenneExament(eleve: EleveCours, examenId: string): number {
-		const notesExamen = eleve.notes?.filter((n) => n.examenId === examenId) || [];
-		if (notesExamen.length === 0) return 0;
-		const totalPoints = notesExamen.reduce((sum, n) => sum + n.valeur * getNoteCoefficient(n), 0);
-		const totalCoef = notesExamen.reduce((sum, n) => sum + getNoteCoefficient(n), 0);
+	function getNotesEleveExamens(e: EleveCours | null, examenIds: string[]): Note[] {
+		if (!e || examenIds.length === 0) return [];
+		return e.notes?.filter((n) => n.examenId && examenIds.includes(n.examenId)) || [];
+	}
+
+	function getNotesMatiere(eleve: EleveCours, coursId: string, examenIds: string[]): Note[] {
+		return getNotesEleveExamens(eleve, examenIds).filter((n) => n.coursId === coursId);
+	}
+
+	function calculerMoyenneMatiere(notes: Note[]): number {
+		if (notes.length === 0) return 0;
+		const totalPoints = notes.reduce((sum, n) => sum + n.valeur * getNoteCoefficient(n), 0);
+		const totalCoef = notes.reduce((sum, n) => sum + getNoteCoefficient(n), 0);
 		return totalCoef > 0 ? Math.round((totalPoints / totalCoef) * 100) / 100 : 0;
 	}
 
@@ -111,29 +130,28 @@
 		return totalCoef > 0 ? Math.round((totalPoints / totalCoef) * 100) / 100 : 0;
 	}
 
-	function calculerRang(eleveId: string, examenId: string): number {
+	function calculerMoyenneGenerale(eleve: EleveCours, examenIds: string[]): number {
+		return calculerMoyenneNotes(getNotesEleveExamens(eleve, examenIds));
+	}
+
+	function calculerRang(eleveId: string, examenIds: string[]): number {
+		if (examenIds.length === 0) return 0;
 		const notes = elevesClasse.map((e) => ({
 			id: e.id,
-			moy: calculerMoyenneExament(e, examenId)
+			moy: calculerMoyenneGenerale(e, examenIds)
 		})).sort((a, b) => b.moy - a.moy);
 		return notes.findIndex((n) => n.id === eleveId) + 1;
 	}
 
-	function getNoteEleve(e: EleveCours, coursId: string, examenId: string): number | undefined {
-		return e.notes?.find((n) => n.coursId === coursId && n.examenId === examenId)?.valeur;
+	function getNomExamens(examenIds: string[]): string {
+		const noms = examenIds.map((id) => getExamen(id)?.nom).filter((nom): nom is string => Boolean(nom));
+		return noms.length > 0 ? noms.join(', ') : '—';
 	}
-
-	function getNotesEleveExamen(e: EleveCours | null, examenId: string | null): Note[] {
-		if (!e || !examenId) return [];
-		return e.notes?.filter((n) => n.examenId === examenId) || [];
-	}
-
-	const notesBulletin = $derived(getNotesEleveExamen(bulletinEleve, bulletinExamenId));
 
 	function ouvrirBulletin(e: EleveCours) {
-		if (!examenSelectionne) return;
+		if (examensActifs.length === 0) return;
 		bulletinEleve = e;
-		bulletinExamenId = examenSelectionne.id;
+		bulletinExamenIds = [...examensActifs];
 		setTimeout(() => {
 			imprimerBulletin();
 		}, 100);
@@ -142,7 +160,7 @@
 	function imprimerBulletin() {
 		window.print();
 		bulletinEleve = null;
-		bulletinExamenId = null;
+		bulletinExamenIds = [];
 	}
 </script>
 
@@ -200,42 +218,40 @@
 			</Dialog.Root>
 		</div>
 
-		{#if examenSelectionne}
-			<div class="mb-6 rounded-md border bg-background/50 p-4">
-				<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+		{#if listeExamens.length > 0}
+			<div class="mb-6 rounded-md border p-4">
+				<div class="mb-4 flex items-center justify-between gap-4">
 					<div>
-						<h2 class="text-xl font-semibold">Examen sélectionné</h2>
+						<h2 class="font-semibold">Examens disponibles</h2>
 						<p class="text-sm text-muted-foreground">
-							{examenSelectionne.nom} • {examenSelectionne.date}
-							{examenSelectionne.periode ? ` • ${examenSelectionne.periode}` : ''}
+							Activez les examens à inclure dans le bulletin
 						</p>
 					</div>
-					<div class="grid gap-2 sm:min-w-[320px]">
-						<Label for="examen_selectionne">Changer d'examen</Label>
-						<select
-							id="examen_selectionne"
-							bind:value={examenSelectionneId}
-							class="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							{#each listeExamens as examen (examen.id)}
-								<option value={examen.id}>{examen.nom} - {examen.date}</option>
-							{/each}
-						</select>
-					</div>
+					<span class="rounded-md bg-sidebar-accent/50 px-3 py-1 text-sm">
+						{examensActifs.length}/{listeExamens.length} actifs
+					</span>
 				</div>
-			</div>
-
-			<div class="mb-6 rounded-md border p-4">
-				<h2 class="mb-4 font-semibold">Examens disponibles</h2>
 				<div class="flex flex-wrap gap-2">
 					{#each listeExamens as examen (examen.id)}
-						<span class="rounded-md px-3 py-2 text-sm {examen.id === examenSelectionne.id ? 'bg-primary text-primary-foreground' : 'bg-sidebar-accent/30'}">
-							{examen.nom} ({examen.date})
-						</span>
+						{@const actif = examensActifs.includes(examen.id)}
+						<button
+							type="button"
+							onclick={() => toggleExamen(examen.id)}
+							class="rounded-md px-3 py-2 text-sm {actif ? 'bg-primary text-primary-foreground' : 'bg-sidebar-accent/30 text-sidebar-foreground'}"
+						>
+							<span>{examen.nom} ({examen.date})</span>
+							<span class="ml-2 text-xs opacity-80">{actif ? 'Actif' : 'Inactif'}</span>
+						</button>
 					{/each}
 				</div>
 			</div>
+		{:else}
+			<div class="mb-6 rounded-md border p-8 text-center text-muted-foreground">
+				Aucun examen créé
+			</div>
+		{/if}
 
+		{#if examensActifs.length > 0}
 			<div class="mb-6 rounded-md border bg-background/50 p-4">
 				<div class="overflow-x-auto">
 					<Table.Root>
@@ -245,7 +261,7 @@
 								{#each listeCours as cours (cours.id)}
 									<Table.Head class="min-w-40 text-center">
 										<div>{cours.nom}</div>
-										<div class="text-xs text-muted-foreground">Note × {cours.coefficient}</div>
+										<div class="text-xs text-muted-foreground">Examens actifs × {cours.coefficient}</div>
 									</Table.Head>
 								{/each}
 								<Table.Head class="text-center">Moyenne</Table.Head>
@@ -263,22 +279,23 @@
 										</div>
 									</Table.Cell>
 									{#each listeCours as cours (cours.id)}
-										{@const note = getNoteEleve(eleve, cours.id, examenSelectionne.id)}
-										{@const points = note === undefined ? undefined : note * getCoefficientCours(cours.id)}
+										{@const notesMatiere = getNotesMatiere(eleve, cours.id, examensActifs)}
+										{@const moyenneMatiere = calculerMoyenneMatiere(notesMatiere)}
+										{@const pointsMatiere = notesMatiere.length > 0 ? moyenneMatiere * getCoefficientCours(cours.id) : undefined}
 										<Table.Cell class="text-center">
-											{#if note === undefined}
+											{#if notesMatiere.length === 0}
 												<span class="text-muted-foreground">—</span>
 											{:else}
-												<div class="font-medium">{note}/20</div>
-												<div class="text-xs text-muted-foreground">{points} pts</div>
+												<div class="font-medium">{formatNombre(moyenneMatiere)}/20</div>
+												<div class="text-xs text-muted-foreground">{formatNombre(pointsMatiere ?? 0)} pts</div>
 											{/if}
 										</Table.Cell>
 									{/each}
 									<Table.Cell class="text-center font-medium">
-										{calculerMoyenneExament(eleve, examenSelectionne.id)}
+										{formatNombre(calculerMoyenneGenerale(eleve, examensActifs))}
 									</Table.Cell>
 									<Table.Cell class="text-center">
-										{calculerRang(eleve.id, examenSelectionne.id)}/{elevesClasse.filter(e => e.actif).length}
+										{calculerRang(eleve.id, examensActifs)}/{elevesClasse.filter(e => e.actif).length}
 									</Table.Cell>
 									<Table.Cell>
 										<Button size="sm" variant="ghost" onclick={() => ouvrirBulletin(eleve)}>
@@ -293,7 +310,7 @@
 			</div>
 		{:else}
 			<div class="rounded-md border p-8 text-center text-muted-foreground">
-				Aucun examen créé
+				Aucun examen actif
 			</div>
 		{/if}
 	</div>
@@ -310,59 +327,52 @@
 						<p><span class="font-semibold">Élève:</span> {bulletinEleve.prenom} {bulletinEleve.nom}</p>
 						<p><span class="font-semibold">Né(e):</span> {bulletinEleve.dateNaissance ? new Date(bulletinEleve.dateNaissance).toLocaleDateString() : '—'}</p>
 						<p><span class="font-semibold">Classe:</span> 1ère L</p>
-						<p><span class="font-semibold">Examen:</span> {listeExamens.find((e) => e.id === bulletinExamenId)?.nom ?? '—'}</p>
+						<p><span class="font-semibold">Examens inclus:</span> {getNomExamens(bulletinExamenIds)}</p>
 					</div>
 					<div class="text-right">
 						<p class="text-sm">Année scolaire: 2025-2026</p>
-						<p class="text-sm">
-							Date: {listeExamens.find((e) => e.id === bulletinExamenId)?.date ?? '—'}
-						</p>
 					</div>
 				</div>
 			</div>
 
 			<Table.Root>
-					<Table.Header>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>Matière</Table.Head>
+						<Table.Head class="text-center">Moyenne /20</Table.Head>
+						<Table.Head class="text-center">Coefficient</Table.Head>
+						<Table.Head class="text-center">Total</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each listeCours as cours (cours.id)}
+						{@const notesMatiere = notesBulletin.filter((n) => n.coursId === cours.id)}
+						{@const moyenneMatiere = calculerMoyenneMatiere(notesMatiere)}
+						{@const pointsMatiere = notesMatiere.length > 0 ? moyenneMatiere * cours.coefficient : undefined}
 						<Table.Row>
-							<Table.Head>Matière</Table.Head>
-							<Table.Head class="text-center">Note /20</Table.Head>
-							<Table.Head class="text-center">Coefficient</Table.Head>
-							<Table.Head class="text-center">Total</Table.Head>
+							<Table.Cell>{cours.nom}</Table.Cell>
+							<Table.Cell class="text-center">
+								{notesMatiere.length > 0 ? `${formatNombre(moyenneMatiere)}/20` : '—'}
+							</Table.Cell>
+							<Table.Cell class="text-center">{cours.coefficient}</Table.Cell>
+							<Table.Cell class="text-center">
+								{pointsMatiere === undefined ? '—' : formatNombre(pointsMatiere)}
+							</Table.Cell>
 						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each listeCours as cours (cours.id)}
-							{@const note = notesBulletin.find((n) => n.coursId === cours.id)}
-							{@const points = getNotePoints(note)}
-							<Table.Row>
-								<Table.Cell>{cours.nom}</Table.Cell>
-								<Table.Cell class="text-center">{note?.valeur ?? '—'}</Table.Cell>
-								<Table.Cell class="text-center">{getNoteCoefficient({
-									id: `${cours.id}-${bulletinExamenId}`,
-									valeur: 0,
-									coefficient: cours.coefficient,
-									date: '',
-									libelle: '',
-									coursId: cours.id
-								})}</Table.Cell>
-								<Table.Cell class="text-center">
-									{points === undefined ? '—' : points}
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
+					{/each}
+				</Table.Body>
 			</Table.Root>
 
-				<div class="mt-6 rounded-md border bg-sidebar-accent/20 p-4">
-					<div class="flex justify-between">
-						<span class="font-semibold">Moyenne générale:</span>
-						<span class="font-bold text-lg">{calculerMoyenneNotes(notesBulletin)}</span>
-					</div>
-					<div class="flex justify-between mt-2">
-						<span class="font-semibold">Rang:</span>
-						<span class="font-bold">{bulletinEleve ? calculerRang(bulletinEleve.id, bulletinExamenId ?? '') : '-'}</span>
-					</div>
+			<div class="mt-6 rounded-md border bg-sidebar-accent/20 p-4">
+				<div class="flex justify-between">
+					<span class="font-semibold">Moyenne générale:</span>
+					<span class="font-bold text-lg">{formatNombre(calculerMoyenneNotes(notesBulletin))}</span>
 				</div>
+				<div class="flex justify-between mt-2">
+					<span class="font-semibold">Rang:</span>
+					<span class="font-bold">{bulletinEleve ? calculerRang(bulletinEleve.id, bulletinExamenIds) : '-'}</span>
+				</div>
+			</div>
 			<Button class="mt-6" onclick={imprimerBulletin}>Imprimer</Button>
 		</div>
 	</div>
