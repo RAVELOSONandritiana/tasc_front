@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import * as Table from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Search } from '@lucide/svelte/icons';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { matiere } from '$lib/variables/territoire';
 	import { Pencil, Users, Calendar, Plus } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import type { Cours, Examen } from '$lib/types/Materiel.type';
+	import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
 
 	let searchCours = $state('');
 
@@ -20,28 +22,34 @@
 		professeur: ''
 	});
 
+
 	let nouveauCoeff = $state(1);
 
 	let coursSelectionne = $state<Cours | null>(null);
+	let coursParticipantsSelectionne = $state<Cours | null>(null);
+	let participantsSelectionnes = $state<string[]>([]);
 
 	let listeCours = $state<Cours[]>([
 		{
 			id: '1',
 			nom: 'Mathématiques',
 			coefficient: 6,
-			professeur: 'RANDRIANANTENAINA Tsitoarimanjakely'
+			professeur: 'RANDRIANANTENAINA Tsitoarimanjakely',
+			participants: ['1', '2', '3']
 		},
 		{
 			id: '2',
 			nom: 'Physique',
 			coefficient: 4,
-			professeur: 'ANDRIANTENAINA Bako'
+			professeur: 'ANDRIANTENAINA Bako',
+			participants: ['1', '3']
 		},
 		{
 			id: '3',
 			nom: 'Français',
 			coefficient: 5,
-			professeur: 'RAKOTO Fanomezamasy'
+			professeur: 'RAKOTO Fanomezamasy',
+			participants: ['2', '3']
 		}
 	]);
 
@@ -49,6 +57,33 @@
 	let listeExamens = $state<Examen[]>([
 		{ id: 'e1', nom: 'Examen de mi-semestre', date: '2026-02-15', classeId: '1' },
 		{ id: 'e2', nom: 'Examen de fin de semestre', date: '2026-03-20', classeId: '1' }
+	]);
+
+	let elevesClasse = $state<EleveCours[]>([
+		{
+			id: '1',
+			nom: 'RANDRIANANTENAINA',
+			prenom: 'Tsitoarimanjakely',
+			dateNaissance: '2008-05-15',
+			actif: true,
+			notes: []
+		},
+		{
+			id: '2',
+			nom: 'RAKOTO',
+			prenom: 'Fanomezamasy',
+			dateNaissance: '2008-03-22',
+			actif: true,
+			notes: []
+		},
+		{
+			id: '3',
+			nom: 'ANDRIANTENAINA',
+			prenom: 'Bako',
+			dateNaissance: '2008-07-10',
+			actif: true,
+			notes: []
+		}
 	]);
 
 	let nouvelExamen = $state({
@@ -60,6 +95,11 @@
 	const coursFiltres = $derived(
 		listeCours.filter((c) => c.nom.toLowerCase().includes(searchCours.toLowerCase()) || (c.professeur?.toLowerCase() || '').includes(searchCours.toLowerCase()))
 	);
+
+	function formaterParticipants(cours: Cours): string {
+		if (!cours.participants?.length) return 'Tous les élèves';
+		return cours.participants.join(', ');
+	}
 
 	function ajouterCours() {
 		if (!nouveaCours.nom || nouveaCours.coefficient! < 1) return;
@@ -73,6 +113,7 @@
 		nouveaCours = { nom: '', coefficient: 1, professeur: '' };
 	}
 
+
 	function modifierCoefficient(cours: Cours) {
 		coursSelectionne = cours;
 		nouveauCoeff = cours.coefficient;
@@ -84,6 +125,31 @@
 			coursSelectionne = null;
 		}
 	}
+
+	function isParticipantSelectionne(eleveId: string): boolean {
+		return participantsSelectionnes.includes(eleveId);
+	}
+
+	function toggleParticipant(eleveId: string) {
+		if (participantsSelectionnes.includes(eleveId)) {
+			participantsSelectionnes = participantsSelectionnes.filter((id) => id !== eleveId);
+		} else {
+			participantsSelectionnes = [...participantsSelectionnes, eleveId];
+		}
+	}
+
+	function modifierParticipants(cours: Cours) {
+		coursParticipantsSelectionne = cours;
+		participantsSelectionnes = cours.participants?.length ? [...cours.participants] : elevesClasse.map((e) => e.id);
+	}
+
+	function sauvegarderParticipants() {
+		if (coursParticipantsSelectionne) {
+			coursParticipantsSelectionne.participants = [...participantsSelectionnes];
+			coursParticipantsSelectionne = null;
+		}
+	}
+
 
 	function ajouterExamen() {
 		if (!nouvelExamen.nom || !nouvelExamen.date) return;
@@ -179,8 +245,18 @@
 									variant="ghost"
 									class="h-7 w-7"
 									onclick={() => modifierCoefficient(cours)}
+									aria-label="Modifier le coefficient"
 								>
 									<Pencil class="size-4" />
+								</Button>
+								<Button
+									size="icon"
+									variant="ghost"
+									class="h-7 w-7"
+									onclick={() => modifierParticipants(cours)}
+									aria-label="Modifier les participants"
+								>
+									<Users class="size-4" />
 								</Button>
 							</div>
 						</div>
@@ -195,6 +271,10 @@
 									<span class="ml-1 font-medium truncate">{cours.professeur}</span>
 								</p>
 							{/if}
+							<p class="text-sm">
+								<span class="text-muted-foreground">Participants :</span>
+								<span class="ml-1 font-medium truncate">{formaterParticipants(cours)}</span>
+							</p>
 						</div>
 					</div>
 					<div class="mt-4 flex flex-col gap-2">
@@ -226,10 +306,61 @@
 			</CardUI>
 		{/each}
 	</div>
+
+
+<Dialog.Root open={coursParticipantsSelectionne !== null}>
+	<Dialog.Content class="sm:max-w-3xl">
+		<Dialog.Header>
+			<Dialog.Title>Modifier les participants</Dialog.Title>
+			<Dialog.Description>
+				Sélectionnez les élèves participants au cours {coursParticipantsSelectionne?.nom}
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="py-4">
+			<div class="overflow-x-auto rounded-md border">
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head class="w-12 whitespace-nowrap">Participant</Table.Head>
+							<Table.Head>Nom</Table.Head>
+							<Table.Head>Prénom</Table.Head>
+							<Table.Head>Date naissance</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each elevesClasse as eleve (eleve.id)}
+							<Table.Row>
+								<Table.Cell>
+									<Checkbox checked={isParticipantSelectionne(eleve.id)} onchange={() => toggleParticipant(eleve.id)} />
+								</Table.Cell>
+								<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
+								<Table.Cell>{eleve.prenom}</Table.Cell>
+								<Table.Cell>
+									{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
+			<p class="mt-2 text-xs text-muted-foreground">
+				Cochez uniquement les élèves qui participent à ce cours.
+			</p>
+		</div>
+		<Dialog.Footer>
+			<Dialog.Close onclick={() => (coursParticipantsSelectionne = null)}>
+				Annuler
+			</Dialog.Close>
+			<Dialog.Close onclick={sauvegarderParticipants}>
+				Sauvegarder
+			</Dialog.Close>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 </div>
 
 <Dialog.Root open={coursSelectionne !== null}>
-	<Dialog.Content>
+	<Dialog.Content class="sm:max-w-3xl">
 		<Dialog.Header>
 			<Dialog.Title>Modifier le coefficient</Dialog.Title>
 			<Dialog.Description>

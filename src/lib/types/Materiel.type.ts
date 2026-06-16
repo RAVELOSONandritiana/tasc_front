@@ -21,6 +21,7 @@ export type Cours = {
 	nom: string;
 	coefficient: number;
 	professeur?: string;
+	participants?: string[];
 };
 
 export type EleveCours = {

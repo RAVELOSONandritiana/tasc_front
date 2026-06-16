@@ -14,9 +14,9 @@
 	const coursId = $page.params.coursId || '1';
 
 	let listeCours = $state<Cours[]>([
-		{ id: '1', nom: 'Mathématiques', coefficient: 6, professeur: 'RANDRIANANTENAINA Tsitoarimanjakely' },
-		{ id: '2', nom: 'Physique', coefficient: 4, professeur: 'ANDRIANTENAINA Bako' },
-		{ id: '3', nom: 'Français', coefficient: 5, professeur: 'RAKOTO Fanomezamasy' }
+		{ id: '1', nom: 'Mathématiques', coefficient: 6, professeur: 'RANDRIANANTENAINA Tsitoarimanjakely', participants: ['1', '2', '3'] },
+		{ id: '2', nom: 'Physique', coefficient: 4, professeur: 'ANDRIANTENAINA Bako', participants: ['1', '3'] },
+		{ id: '3', nom: 'Français', coefficient: 5, professeur: 'RAKOTO Fanomezamasy', participants: ['2', '3'] }
 	]);
 
 	let listeExamens = $state<Examen[]>([
@@ -94,6 +94,10 @@
 	}
 
 	const coursInfo = $derived(listeCours.find((c) => c.id === coursId));
+
+	const elevesParticipants = $derived(
+		elevesClasse.filter((e) => e.actif && (!coursInfo?.participants?.length || coursInfo.participants.includes(e.id)))
+	);
 	
 	let examenSelectionne = $derived<Examen | null>(
 		(() => {
@@ -121,7 +125,7 @@
 		<div>
 			<h1 class="text-2xl font-bold">{coursInfo?.nom || 'Cours'}</h1>
 			<p class="text-sm text-muted-foreground">
-				Professeur : {coursInfo?.professeur || '—'} • Coefficient : {coursInfo?.coefficient}
+				Professeur : {coursInfo?.professeur || '—'} • Coefficient : {coursInfo?.coefficient} • Participants : {elevesParticipants.length}
 			</p>
 			{#if examenSelectionne}
 				<p class="text-xs text-muted-foreground mt-1">
@@ -163,7 +167,7 @@
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{#each elevesClasse.filter((e) => e.actif) as eleve (eleve.id)}
+							{#each elevesParticipants as eleve (eleve.id)}
 								<Table.Row>
 									<Table.Cell>
 										<div class="font-medium">{eleve.nom} {eleve.prenom}</div>
