@@ -347,7 +347,7 @@
 						<Table.Row>
 							<Table.Cell>{cours.nom}</Table.Cell>
 							<Table.Cell class="text-center">
-								{notesMatiere.length > 0 ? `${formatNombre(moyenneMatiere)}/20` : '—'}
+								{notesMatiere.length > 0 ? formatNombre(moyenneMatiere) : '—'}
 							</Table.Cell>
 							<Table.Cell class="text-center">{cours.coefficient}</Table.Cell>
 							<Table.Cell class="text-center">

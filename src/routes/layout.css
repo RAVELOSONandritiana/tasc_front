@@ -131,3 +131,57 @@
 		@apply font-sans;
 	}
 }
+
+@media print {
+	@page {
+		size: A4;
+		margin: 10mm;
+	}
+
+	body,
+	html {
+		background: white !important;
+		color: black !important;
+	}
+
+	header,
+	aside,
+	nav,
+	footer,
+	dialog {
+		display: none !important;
+	}
+
+	[data-slot='sidebar'],
+	[data-slot='sidebar-content'],
+	[data-slot='sidebar-header'],
+	[data-slot='sidebar-footer'],
+	[data-slot='sidebar-trigger'],
+	[data-slot='drawer'],
+	[data-slot='drawer-content'],
+	[data-slot='drawer-overlay'],
+	[data-slot='dropdown-menu-content'],
+	[data-slot='select-content'] {
+		display: none !important;
+	}
+
+	.print-section {
+		display: block !important;
+		max-width: none !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		background: white !important;
+		color: black !important;
+	}
+
+	.print-section * {
+		color: black !important;
+	}
+
+	.print-section button,
+	.print-section input,
+	.print-section select,
+	.print-section textarea {
+		display: none !important;
+	}
+}
