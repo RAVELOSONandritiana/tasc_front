@@ -12,9 +12,15 @@
 
 	let matricele = $state('');
 	let password = $state('');
+	let error = $state('');
 
 	function handleSubmit(event: Event) {
 		event.preventDefault();
+		error = '';
+		if (matricele.length < 6 || matricele.length > 6) {
+			error = 'Le matricule doit contenir exactement 6 caractères.';
+			return;
+		}
 		goto('/dashboard');
 	}
 
@@ -38,16 +44,23 @@
 			<CardContent class="space-y-4">
 				<div class="space-y-2">
 					<Label for="matricule">Matricule</Label>
-					<Input
-						id="matricule"
-						bind:value={matricele}
-						type="number"
-						inputmode="numeric"
-						placeholder="059875"
-						required
-						autocomplete="username"
-					/>
-				</div>
+				<Input
+					id="matricule"
+					bind:value={matricele}
+					type="text"
+					inputmode="numeric"
+					placeholder="059875"
+					required
+					minlength={6}
+					maxlength={6}
+					autocomplete="username"
+					
+				/>
+			</div>
+
+			{#if error}
+				<p class="text-sm text-red-500">{error}</p>
+			{/if}
 
 				<div class="space-y-2">
 					<Label for="password">Mot de passe</Label>
