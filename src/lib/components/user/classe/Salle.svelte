@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { DoorOpen, Users } from '@lucide/svelte/icons';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
-	import pb from '$lib/pocketbase/pocketbase';
+	import pb, { auth } from '$lib/pocketbase/pocketbase';
 
 	const { salle }: { salle: Salle } = $props();
 	// svelte-ignore state_referenced_locally
@@ -12,13 +12,26 @@
 	let open = $state(false);
 	let files = $state<FileList | null>(null);
 
+	async function ensureAuth() {
+		try {
+			await auth();
+		} catch (e) {
+			console.error('PocketBase unavailable');
+		}
+	}
+
 	async function handleSubmit() {
 		if (!files || files.length === 0) return;
+		await ensureAuth();
 		const formdata = new FormData();
 		formdata.append('file', files[0]);
-		const record = await pb.collection('tasc_statics').create(formdata);
-		if (record && record.file) {
-			sl.url = pb.files.getURL(record, record.file);
+		try {
+			const record = await pb.collection('tasc_statics').create(formdata);
+			if (record && record.file) {
+				sl.url = pb.files.getURL(record, record.file);
+			}
+		} catch (e) {
+			console.error('Upload failed:', e);
 		}
 		open = false;
 	}
