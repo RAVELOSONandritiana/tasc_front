@@ -74,6 +74,7 @@ export type EleveDetail = {
 	dateNaissance: string;
 	classe: string;
 	serie?: string;
+	actif: boolean;
 	notes?: Note[];
 	moyenne?: number;
 	rang?: number;
