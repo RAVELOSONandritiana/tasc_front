@@ -1,11 +1,7 @@
 <script lang="ts">
 	import EleveCard from '$lib/components/user/eleve/EleveCard.svelte';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
-	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 
@@ -13,7 +9,6 @@
 
 	let listEleve = $state([...data.list_eleve]);
 	let searchText = $state('');
-	let resetDialogOpen = $state(false);
 
 	const elevesFiltres = $derived(
 		listEleve.filter(
@@ -27,30 +22,6 @@
 	<div class="flex flex-wrap items-center justify-between gap-4 p-4">
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchText} />
 		<div class="flex gap-2">
-			<AlertDialog.Root bind:open={resetDialogOpen}>
-				<AlertDialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}>
-					Nouvelle année
-				</AlertDialog.Trigger>
-				<AlertDialog.Content>
-					<AlertDialog.Header>
-						<AlertDialog.Title>Confirmer la nouvelle année scolaire</AlertDialog.Title>
-						<AlertDialog.Description>
-							Cela supprimera tous les élèves actuels. Cette action est irréversible.
-						</AlertDialog.Description>
-					</AlertDialog.Header>
-					<AlertDialog.Footer>
-						<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-						<AlertDialog.Action
-							onclick={() => {
-								listEleve = [];
-								resetDialogOpen = false;
-							}}
-						>
-							Confirmer
-						</AlertDialog.Action>
-					</AlertDialog.Footer>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
 			<Button size="sm" onclick={() => goto('eleves/new')}>Nouvel élève</Button>
 		</div>
 	</div>
