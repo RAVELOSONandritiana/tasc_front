@@ -161,24 +161,26 @@
 						<div class="grid gap-4 rounded-md border p-4 md:grid-cols-3">
 							<div class="grid gap-2">
 								<Label for="nom">Nom *</Label>
-								<Input
-									id="nom"
-									bind:value={form.nom}
-									placeholder="Entrer le nom"
-									class={errors.nom ? 'border-destructive' : ''}
-								/>
+							<Input
+								id="nom"
+								bind:value={form.nom}
+								placeholder="Entrer le nom"
+								class={errors.nom ? 'border-destructive' : ''}
+								oninput={(e) => form.nom = (e.target as HTMLInputElement).value.toUpperCase()}
+							/>
 								{#if errors.nom}
 									<span class="text-xs text-destructive">{errors.nom}</span>
 								{/if}
 							</div>
 							<div class="grid gap-2">
 								<Label for="prenom">Prénom *</Label>
-								<Input
-									id="prenom"
-									bind:value={form.prenom}
-									placeholder="Entrer le prénom"
-									class={errors.prenom ? 'border-destructive' : ''}
-								/>
+							<Input
+								id="prenom"
+								bind:value={form.prenom}
+								placeholder="Entrer le prénom"
+								class={errors.prenom ? 'border-destructive' : ''}
+								oninput={(e) => form.prenom = (e.target as HTMLInputElement).value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+							/>
 								{#if errors.prenom}
 									<span class="text-xs text-destructive">{errors.prenom}</span>
 								{/if}
