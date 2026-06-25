@@ -5,12 +5,19 @@
 	import { DoorOpen, Users } from '@lucide/svelte/icons';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import pb, { auth } from '$lib/pocketbase/pocketbase';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { buttonVariants } from '$lib/components/ui/button';
+	import { Label } from '$lib/components/ui/label';
+	import { Input } from '$lib/components/ui/input';
 
 	const { salle }: { salle: Salle } = $props();
 	// svelte-ignore state_referenced_locally
 	let sl = $state(salle);
 	let open = $state(false);
 	let files = $state<FileList | null>(null);
+	let editOpen = $state(false);
+	let editName = $state('');
+	let editPlace = $state('');
 
 	async function ensureAuth() {
 		try {
@@ -38,6 +45,28 @@
 
 	const statutLabel = $derived(sl.used ? 'Occupée' : 'Libre');
 	const statutClass = $derived(sl.used ? 'bg-purple-500 text-purple-50' : 'bg-emerald-600 text-emerald-50');
+
+	async function handleEdit() {
+		editName = sl.name ?? '';
+		editPlace = String(sl.place ?? '');
+		editOpen = true;
+	}
+
+	async function saveEdit() {
+		sl.name = editName;
+		sl.place = parseInt(editPlace) || sl.place;
+		editOpen = false;
+		try {
+			await ensureAuth();
+			const updated = await pb.collection('salles').update(sl.id, {
+				name: sl.name ?? '',
+				place: sl.place
+			});
+			if (updated) Object.assign(sl, updated);
+		} catch (e) {
+			console.error('Update failed:', e);
+		}
+	}
 </script>
 
 <CardUI>
@@ -69,7 +98,9 @@
 			</span>
 		</div>
 		<div class="flex w-full items-center justify-between gap-2">
-			<Button variant="outline" size="sm" class="h-8 flex-1 rounded-lg px-3 text-xs"> Modifier salle </Button>
+			<Button variant="outline" size="sm" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={handleEdit}>
+				Modifier salle
+			</Button>
 			<div class="flex flex-1 gap-2">
 				<Button size="sm" variant="default" class="h-8 flex-1 rounded-lg px-3 text-xs" onclick={() => (open = true)}>
 					Modifier image
@@ -80,3 +111,31 @@
 		</div>
 	</div>
 </CardUI>
+
+<Dialog.Root bind:open={editOpen}>
+	<Dialog.Content class="sm:max-w-[425px]">
+		<Dialog.Header>
+			<Dialog.Title>Modifier la salle</Dialog.Title>
+			<Dialog.Description>Mettre à jour le nom et le nombre de places.</Dialog.Description>
+		</Dialog.Header>
+
+		<div class="grid gap-4">
+			<div class="grid gap-3">
+				<Label for="edit-nom-salle">Nom de la salle</Label>
+				<Input id="edit-nom-salle" bind:value={editName} placeholder="ex: Salle A" />
+			</div>
+
+			<div class="grid gap-3">
+				<Label for="edit-nombre-place">Nombre de places</Label>
+				<Input id="edit-nombre-place" type="number" bind:value={editPlace} placeholder="ex: 50" />
+			</div>
+		</div>
+
+		<Dialog.Footer>
+			<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}> Annuler </Dialog.Close>
+			<Dialog.Close type="button" class={buttonVariants({ variant: 'default' })} onclick={saveEdit}>
+				Confirmer
+			</Dialog.Close>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>

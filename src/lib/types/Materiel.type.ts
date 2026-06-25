@@ -1,6 +1,7 @@
 export type Salle = {
 	id: number;
 	num: number;
+	name: string;
 	place: number;
 	used?: boolean;
 	url?: string;
