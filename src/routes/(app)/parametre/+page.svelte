@@ -99,11 +99,22 @@
 		}
 	}
 
+	let listeAnnees = $state([
+		{ id: '1', nom: '2024-2025', dateCreation: '2024-01-15', active: false },
+		{ id: '2', nom: '2025-2026', dateCreation: '2025-01-15', active: true },
+		{ id: '3', nom: '2026-2027', dateCreation: '2026-01-10', active: false },
+	]);
+
 	function creerAnneeScolaire() {
 		if (!nouvelleAnnee.trim()) return;
-		const annee = { nom: nouvelleAnnee, dateCreation: new Date().toISOString().split('T')[0] };
+		const annee = { id: Date.now().toString(), nom: nouvelleAnnee, dateCreation: new Date().toISOString().split('T')[0], active: false };
+		listeAnnees = [...listeAnnees, annee];
 		console.log('Nouvelle année scolaire créée:', annee);
 		nouvelleAnnee = '';
+	}
+
+	function selectAnnee(id: string) {
+		listeAnnees = listeAnnees.map((a) => ({ ...a, active: a.id === id }));
 	}
 </script>
 
@@ -184,13 +195,59 @@
 	</div>
 
 	<div class="border-t border-sidebar-border p-4">
-		<h2 class="mb-4 text-lg font-bold text-foreground">Gestion de l'année scolaire</h2>
+		<h2 class="mb-4 text-lg font-bold text-foreground">Gestion des années scolaires</h2>
 
-		<div class="w-full max-w-md space-y-4 rounded-md border p-4">
-			<Label class="text-md">Année scolaire actuelle : <strong class="text-blue-500">2025-2026</strong></Label>
+		<div class="w-full max-w-2xl space-y-4 rounded-md border p-4">
+			<div class="rounded-md bg-blue-500/10 p-3">
+				<p class="text-sm">
+					Année scolaire actuelle : <strong class="text-blue-500">{listeAnnees.find((a) => a.active)?.nom || 'Aucune'}</strong>
+				</p>
+			</div>
+
+			<div class="space-y-2">
+				<h3 class="font-medium">Liste des années</h3>
+				<div class="overflow-x-auto rounded-md border">
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head>Année</Table.Head>
+								<Table.Head>Date création</Table.Head>
+								<Table.Head>Statut</Table.Head>
+								<Table.Head class="text-right">Action</Table.Head>
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							{#each listeAnnees as annee (annee.id)}
+								<Table.Row>
+									<Table.Cell class="font-medium">{annee.nom}</Table.Cell>
+									<Table.Cell class="text-xs">{annee.dateCreation}</Table.Cell>
+									<Table.Cell>
+										<span class="inline-flex items-center gap-1 text-xs font-medium">
+											{#if annee.active}
+												<span class="inline-block size-2 rounded-full bg-emerald-500"></span>
+												Actuelle
+											{:else}
+												<span class="inline-block size-2 rounded-full bg-muted-foreground"></span>
+												Inactive
+											{/if}
+										</span>
+									</Table.Cell>
+									<Table.Cell class="text-right">
+										{#if !annee.active}
+											<Button size="sm" variant="outline" class="h-7 px-2 text-xs" onclick={() => selectAnnee(annee.id)}>
+												Sélectionner
+											</Button>
+										{/if}
+									</Table.Cell>
+								</Table.Row>
+							{/each}
+						</Table.Body>
+					</Table.Root>
+				</div>
+			</div>
 
 			<AlertDialog.Root>
-				<AlertDialog.Trigger class={buttonVariants({ variant: 'default' })}>
+				<AlertDialog.Trigger class={buttonVariants({ variant: 'default', size: 'sm' })}>
 					Nouvelle année scolaire
 				</AlertDialog.Trigger>
 				<AlertDialog.Content>
