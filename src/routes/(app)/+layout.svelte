@@ -11,7 +11,6 @@
 		GraduationCap,
 		ClipboardList,
 		AlertTriangle,
-		CalendarRange,
 		Building2,
 		UserRoundSearch,
 		Settings,
@@ -39,10 +38,18 @@
 
 <Sidebar.Provider>
 	<div class="flex min-h-screen w-full">
-		<Sidebar.Root>
-			<Sidebar.Header class="p-6 text-lg font-bold">Tasc</Sidebar.Header>
+		<Sidebar.Root collapsible="offcanvas">
+			<Sidebar.Header class="p-5">
+				<div class="flex items-center gap-2.5">
+					<div class="flex size-8 items-center justify-center rounded-lg bg-primary">
+						<span class="text-sm font-bold text-primary-foreground">T</span>
+					</div>
+					<span class="text-lg font-bold tracking-tight">Tasc</span>
+				</div>
+			</Sidebar.Header>
 			<Sidebar.Content>
 				<Sidebar.Group>
+					<Sidebar.GroupLabel class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Navigation</Sidebar.GroupLabel>
 					<Sidebar.Menu>
 						{#each path as p (p.path)}
 							<Sidebar.MenuItem>
@@ -50,8 +57,8 @@
 									{#snippet child({ props })}
 										<a href={p.path} {...props}>
 											<span class="inline-flex items-center gap-3">
-												<p.icon class="size-4" />
-												<span>{p.label}</span>
+												<p.icon class="size-4 transition-all duration-200 {isActive(p.path) ? 'text-primary' : ''}" />
+												<span class="transition-all duration-200 {isActive(p.path) ? 'font-semibold text-primary' : ''}">{p.label}</span>
 											</span>
 										</a>
 									{/snippet}
@@ -62,15 +69,15 @@
 				</Sidebar.Group>
 			</Sidebar.Content>
 			<Sidebar.Footer>
-				<Button variant="outline" class="w-full gap-2" onclick={() => goto('/')}>
+				<Button variant="outline" class="w-full gap-2 text-muted-foreground hover:text-destructive transition-colors" onclick={() => goto('/')}>
 					<LogOut class="size-4" />
 					Déconnexion
 				</Button>
 			</Sidebar.Footer>
 		</Sidebar.Root>
 
-		<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
-			<header class="flex items-center justify-between gap-4 border-sidebar-border bg-sidebar p-4 h-16 text-sidebar-foreground sticky top-0 z-50">
+		<div class="flex flex-1 flex-col bg-background text-foreground">
+			<header class="flex items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 backdrop-blur-sm px-4 h-16 text-sidebar-foreground sticky top-0 z-50">
 				<div class="flex items-center space-x-2">
 					<Sidebar.Trigger />
 				</div>

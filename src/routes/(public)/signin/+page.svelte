@@ -54,7 +54,6 @@
 					minlength={6}
 					maxlength={6}
 					autocomplete="username"
-					
 				/>
 			</div>
 

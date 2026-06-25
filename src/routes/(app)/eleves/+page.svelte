@@ -2,11 +2,15 @@
 	import EleveCard from '$lib/components/user/eleve/EleveCard.svelte';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Card } from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
+	import { GraduationCap, UserPlus } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
 
+	// svelte-ignore state_referenced_locally
 	let listEleve = $state([...data.list_eleve]);
 	let searchText = $state('');
 	let selectedClasse = $state('全部');
@@ -22,30 +26,60 @@
 	);
 </script>
 
-<main class="flex-1 bg-sidebar text-sidebar-foreground">
-	<div class="flex flex-wrap items-center justify-between gap-4 p-4">
-	<div class="flex flex-1 items-center gap-3">
-			<SearchInput placeholder="Rechercher un élève" bind:value={searchText} />
-			<select bind:value={selectedClasse} class="h-9 rounded-md border border-input bg-transparent px-3 py-1 pr-8 text-sm shadow-xs transition-colors focus-visible:ring-2 w-44">
-				<option value="全部">Toutes les classes</option>
-				{#each classes as c}
-					<option value={c}>{c}</option>
-				{/each}
-			</select>
+<main class="bg-background text-foreground">
+	<div class="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
+		<!-- Header -->
+		<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex items-center gap-3">
+				<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+					<GraduationCap class="size-5 text-primary" />
+				</div>
+				<div>
+					<h1 class="text-xl font-bold tracking-tight">Élèves</h1>
+					<p class="text-xs text-muted-foreground">{elevesFiltres.length} élève{elevesFiltres.length > 1 ? 's' : ''} inscrit{elevesFiltres.length > 1 ? 's' : ''}</p>
+				</div>
+			</div>
+			<Button size="sm" onclick={() => goto('/eleves/new')} class="gap-2">
+				<UserPlus class="size-3.5" />
+				Nouvel élève
+			</Button>
 		</div>
-		<Button size="sm" onclick={() => goto('eleves/new')}>Nouvel élève</Button>
-	</div>
 
-	{#if elevesFiltres.length === 0}
-		<div class="flex flex-col items-center justify-center p-8 text-muted-foreground">
-			<p>Aucun élève inscrit pour le moment.</p>
-			<Button class="mt-4" onclick={() => goto('eleves/new')}>Ajouter un élève</Button>
-		</div>
-	{:else}
-		<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each elevesFiltres as eleve (eleve.id)}
-				<EleveCard {eleve} />
-			{/each}
-		</div>
-	{/if}
+		<!-- Filters -->
+		<Card class="animate-slide-up stagger-1 opacity-0 p-4">
+			<div class="flex flex-wrap items-center gap-3">
+				<div class="flex-1 min-w-48">
+					<SearchInput placeholder="Rechercher un élève..." bind:value={searchText} />
+				</div>
+				<div class="flex items-center gap-2">
+					<Badge variant={selectedClasse === '全部' ? 'default' : 'outline'} class="cursor-pointer transition-all hover:shadow-sm" onclick={() => selectedClasse = '全部'}>
+						Toutes les classes
+					</Badge>
+					{#each classes as c}
+						<Badge variant={selectedClasse === c ? 'default' : 'outline'} class="cursor-pointer transition-all hover:shadow-sm" onclick={() => selectedClasse = c}>
+							{c}
+						</Badge>
+					{/each}
+				</div>
+			</div>
+		</Card>
+
+		<!-- Content -->
+		{#if elevesFiltres.length === 0}
+			<div class="animate-fade-in flex flex-col items-center justify-center py-16 text-muted-foreground">
+				<GraduationCap class="size-12 text-muted-foreground/30" />
+				<p class="mt-4 text-sm font-medium">Aucun élève trouvé</p>
+				<p class="text-xs mt-1">Essayez de modifier vos critères de recherche.</p>
+				<Button class="mt-4" variant="outline" onclick={() => goto('/eleves/new')}>Ajouter un élève</Button>
+			</div>
+		{:else}
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				{#each elevesFiltres as eleve, i (eleve.id)}
+					<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
+						<EleveCard {eleve} />
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </main>

@@ -8,10 +8,15 @@
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input';
+	import { Card } from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock } from '@lucide/svelte/icons';
 
 	let themeChecked = $state(true);
+
+	let checked = $derived(themeChecked);
 
 	$effect(() => {
 		document.documentElement.classList.toggle('dark', themeChecked);
@@ -109,7 +114,6 @@
 		if (!nouvelleAnnee.trim()) return;
 		const annee = { id: Date.now().toString(), nom: nouvelleAnnee, dateCreation: new Date().toISOString().split('T')[0], active: false };
 		listeAnnees = [...listeAnnees, annee];
-		console.log('Nouvelle année scolaire créée:', annee);
 		nouvelleAnnee = '';
 	}
 
@@ -118,147 +122,172 @@
 	}
 </script>
 
-<div class="min-h-full bg-sidebar text-sidebar-foreground">
-	<div class="space-y-8 p-4">
-		<div class="flex items-center justify-between rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-4">
-			<h2 class="text-lg font-bold text-foreground">Gestion des comptes</h2>
-			<SearchInput bind:value={searchCompte} placeholder="Rechercher un compte" class="w-64" />
-		</div>
-
-		<div class="rounded-md border border-blue-500 bg-blue-500/10 p-4">
-			<div class="flex items-center gap-2">
-				<AlertCircleIcon class="text-blue-500" />
-				<span class="font-semibold">Comptes en attente de validation</span>
+<div class="min-h-full bg-background text-foreground">
+	<div class="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
+		<!-- Header -->
+		<div class="animate-slide-down flex items-center gap-3">
+			<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+				<Settings class="size-5 text-primary" />
 			</div>
-			<p class="mt-1 text-sm">
-				Les comptes en attente ne sont pas actifs. Vous devez les valider pour qu'ils puissent accéder à la plateforme.
-			</p>
+			<div>
+				<h1 class="text-xl font-bold tracking-tight">Paramètres</h1>
+				<p class="text-xs text-muted-foreground">Gérez votre établissement</p>
+			</div>
 		</div>
 
-		<div class="overflow-x-auto rounded-md border">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head class="w-40">Nom</Table.Head>
-						<Table.Head>Prénom</Table.Head>
-						<Table.Head>Email</Table.Head>
-						<Table.Head>Rôle</Table.Head>
-						<Table.Head>Date création</Table.Head>
-						<Table.Head>Statut</Table.Head>
-						<Table.Head class="text-right">Actions</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each comptesFiltres as compte (compte.id)}
-						<Table.Row>
-							<Table.Cell class="font-medium">{compte.nom}</Table.Cell>
-							<Table.Cell>{compte.prenom}</Table.Cell>
-							<Table.Cell class="text-xs">{compte.email}</Table.Cell>
-							<Table.Cell>{compte.role}</Table.Cell>
-							<Table.Cell class="text-xs">{compte.dateCreation}</Table.Cell>
-							<Table.Cell>
-								<span class="inline-flex items-center gap-1 text-xs font-medium">
-									{#if compte.statut === 'en_attente'}
-										<span class="inline-block size-2 rounded-full bg-amber-500"></span>
-										En attente
-									{:else if compte.statut === 'actif'}
-										<span class="inline-block size-2 rounded-full bg-emerald-500"></span>
-										Actif
-									{:else}
-										<span class="inline-block size-2 rounded-full bg-destructive"></span>
-										Bloqué
-									{/if}
-								</span>
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								{#if compte.statut === 'en_attente'}
-									<Button size="sm" variant="default" class="h-7 px-2 text-xs" onclick={() => validerCompte(compte.id)}>
-										<CheckCircleIcon class="mr-1 size-3" />
-										Valider
-									</Button>
-								{:else if compte.statut === 'actif'}
-									<Button size="sm" variant="destructive" class="h-7 px-2 text-xs" onclick={() => bloquerCompte(compte.id)}>
-										<XCircleIcon class="mr-1 size-3" />
-										Bloquer
-									</Button>
-								{:else}
-									<Button size="sm" variant="secondary" class="h-7 px-2 text-xs" onclick={() => debloquerCompte(compte.id)}>
-										Débloquer
-									</Button>
-								{/if}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
-		</div>
-	</div>
+		<!-- Gestion des comptes -->
+		<Card class="animate-slide-up stagger-1 opacity-0 p-5 space-y-4">
+			<div class="flex flex-wrap items-center justify-between gap-4">
+				<div class="flex items-center gap-2">
+					<Shield class="size-4 text-primary" />
+					<h2 class="font-semibold">Gestion des comptes</h2>
+					<Badge variant="secondary" class="text-xs">{comptesFiltres.length}</Badge>
+				</div>
+				<SearchInput bind:value={searchCompte} placeholder="Rechercher un compte" class="w-64" />
+			</div>
 
-	<div class="border-t border-sidebar-border p-4">
-		<h2 class="mb-4 text-lg font-bold text-foreground">Gestion des années scolaires</h2>
-
-		<div class="w-full max-w-2xl space-y-4 rounded-md border p-4">
-			<div class="rounded-md bg-blue-500/10 p-3">
-				<p class="text-sm">
-					Année scolaire actuelle : <strong class="text-blue-500">{listeAnnees.find((a) => a.active)?.nom || 'Aucune'}</strong>
+			<div class="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+				<div class="flex items-center gap-2">
+					<AlertCircleIcon class="size-4 text-blue-500" />
+					<span class="text-xs font-medium">Comptes en attente de validation</span>
+				</div>
+				<p class="mt-1 text-xs text-muted-foreground">
+					Les comptes en attente ne sont pas actifs. Vous devez les valider pour qu'ils puissent accéder à la plateforme.
 				</p>
 			</div>
 
-			<div class="space-y-2">
-				<h3 class="font-medium">Liste des années</h3>
-				<div class="overflow-x-auto rounded-md border">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Année</Table.Head>
-								<Table.Head>Date création</Table.Head>
-								<Table.Head>Statut</Table.Head>
-								<Table.Head class="text-right">Action</Table.Head>
+			<div class="overflow-x-auto rounded-lg border">
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head class="w-40">Nom</Table.Head>
+							<Table.Head>Prénom</Table.Head>
+							<Table.Head>Email</Table.Head>
+							<Table.Head>Rôle</Table.Head>
+							<Table.Head>Date création</Table.Head>
+							<Table.Head>Statut</Table.Head>
+							<Table.Head class="text-right">Actions</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each comptesFiltres as compte (compte.id)}
+							<Table.Row class="transition-colors hover:bg-muted/50">
+								<Table.Cell class="font-medium">{compte.nom}</Table.Cell>
+								<Table.Cell>{compte.prenom}</Table.Cell>
+								<Table.Cell class="text-xs">{compte.email}</Table.Cell>
+								<Table.Cell>{compte.role}</Table.Cell>
+								<Table.Cell class="text-xs">{compte.dateCreation}</Table.Cell>
+								<Table.Cell>
+									{#if compte.statut === 'en_attente'}
+										<Badge variant="outline" class="gap-1 text-xs border-amber-500/30 bg-amber-500/10 text-amber-500">
+											<span class="size-1.5 rounded-full bg-amber-500 animate-pulse-soft"></span>
+											En attente
+										</Badge>
+									{:else if compte.statut === 'actif'}
+										<Badge variant="outline" class="gap-1 text-xs border-emerald-500/30 bg-emerald-500/10 text-emerald-500">
+											<span class="size-1.5 rounded-full bg-emerald-500"></span>
+											Actif
+										</Badge>
+									{:else}
+										<Badge variant="outline" class="gap-1 text-xs border-destructive/30 bg-destructive/10 text-destructive">
+											<span class="size-1.5 rounded-full bg-destructive"></span>
+											Bloqué
+										</Badge>
+									{/if}
+								</Table.Cell>
+								<Table.Cell class="text-right">
+									{#if compte.statut === 'en_attente'}
+										<Button size="sm" variant="default" class="h-7 px-2 text-xs gap-1" onclick={() => validerCompte(compte.id)}>
+											<Check class="size-3" />
+											Valider
+										</Button>
+									{:else if compte.statut === 'actif'}
+										<Button size="sm" variant="destructive" class="h-7 px-2 text-xs gap-1" onclick={() => bloquerCompte(compte.id)}>
+											<Ban class="size-3" />
+											Bloquer
+										</Button>
+									{:else}
+										<Button size="sm" variant="secondary" class="h-7 px-2 text-xs gap-1" onclick={() => debloquerCompte(compte.id)}>
+											<Lock class="size-3" />
+											Débloquer
+										</Button>
+									{/if}
+								</Table.Cell>
 							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each listeAnnees as annee (annee.id)}
-								<Table.Row>
-									<Table.Cell class="font-medium">{annee.nom}</Table.Cell>
-									<Table.Cell class="text-xs">{annee.dateCreation}</Table.Cell>
-									<Table.Cell>
-										<span class="inline-flex items-center gap-1 text-xs font-medium">
-											{#if annee.active}
-												<span class="inline-block size-2 rounded-full bg-emerald-500"></span>
-												Actuelle
-											{:else}
-												<span class="inline-block size-2 rounded-full bg-muted-foreground"></span>
-												Inactive
-											{/if}
-										</span>
-									</Table.Cell>
-									<Table.Cell class="text-right">
-										{#if !annee.active}
-											<Button size="sm" variant="outline" class="h-7 px-2 text-xs" onclick={() => selectAnnee(annee.id)}>
-												Sélectionner
-											</Button>
-										{/if}
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
+		</Card>
+
+		<!-- Gestion des années scolaires -->
+		<Card class="animate-slide-up stagger-2 opacity-0 p-5 space-y-4">
+			<div class="flex items-center gap-2">
+				<CalendarRange class="size-4 text-primary" />
+				<h2 class="font-semibold">Gestion des années scolaires</h2>
+			</div>
+
+			<div class="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+				<p class="text-xs">
+					Année scolaire actuelle : <strong class="text-primary">{listeAnnees.find((a) => a.active)?.nom || 'Aucune'}</strong>
+				</p>
+			</div>
+
+			<div class="overflow-x-auto rounded-lg border">
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head>Année</Table.Head>
+							<Table.Head>Date création</Table.Head>
+							<Table.Head>Statut</Table.Head>
+							<Table.Head class="text-right">Action</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each listeAnnees as annee (annee.id)}
+							<Table.Row class="transition-colors hover:bg-muted/50">
+								<Table.Cell class="font-medium">{annee.nom}</Table.Cell>
+								<Table.Cell class="text-xs">{annee.dateCreation}</Table.Cell>
+								<Table.Cell>
+									{#if annee.active}
+										<Badge variant="outline" class="gap-1 text-xs border-emerald-500/30 bg-emerald-500/10 text-emerald-500">
+											<span class="size-1.5 rounded-full bg-emerald-500"></span>
+											Actuelle
+										</Badge>
+									{:else}
+										<Badge variant="outline" class="gap-1 text-xs">
+											<span class="size-1.5 rounded-full bg-muted-foreground"></span>
+											Inactive
+										</Badge>
+									{/if}
+								</Table.Cell>
+								<Table.Cell class="text-right">
+									{#if !annee.active}
+										<Button size="sm" variant="outline" class="h-7 px-2 text-xs" onclick={() => selectAnnee(annee.id)}>
+											Sélectionner
+										</Button>
+									{/if}
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
 			</div>
 
 			<AlertDialog.Root>
 				<AlertDialog.Trigger class={buttonVariants({ variant: 'default', size: 'sm' })}>
+					<Plus class="size-3.5" />
 					Nouvelle année scolaire
 				</AlertDialog.Trigger>
 				<AlertDialog.Content>
 					<AlertDialog.Header>
 						<AlertDialog.Title>Nouvelle année scolaire</AlertDialog.Title>
-						<div class="rounded-md border border-destructive bg-destructive/10 p-3">
+						<div class="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
 							<div class="flex items-center gap-2">
-								<AlertCircleIcon />
-								<span class="font-semibold">L'ancienne année scolaire sera désactivée</span>
+								<AlertCircleIcon class="size-4 text-destructive" />
+								<span class="text-xs font-medium">L'ancienne année scolaire sera désactivée</span>
 							</div>
-							<p class="mt-1 text-xs">
+							<p class="mt-1 text-xs text-muted-foreground">
 								La création d'une nouvelle année scolaire effacera les classes et élèves existants.
 							</p>
 						</div>
@@ -273,6 +302,32 @@
 					</AlertDialog.Footer>
 				</AlertDialog.Content>
 			</AlertDialog.Root>
-		</div>
+		</Card>
+
+		<!-- Theme -->
+		<Card class="animate-slide-up stagger-3 opacity-0 p-5">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-3">
+					<div class="flex size-9 items-center justify-center rounded-lg bg-muted">
+						{#if themeChecked}
+							<span class="text-sm">🌙</span>
+						{:else}
+							<span class="text-sm">☀️</span>
+						{/if}
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold">Thème sombre</h3>
+						<p class="text-xs text-muted-foreground">Basculer entre le mode clair et sombre</p>
+					</div>
+				</div>
+				<Switch checked={themeChecked} onCheckedChange={(details) => (themeChecked = details.checked)}>
+					<Switch.Label class="sr-only">Toggle theme</Switch.Label>
+					<Switch.Control>
+						<Switch.Thumb class="transition-transform duration-200" />
+					</Switch.Control>
+					<Switch.HiddenInput />
+				</Switch>
+			</div>
+		</Card>
 	</div>
 </div>

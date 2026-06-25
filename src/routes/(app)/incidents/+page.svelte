@@ -6,9 +6,10 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Card } from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { buttonVariants } from '$lib/components/ui/button';
-	import { User, Send } from '@lucide/svelte/icons';
+	import { Avatar } from '$lib/components/ui/avatar';
+	import { User, Send, MessageCircle, AlertCircle, Info, Star, UserX } from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 	import type { PageProps } from './$types';
 
@@ -20,7 +21,7 @@
 	let selectedType = $state<IncidentType>('note');
 	let dialogOpen = $state(false);
 	let commentTexts = $state<Record<string, string>>({});
-
+	let reactingTo = $state<string | null>(null);
 
 	const typeLabels: Record<IncidentType, string> = {
 		info: 'Information',
@@ -28,6 +29,15 @@
 		note: 'Note positive',
 		absent: 'Absence'
 	};
+
+	const typeConfig: Record<IncidentType, { icon: typeof Info; color: string; bg: string; border: string }> = {
+		info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+		erreur: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+		note: { icon: Star, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
+		absent: { icon: UserX, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' }
+	};
+
+	const reactionEmojis = ['⚠️', '👍', '❤️', '😂', '🌟', '😢'];
 
 	function openNewIncident() {
 		selectedEleveId = '';
@@ -65,6 +75,19 @@
 		} else {
 			incident.reactions = [...incident.reactions, { emoji, user: 'Moi' }];
 		}
+		reactingTo = null;
+	}
+
+	function getReactionCount(incident: Incident, emoji: string) {
+		return incident.reactions.filter((r) => r.emoji === emoji).length;
+	}
+
+	function hasUserReacted(incident: Incident, emoji: string) {
+		return incident.reactions.some((r) => r.emoji === emoji && r.user === 'Moi');
+	}
+
+	function getTotalReactions(incident: Incident) {
+		return incident.reactions.length;
 	}
 
 	function addComment(incidentId: string) {
@@ -84,6 +107,20 @@
 		return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 	}
 
+	function timeAgo(dateStr: string) {
+		const now = new Date();
+		const date = new Date(dateStr);
+		const diff = now.getTime() - date.getTime();
+		const minutes = Math.floor(diff / 60000);
+		const hours = Math.floor(diff / 3600000);
+		const days = Math.floor(diff / 86400000);
+		if (minutes < 1) return "à l'instant";
+		if (minutes < 60) return `il y a ${minutes}min`;
+		if (hours < 24) return `il y a ${hours}h`;
+		if (days < 7) return `il y a ${days}j`;
+		return formatDate(dateStr);
+	}
+
 	const mockEleves = [
 		{ id: '1', nom: 'RANDRIANANTENAINA', prenom: 'Tsitoarimanjakely' },
 		{ id: '2', nom: 'RAKOTO', prenom: 'Fanomezamasy' },
@@ -91,80 +128,151 @@
 	];
 </script>
 
-<main class="flex h-[calc(100vh-4rem)] flex-col bg-sidebar text-sidebar-foreground">
-	<div class="border-border flex items-center justify-between border-b p-4">
-		<h1 class="text-xl font-bold">Fil d'incidents</h1>
-		<Button onclick={openNewIncident} size="sm">Nouvelle note</Button>
+<main class="flex h-[calc(100vh-4rem)] flex-col bg-background text-foreground">
+	<!-- Header -->
+	<div class="animate-slide-down flex items-center justify-between border-b border-border bg-card/50 backdrop-blur-sm px-4 py-3 sticky top-16 z-40">
+		<div class="flex items-center gap-3">
+			<div class="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+				<AlertCircle class="size-5 text-primary" />
+			</div>
+			<div>
+				<h1 class="text-lg font-bold">Fil d'incidents</h1>
+				<p class="text-xs text-muted-foreground">{incidents.length} incidents signalés</p>
+			</div>
+		</div>
+		<Button onclick={openNewIncident} size="sm" class="gap-2">
+			<AlertCircle class="size-3.5" />
+			Nouvelle note
+		</Button>
 	</div>
 
+	<!-- Feed -->
 	<div class="flex-1 overflow-y-auto p-4 space-y-4">
-		{#each incidents as incident (incident.id)}
-			<Card class="border-l-4 border-sidebar-border bg-card">
+		{#each incidents as incident, idx (incident.id)}
+			{@const config = typeConfig[incident.type]}
+			<Card class="animate-slide-up opacity-0 overflow-hidden border-l-4 {config.border} transition-all duration-200 hover:shadow-md" style="animation-delay: {Math.min(idx * 80, 400)}ms">
 				<div class="p-4">
-					<div class="mb-2 flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<button
-								class="flex items-center gap-2 font-semibold text-primary hover:underline"
-								onclick={() => goto(`/eleves/${incident.eleveId}`)}
-							>
-								<User class="size-4" />
-								{incident.eleveNom} {incident.elevePrenom}
-							</button>
-							<span class="rounded-full bg-muted px-2 py-0.5 text-xs">{typeLabels[incident.type]}</span>
-						</div>
-						<span class="text-xs text-muted-foreground">{formatDate(incident.date)}</span>
-					</div>
-					<p class="text-sm leading-relaxed">{incident.message}</p>
-
-					<div class="mt-3 flex items-center gap-2">
-						<div class="flex gap-1">
-							{#each ['⚠️', '👍', '❤️', '😂'] as emoji}
+					<!-- Post Header -->
+					<div class="flex items-start justify-between">
+						<div class="flex items-center gap-3">
+							<Avatar.Root class="size-10">
+								<Avatar.Fallback class="text-xs font-bold">{incident.elevePrenom[0]}{incident.eleveNom[0]}</Avatar.Fallback>
+							</Avatar.Root>
+							<div>
 								<button
-									class="rounded px-1.5 py-0.5 text-sm hover:bg-muted {incident.reactions.some((r) => r.emoji === emoji && r.user === 'Moi') ? 'bg-muted' : ''}"
+									class="font-semibold text-sm hover:text-primary hover:underline transition-colors"
+									onclick={() => goto(`/eleves/${incident.eleveId}`)}
+								>
+									{incident.elevePrenom} {incident.eleveNom}
+								</button>
+								<div class="flex items-center gap-2 mt-0.5">
+									<span class="text-xs text-muted-foreground">{timeAgo(incident.date)}</span>
+									<span class="text-xs text-muted-foreground">·</span>
+									<span class="text-xs text-muted-foreground">{incident.auteur}</span>
+								</div>
+							</div>
+						</div>
+						<Badge variant="outline" class="gap-1.5 text-xs {config.bg} {config.color} border-0">
+							<config.icon class="size-3" />
+							{typeLabels[incident.type]}
+						</Badge>
+					</div>
+
+					<!-- Message -->
+					<p class="mt-3 text-sm leading-relaxed">{incident.message}</p>
+
+					<!-- Reactions Summary -->
+					{#if getTotalReactions(incident) > 0 || incident.comments.length > 0}
+						<div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+							{#if getTotalReactions(incident) > 0}
+								<div class="flex items-center gap-1">
+									<div class="flex -space-x-1">
+										{#each [...new Set(incident.reactions.map(r => r.emoji))] as emoji}
+											<span class="flex size-5 items-center justify-center rounded-full bg-muted text-xs ring-2 ring-card">{emoji}</span>
+										{/each}
+									</div>
+									<span class="ml-1">{getTotalReactions(incident)}</span>
+								</div>
+							{:else}
+								<span></span>
+							{/if}
+							{#if incident.comments.length > 0}
+								<button class="hover:text-foreground transition-colors">
+									{incident.comments.length} commentaire{incident.comments.length > 1 ? 's' : ''}
+								</button>
+							{/if}
+						</div>
+					{/if}
+
+					<!-- Reaction Buttons -->
+					<div class="mt-3 flex items-center gap-1 border-t border-border pt-3">
+						<div class="flex flex-wrap gap-1">
+							{#each reactionEmojis as emoji}
+								{@const count = getReactionCount(incident, emoji)}
+								{@const active = hasUserReacted(incident, emoji)}
+								<button
+									class="group flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all duration-200 hover:scale-105 {active ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50 hover:bg-muted'}"
 									onclick={() => addReaction(incident.id, emoji)}
 								>
-									{emoji}
+									<span class="transition-transform duration-200 group-hover:scale-125">{emoji}</span>
+									{#if count > 0}
+										<span class="font-medium {active ? 'text-primary' : 'text-muted-foreground'}">{count}</span>
+									{/if}
 								</button>
 							{/each}
 						</div>
-						{#if incident.reactions.length > 0}
-							<span class="text-xs text-muted-foreground">
-								{incident.reactions.map((r) => r.emoji).join(' ')}
-							</span>
-						{/if}
 					</div>
 
+					<!-- Comments -->
 					{#if incident.comments.length > 0}
-						<div class="mt-3 space-y-2 border-t pt-3">
+						<div class="mt-3 space-y-2 border-t border-border pt-3">
 							{#each incident.comments as comment}
-								<div class="flex items-start gap-2">
-									<div class="min-w-0 flex-1">
-										<span class="text-xs font-medium">{comment.author}</span>
-										<p class="text-xs text-muted-foreground">{comment.text}</p>
+								<div class="flex items-start gap-2.5 animate-fade-in">
+									<Avatar.Root class="size-7">
+										<Avatar.Fallback class="text-[10px] font-bold">{comment.author[0]}</Avatar.Fallback>
+									</Avatar.Root>
+									<div class="flex-1 rounded-lg bg-muted/50 px-3 py-2">
+										<div class="flex items-center gap-2">
+											<span class="text-xs font-semibold">{comment.author}</span>
+											<span class="text-[10px] text-muted-foreground">{timeAgo(comment.date)}</span>
+										</div>
+										<p class="mt-0.5 text-xs text-muted-foreground leading-relaxed">{comment.text}</p>
 									</div>
 								</div>
 							{/each}
 						</div>
 					{/if}
 
-					<div class="mt-3 flex items-center gap-2">
+					<!-- Comment Input -->
+					<div class="mt-3 flex items-center gap-2 border-t border-border pt-3">
+						<Avatar.Root class="size-7">
+							<Avatar.Fallback class="text-[10px] font-bold">M</Avatar.Fallback>
+						</Avatar.Root>
 						<Input
-							placeholder="Commenter..."
+							placeholder="Écrire un commentaire..."
 							bind:value={commentTexts[incident.id]}
-							class="h-8 text-xs"
+							class="h-8 text-xs bg-muted/50 border-0"
 							onkeydown={(e) => {
 								if (e.key === 'Enter') addComment(incident.id);
 							}}
 						/>
-						<Button size="icon" variant="ghost" class="h-8 w-8" onclick={() => addComment(incident.id)}>
+						<Button size="icon" variant="ghost" class="size-8 shrink-0" onclick={() => addComment(incident.id)}>
 							<Send class="size-3.5" />
 						</Button>
 					</div>
 				</div>
 			</Card>
+		{:else}
+			<div class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+				<AlertCircle class="size-12 text-muted-foreground/30" />
+				<p class="mt-4 text-sm font-medium">Aucun incident signalé</p>
+				<p class="text-xs mt-1">Les incidents apparaîtront ici une fois créés.</p>
+				<Button onclick={openNewIncident} class="mt-4" variant="outline">Créer un incident</Button>
+			</div>
 		{/each}
 	</div>
 
+	<!-- New Incident Dialog -->
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Content class="sm:max-w-[500px]">
 			<Dialog.Header>

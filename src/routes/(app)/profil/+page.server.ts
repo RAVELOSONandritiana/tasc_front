@@ -5,9 +5,11 @@ export const load: PageServerLoad = async () => {
         nom: 'ADMIN',
         prenom: 'Super',
         email: 'admin@tasc.mg',
-        phone: '+261 34 000 00 00',
+        phone: '+261 34 00 00 00',
         role: 'Administrateur',
-        dateInscription: '2024-01-15'
+        dateInscription: '2024-01-15',
+        adresse: 'Lot IV Bis Ambatobe, Antananarivo',
+        bio: ''
     };
     return { profil };
 };

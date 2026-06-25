@@ -9,6 +9,9 @@
 	import type { Personne, Surveillant } from '$lib/types/Personne.type';
 	import type { PageProps } from './$types';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import { Card } from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
+	import { UserSquare2, Plus } from '@lucide/svelte/icons';
 
 	const { data }: PageProps = $props();
 
@@ -53,20 +56,40 @@
 	let open = $state(false);
 </script>
 
-<main class="min-h-full rounded-md bg-sidebar text-sidebar-foreground">
-	<div class="flex justify-between p-4 top-16 sticky z-50 bg-sidebar">
-		<SearchInput bind:value={searchText} placeholder="Rechercher un surveillant" />
-		<Button class="h-9 rounded-lg px-5 text-sm font-medium" onclick={() => (open = true)}> Nouveau </Button>
-	</div>
+<main class="bg-background text-foreground">
+	<div class="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
+		<!-- Header -->
+		<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex items-center gap-3">
+				<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+					<UserSquare2 class="size-5 text-primary" />
+				</div>
+				<div>
+					<h1 class="text-xl font-bold tracking-tight">Surveillants</h1>
+					<p class="text-xs text-muted-foreground">{listFiltered.length} surveillant{listFiltered.length > 1 ? 's' : ''}</p>
+				</div>
+			</div>
+			<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (open = true)}>
+				<Plus class="size-3.5" />
+				Nouveau
+			</Button>
+		</div>
 
-	<div class="p-4">
-		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
-			{#each listFiltered as p (p.phone || `${p.name}${p.lastname}`)}
-				<SurveillantCard
-					personne={p}
-					tags={[p.poste]}
-					hrefProfil={`/surveillant/${encodeURIComponent(p.phone)}`}
-				/>
+		<!-- Search -->
+		<Card class="animate-slide-up stagger-1 opacity-0 p-4">
+			<SearchInput bind:value={searchText} placeholder="Rechercher un surveillant" />
+		</Card>
+
+		<!-- List -->
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+			{#each listFiltered as p, i (p.phone || `${p.name}${p.lastname}`)}
+				<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
+					<SurveillantCard
+						personne={p}
+						tags={[p.poste]}
+						hrefProfil={`/surveillant/${encodeURIComponent(p.phone)}`}
+					/>
+				</div>
 			{/each}
 		</div>
 	</div>
