@@ -7,7 +7,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Avatar } from '$lib/components/ui/avatar';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { User, Mail, Phone, Shield, Calendar, Camera, Save, X, MapPin, Building, Clock, CheckCircle2 } from '@lucide/svelte/icons';
+	import { User, Mail, Phone, Shield, Calendar, Camera, Save, X, MapPin, Building, Clock, CheckCircle2, BookOpen, CalendarDays, Users, TrendingUp, TrendingDown } from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -16,7 +16,6 @@
 	let saving = $state(false);
 	let saved = $state(false);
 
-	// Editable fields
 	let editNom = $state(data.profil.nom);
 	let editPrenom = $state(data.profil.prenom);
 	let editEmail = $state(data.profil.email);
@@ -62,6 +61,21 @@
 		{ label: 'Rôle', value: data.profil.role, icon: Shield },
 		{ label: 'Statut', value: 'Actif', icon: CheckCircle2 }
 	]);
+
+	const isEmployee = $derived(data.profil.role === 'Enseignant' || data.profil.role === 'Surveillant');
+	const employeeStats = $derived(data.profil.stats);
+
+	const statCards = $derived.by(() => {
+		if (!isEmployee || !employeeStats) return [];
+		return [
+			{ label: 'Heures de cours', value: `${employeeStats.heuresCours}h`, icon: CalendarDays, color: 'text-blue-500' },
+			{ label: 'Retards', value: employeeStats.retards.toString(), icon: TrendingUp, color: employeeStats.retards > 2 ? 'text-red-500' : 'text-amber-500' },
+			{ label: 'Absences', value: employeeStats.absences.toString(), icon: Users, color: employeeStats.absences > 1 ? 'text-red-500' : 'text-amber-500' },
+			{ label: 'Incidents', value: employeeStats.incidents.toString(), icon: Shield, color: employeeStats.incidents > 2 ? 'text-red-500' : employeeStats.incidents > 0 ? 'text-amber-500' : 'text-emerald-500' },
+			{ label: 'Notes positives', value: employeeStats.notesPositives.toString(), icon: CheckCircle2, color: 'text-emerald-500' },
+			{ label: 'Notes négatives', value: employeeStats.notesNegatives.toString(), icon: X, color: employeeStats.notesNegatives > 2 ? 'text-red-500' : employeeStats.notesNegatives > 0 ? 'text-amber-500' : 'text-emerald-500' }
+		];
+	});
 </script>
 
 <main class="flex-1 overflow-y-auto bg-background p-4 md:p-6 text-foreground">
@@ -140,6 +154,26 @@
 				</Card>
 			{/each}
 		</div>
+
+		<!-- Employee Stats -->
+		{#if isEmployee && employeeStats}
+			<div class="space-y-3">
+				<h3 class="text-lg font-semibold">Statistiques de travail</h3>
+				<div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+					{#each statCards as stat, i}
+						<Card class="animate-slide-up stagger-{i + 2} opacity-0 p-4 transition-all duration-200 hover:shadow-sm">
+							<div class="flex items-center gap-2">
+								<stat.icon class="size-4 {stat.color}" />
+								<div>
+									<p class="text-xs text-muted-foreground">{stat.label}</p>
+									<p class="text-lg font-bold">{stat.value}</p>
+								</div>
+							</div>
+						</Card>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		<!-- Info Cards -->
 		<div class="grid gap-4 md:grid-cols-2">

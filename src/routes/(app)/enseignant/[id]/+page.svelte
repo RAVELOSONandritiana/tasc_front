@@ -2,33 +2,36 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Label } from '$lib/components/ui/label';
-	import { User, Mail, Phone, MapPin, Calendar, Clock, Shield, Users, CheckCircle2, X } from '@lucide/svelte/icons';
+	import { Avatar } from '$lib/components/ui/avatar';
+	import { User, Mail, Phone, Shield, Calendar, MapPin, Building, Clock, CheckCircle2, CalendarDays, Users, X } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
-	const eleve = data.eleve;
+	const prof = data.professeur;
 
-	const initial = eleve.prenom.charAt(0) + eleve.nom.charAt(0);
-	const stats = eleve.stats;
+	const initial = prof.name.charAt(0) + prof.lastname.charAt(0);
+
+	const stats = prof.stats;
 </script>
 
 <main class="min-h-full bg-sidebar p-6 text-sidebar-foreground">
 	<div class="mx-auto max-w-3xl space-y-6">
 		<div class="flex items-center justify-between">
-			<h1 class="text-2xl font-bold">Profil de l'élève</h1>
-			<Button variant="outline" onclick={() => goto('/eleves')}>Retour</Button>
+			<h1 class="text-2xl font-bold">Profil de l'enseignant</h1>
+			<Button variant="outline" onclick={() => goto('/enseignant')}>Retour</Button>
 		</div>
 
 		<Card class="p-6">
 			<div class="flex items-center gap-4">
-				<div class="bg-primary/10 flex size-16 items-center justify-center rounded-full">
-					<User class="size-8 text-primary" />
-				</div>
+				<Avatar class="h-20 w-20">
+					<Avatar.Fallback class="text-xl font-bold text-primary bg-primary/10">
+						{initial}
+					</Avatar.Fallback>
+				</Avatar>
 				<div>
-					<h2 class="text-2xl font-semibold">{eleve.prenom} {eleve.nom}</h2>
-					<Badge variant="secondary" class="text-xs">{eleve.classe}</Badge>
+					<h2 class="text-2xl font-semibold">{prof.name} {prof.lastname}</h2>
+					<Badge variant="outline" class="text-xs">Enseignant</Badge>
 				</div>
 			</div>
 		</Card>
@@ -37,51 +40,42 @@
 			<Card class="p-4 space-y-3">
 				<h3 class="font-semibold">Informations</h3>
 				<div class="flex items-center gap-3">
-					<Calendar class="size-4 text-muted-foreground" />
-					<div>
-						<Label class="text-xs text-muted-foreground">Date de naissance</Label>
-						<p class="text-sm font-medium">
-							{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString('fr-FR') : '—'}
-						</p>
-					</div>
-				</div>
-				<div class="flex items-center gap-3">
 					<Mail class="size-4 text-muted-foreground" />
 					<div>
-						<Label class="text-xs text-muted-foreground">Email</Label>
-						<p class="text-sm font-medium">eleve@example.com</p>
+						<p class="text-xs text-muted-foreground">Email</p>
+						<p class="text-sm font-medium">{prof.email}</p>
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
 					<Phone class="size-4 text-muted-foreground" />
 					<div>
-						<Label class="text-xs text-muted-foreground">Téléphone</Label>
-						<p class="text-sm font-medium">+261 34 000 00 00</p>
+						<p class="text-xs text-muted-foreground">Téléphone</p>
+						<p class="text-sm font-medium">{prof.phone}</p>
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
 					<MapPin class="size-4 text-muted-foreground" />
 					<div>
-						<Label class="text-xs text-muted-foreground">Adresse</Label>
-						<p class="text-sm font-medium">Antananarivo, Madagascar</p>
+						<p class="text-xs text-muted-foreground">Adresse</p>
+						<p class="text-sm font-medium">{prof.domicile}, {prof.commune}</p>
 					</div>
 				</div>
 			</Card>
 
 			<Card class="p-4 space-y-3">
-				<h3 class="font-semibold">Statut</h3>
+				<h3 class="font-semibold">Statut professionnel</h3>
 				<div class="flex items-center gap-3">
 					<Shield class="size-4 text-muted-foreground" />
 					<div>
-						<Label class="text-xs text-muted-foreground">Rôle</Label>
-						<p class="text-sm font-medium">Élève</p>
+						<p class="text-xs text-muted-foreground">Rôle</p>
+						<p class="text-sm font-medium">Enseignant</p>
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
 					<Calendar class="size-4 text-muted-foreground" />
 					<div>
-						<Label class="text-xs text-muted-foreground">Classe</Label>
-						<p class="text-sm font-medium">{eleve.classe}</p>
+						<p class="text-xs text-muted-foreground">Matières</p>
+						<p class="text-sm font-medium">{prof.matiere.join(', ')}</p>
 					</div>
 				</div>
 			</Card>
@@ -89,8 +83,13 @@
 
 		{#if stats}
 			<Card class="p-5 space-y-4">
-				<h3 class="font-semibold">Statistiques</h3>
+				<h3 class="font-semibold">Statistiques de travail</h3>
 				<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+					<div class="text-center p-3 bg-muted/30 rounded-lg">
+						<CalendarDays class="size-5 text-blue-500 mx-auto mb-1" />
+						<p class="text-xs text-muted-foreground">Heures de cours</p>
+						<p class="text-2xl font-bold text-blue-500">{stats.heuresCours}h</p>
+					</div>
 					<div class="text-center p-3 bg-muted/30 rounded-lg">
 						<Clock class="size-5 text-amber-500 mx-auto mb-1" />
 						<p class="text-xs text-muted-foreground">Retards</p>
@@ -104,7 +103,7 @@
 					<div class="text-center p-3 bg-muted/30 rounded-lg">
 						<Shield class="size-5 text-red-500 mx-auto mb-1" />
 						<p class="text-xs text-muted-foreground">Incidents</p>
-						<p class="text-2xl font-bold {stats.incidents > 0 ? 'text-red-500' : 'text-emerald-500'}">{stats.incidents}</p>
+						<p class="text-2xl font-bold {stats.incidents > 2 ? 'text-red-500' : stats.incidents > 0 ? 'text-amber-500' : 'text-emerald-500'}">{stats.incidents}</p>
 					</div>
 					<div class="text-center p-3 bg-muted/30 rounded-lg">
 						<CheckCircle2 class="size-5 text-emerald-500 mx-auto mb-1" />
@@ -115,11 +114,6 @@
 						<X class="size-5 text-red-500 mx-auto mb-1" />
 						<p class="text-xs text-muted-foreground">Notes négatives</p>
 						<p class="text-2xl font-bold {stats.notesNegatives > 2 ? 'text-red-500' : stats.notesNegatives > 0 ? 'text-amber-500' : 'text-emerald-500'}">{stats.notesNegatives}</p>
-					</div>
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<Calendar class="size-5 text-blue-500 mx-auto mb-1" />
-						<p class="text-xs text-muted-foreground">Heures cours</p>
-						<p class="text-2xl font-bold text-blue-500">{stats.heuresCours}h</p>
 					</div>
 				</div>
 			</Card>
