@@ -9,7 +9,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Avatar  from '$lib/components/ui/avatar';
-	import { Send, AlertCircle, Info, Star, UserX } from '@lucide/svelte/icons';
+	import { Send, AlertCircle, Info, Star, UserX, Shield } from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 	import type { PageProps } from './$types';
 
@@ -30,14 +30,20 @@
 		absent: 'Absence'
 	};
 
-	const typeConfig: Record<IncidentType, { icon: typeof Info; color: string; bg: string; border: string }> = {
-		info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-		erreur: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
-		note: { icon: Star, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
-		absent: { icon: UserX, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' }
+	const typeConfig: Record<IncidentType, { icon: typeof Info; color: string; bg: string; border: string; dot: string }> = {
+		info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/15', border: 'border-blue-500/30', dot: 'bg-blue-500' },
+		erreur: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-500/15', border: 'border-red-500/30', dot: 'bg-red-500' },
+		note: { icon: Star, color: 'text-emerald-500', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
+		absent: { icon: UserX, color: 'text-amber-500', bg: 'bg-amber-500/15', border: 'border-amber-500/30', dot: 'bg-amber-500' }
 	};
 
 	const reactionEmojis = ['⚠️', '👍', '❤️', '😂', '🌟', '😢'];
+
+	const mockEleves = [
+		{ id: '1', nom: 'RANDRIANANTENAINA', prenom: 'Tsitoarimanjakely' },
+		{ id: '2', nom: 'RAKOTO', prenom: 'Fanomezamasy' },
+		{ id: '3', nom: 'ANDRIANTENAINA', prenom: 'Bako' }
+	];
 
 	function openNewIncident() {
 		selectedEleveId = '';
@@ -120,24 +126,17 @@
 		if (days < 7) return `il y a ${days}j`;
 		return formatDate(dateStr);
 	}
-
-	const mockEleves = [
-		{ id: '1', nom: 'RANDRIANANTENAINA', prenom: 'Tsitoarimanjakely' },
-		{ id: '2', nom: 'RAKOTO', prenom: 'Fanomezamasy' },
-		{ id: '3', nom: 'ANDRIANTENAINA', prenom: 'Bako' }
-	];
 </script>
 
 <main class="flex h-[calc(100vh-4rem)] flex-col bg-background text-foreground">
-	<!-- Header -->
-	<div class="animate-slide-down flex items-center justify-between border-b border-border bg-card/50 backdrop-blur-sm px-4 py-3 sticky top-16 z-40">
+	<div class="animate-slide-down flex items-center justify-between border-b border-sidebar-border bg-card/80 backdrop-blur-sm px-4 py-3 sticky top-16 z-40">
 		<div class="flex items-center gap-3">
 			<div class="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-				<AlertCircle class="size-5 text-primary" />
+				<Shield class="size-5 text-primary" />
 			</div>
 			<div>
 				<h1 class="text-lg font-bold">Fil d'incidents</h1>
-				<p class="text-xs text-muted-foreground">{incidents.length} incidents signalés</p>
+				<p class="text-xs text-muted-foreground">{incidents.length} incident{incidents.length > 1 ? 's' : ''}</p>
 			</div>
 		</div>
 		<Button onclick={openNewIncident} size="sm" class="gap-2">
@@ -146,72 +145,74 @@
 		</Button>
 	</div>
 
-	<!-- Feed -->
-	<div class="flex-1 overflow-y-auto p-4 space-y-4">
-		{#each incidents as incident, idx (incident.id)}
-			{@const config = typeConfig[incident.type]}
-			<Card class="animate-slide-up opacity-0 overflow-hidden border-l-4 {config.border} transition-all duration-200 hover:shadow-md" style="animation-delay: {Math.min(idx * 80, 400)}ms">
-				<div class="p-4">
-					<!-- Post Header -->
-					<div class="flex items-start justify-between">
-						<div class="flex items-center gap-3">
-							<Avatar.Root class="size-10">
-								<Avatar.Fallback class="text-xs font-bold">{incident.elevePrenom[0]}{incident.eleveNom[0]}</Avatar.Fallback>
-							</Avatar.Root>
-							<div>
-								<button
-									class="font-semibold text-sm hover:text-primary hover:underline transition-colors"
-									onclick={() => goto(`/eleves/${incident.eleveId}`)}
-								>
-									{incident.elevePrenom} {incident.eleveNom}
-								</button>
-								<div class="flex items-center gap-2 mt-0.5">
-									<span class="text-xs text-muted-foreground">{timeAgo(incident.date)}</span>
-									<span class="text-xs text-muted-foreground">·</span>
-									<span class="text-xs text-muted-foreground">{incident.auteur}</span>
+	<div class="flex-1 overflow-y-auto p-4 space-y-3">
+		{#if incidents.length === 0}
+			<div class="flex flex-col items-center justify-center py-20 text-muted-foreground">
+				<div class="size-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+					<AlertCircle class="size-8 text-muted-foreground/50" />
+				</div>
+				<p class="text-sm font-medium mb-1">Aucun incident signalé</p>
+				<p class="text-xs text-muted-foreground/70 mb-4">Les incidents apparaîtront ici une fois créés.</p>
+				<Button onclick={openNewIncident} variant="outline" size="sm">Créer un incident</Button>
+			</div>
+		{:else}
+			{#each incidents as incident, idx (incident.id)}
+				{@const config = typeConfig[incident.type]}
+				<Card class="animate-slide-up opacity-0 border-l-4 {config.border} transition-all duration-200 hover:shadow-md" style="animation-delay: {Math.min(idx * 50, 300)}ms">
+					<div class="p-4">
+						<div class="flex items-start justify-between">
+							<div class="flex items-center gap-3">
+								<Avatar.Root class="size-10">
+									<Avatar.Fallback class="text-xs font-bold">{incident.elevePrenom[0]}{incident.eleveNom[0]}</Avatar.Fallback>
+								</Avatar.Root>
+								<div>
+									<button
+										class="font-semibold text-sm hover:text-primary hover:underline transition-colors"
+										onclick={() => goto(`/eleves/${incident.eleveId}`)}
+									>
+										{incident.elevePrenom} {incident.eleveNom}
+									</button>
+									<div class="flex items-center gap-2 mt-0.5">
+										<span class="text-xs text-muted-foreground">{timeAgo(incident.date)}</span>
+										<span class="text-xs text-muted-foreground">·</span>
+										<span class="text-xs text-muted-foreground">{incident.auteur}</span>
+									</div>
 								</div>
 							</div>
+							<Badge variant="outline" class="gap-1.5 text-xs {config.bg} {config.color} border-0">
+								<config.icon class="size-3" />
+								{typeLabels[incident.type]}
+							</Badge>
 						</div>
-						<Badge variant="outline" class="gap-1.5 text-xs {config.bg} {config.color} border-0">
-							<config.icon class="size-3" />
-							{typeLabels[incident.type]}
-						</Badge>
-					</div>
 
-					<!-- Message -->
-					<p class="mt-3 text-sm leading-relaxed">{incident.message}</p>
+						<p class="mt-3 text-sm leading-relaxed">{incident.message}</p>
 
-					<!-- Reactions Summary -->
-					{#if getTotalReactions(incident) > 0 || incident.comments.length > 0}
-						<div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-							{#if getTotalReactions(incident) > 0}
-								<div class="flex items-center gap-1">
-									<div class="flex -space-x-1">
-										{#each [...new Set(incident.reactions.map(r => r.emoji))] as emoji}
-											<span class="flex size-5 items-center justify-center rounded-full bg-muted text-xs ring-2 ring-card">{emoji}</span>
-										{/each}
+						{#if getTotalReactions(incident) > 0 || incident.comments.length > 0}
+							<div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+								{#if getTotalReactions(incident) > 0}
+									<div class="flex items-center gap-1">
+										<div class="flex -space-x-1">
+											{#each [...new Set(incident.reactions.map(r => r.emoji))] as emoji}
+												<span class="flex size-5 items-center justify-center rounded-full bg-muted text-xs ring-2 ring-card">{emoji}</span>
+											{/each}
+										</div>
+										<span class="ml-1">{getTotalReactions(incident)}</span>
 									</div>
-									<span class="ml-1">{getTotalReactions(incident)}</span>
-								</div>
-							{:else}
-								<span></span>
-							{/if}
-							{#if incident.comments.length > 0}
-								<button class="hover:text-foreground transition-colors">
-									{incident.comments.length} commentaire{incident.comments.length > 1 ? 's' : ''}
-								</button>
-							{/if}
-						</div>
-					{/if}
+								{/if}
+								{#if incident.comments.length > 0}
+									<button class="hover:text-foreground transition-colors">
+										{incident.comments.length} commentaire{incident.comments.length > 1 ? 's' : ''}
+									</button>
+								{/if}
+							</div>
+						{/if}
 
-					<!-- Reaction Buttons -->
-					<div class="mt-3 flex items-center gap-1 border-t border-border pt-3">
-						<div class="flex flex-wrap gap-1">
+						<div class="mt-3 flex items-center gap-1 border-t border-sidebar-border pt-3">
 							{#each reactionEmojis as emoji}
 								{@const count = getReactionCount(incident, emoji)}
 								{@const active = hasUserReacted(incident, emoji)}
 								<button
-									class="group flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all duration-200 hover:scale-105 {active ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50 hover:bg-muted'}"
+									class="group flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-all duration-200 hover:scale-105 {active ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50 hover:bg-muted'}"
 									onclick={() => addReaction(incident.id, emoji)}
 								>
 									<span class="transition-transform duration-200 group-hover:scale-125">{emoji}</span>
@@ -221,58 +222,48 @@
 								</button>
 							{/each}
 						</div>
-					</div>
 
-					<!-- Comments -->
-					{#if incident.comments.length > 0}
-						<div class="mt-3 space-y-2 border-t border-border pt-3">
-							{#each incident.comments as comment}
-								<div class="flex items-start gap-2.5 animate-fade-in">
-									<Avatar.Root class="size-7">
-										<Avatar.Fallback class="text-[10px] font-bold">{comment.author[0]}</Avatar.Fallback>
-									</Avatar.Root>
-									<div class="flex-1 rounded-lg bg-muted/50 px-3 py-2">
-										<div class="flex items-center gap-2">
-											<span class="text-xs font-semibold">{comment.author}</span>
-											<span class="text-[10px] text-muted-foreground">{timeAgo(comment.date)}</span>
+						{#if incident.comments.length > 0}
+							<div class="mt-3 space-y-2 border-t border-sidebar-border pt-3">
+								{#each incident.comments as comment}
+									<div class="flex items-start gap-2.5 animate-fade-in">
+										<Avatar.Root class="size-7">
+											<Avatar.Fallback class="text-[10px] font-bold">{comment.author[0]}</Avatar.Fallback>
+										</Avatar.Root>
+										<div class="flex-1 rounded-lg bg-muted/50 px-3 py-2">
+											<div class="flex items-center gap-2">
+												<span class="text-xs font-semibold">{comment.author}</span>
+												<span class="text-[10px] text-muted-foreground">{timeAgo(comment.date)}</span>
+											</div>
+											<p class="mt-0.5 text-xs text-muted-foreground leading-relaxed">{comment.text}</p>
 										</div>
-										<p class="mt-0.5 text-xs text-muted-foreground leading-relaxed">{comment.text}</p>
 									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
+								{/each}
+							</div>
+						{/if}
 
-					<!-- Comment Input -->
-					<div class="mt-3 flex items-center gap-2 border-t border-border pt-3">
-						<Avatar.Root class="size-7">
-							<Avatar.Fallback class="text-[10px] font-bold">M</Avatar.Fallback>
-						</Avatar.Root>
-						<Input
-							placeholder="Écrire un commentaire..."
-							bind:value={commentTexts[incident.id]}
-							class="h-8 text-xs bg-muted/50 border-0"
-							onkeydown={(e) => {
-								if (e.key === 'Enter') addComment(incident.id);
-							}}
-						/>
-						<Button size="icon" variant="ghost" class="size-8 shrink-0" onclick={() => addComment(incident.id)}>
-							<Send class="size-3.5" />
-						</Button>
+						<div class="mt-3 flex items-center gap-2 border-t border-sidebar-border pt-3">
+							<Avatar.Root class="size-7">
+								<Avatar.Fallback class="text-[10px] font-bold">M</Avatar.Fallback>
+							</Avatar.Root>
+							<Input
+								placeholder="Écrire un commentaire..."
+								bind:value={commentTexts[incident.id]}
+								class="h-8 text-xs bg-muted/50 border-0 flex-1"
+								onkeydown={(e) => {
+									if (e.key === 'Enter') addComment(incident.id);
+								}}
+							/>
+							<Button size="icon" variant="ghost" class="size-8 shrink-0" onclick={() => addComment(incident.id)}>
+								<Send class="size-3.5" />
+							</Button>
+						</div>
 					</div>
-				</div>
-			</Card>
-		{:else}
-			<div class="flex flex-col items-center justify-center py-16 text-muted-foreground">
-				<AlertCircle class="size-12 text-muted-foreground/30" />
-				<p class="mt-4 text-sm font-medium">Aucun incident signalé</p>
-				<p class="text-xs mt-1">Les incidents apparaîtront ici une fois créés.</p>
-				<Button onclick={openNewIncident} class="mt-4" variant="outline">Créer un incident</Button>
-			</div>
-		{/each}
+				</Card>
+			{/each}
+		{/if}
 	</div>
 
-	<!-- New Incident Dialog -->
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Content class="sm:max-w-[500px]">
 			<Dialog.Header>
@@ -295,7 +286,7 @@
 					</Select.Root>
 				</div>
 				<div class="grid gap-2">
-					<Label for="eleve-select">Élève</Label>
+					<Label>Élève</Label>
 					<Select.Root type="single" bind:value={selectedEleveId}>
 						<Select.Trigger class="w-full">
 							{selectedEleveId ? mockEleves.find((e) => e.id === selectedEleveId)?.prenom + ' ' + mockEleves.find((e) => e.id === selectedEleveId)?.nom : 'Sélectionner un élève'}
@@ -308,8 +299,8 @@
 					</Select.Root>
 				</div>
 				<div class="grid gap-2">
-					<Label for="message">Message</Label>
-					<Textarea id="message" bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
+					<Label>Message</Label>
+					<Textarea bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
 				</div>
 			</div>
 			<Dialog.Footer>
