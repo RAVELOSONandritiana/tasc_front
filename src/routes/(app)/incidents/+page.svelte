@@ -8,8 +8,8 @@
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Avatar } from '$lib/components/ui/avatar';
-	import { User, Send, MessageCircle, AlertCircle, Info, Star, UserX } from '@lucide/svelte/icons';
+	import * as Avatar  from '$lib/components/ui/avatar';
+	import { Send, AlertCircle, Info, Star, UserX } from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 	import type { PageProps } from './$types';
 

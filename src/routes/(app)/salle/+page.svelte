@@ -41,12 +41,12 @@
 						<div class="grid gap-4">
 							<div class="grid gap-3">
 								<Label for="num_salle">Numéro de salle</Label>
-								<Input id="num_salle" name="num_salle" type="number" placeholder="ex: 7" />
+								<Input id="num_salle" name="num_salle" type="number" placeholder="ex: 7" class="rounded-lg border-input bg-background px-3 py-2 text-sm shadow-xs transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" />
 							</div>
 
 							<div class="grid gap-3">
 								<Label for="nplace">Nombre de places</Label>
-								<Input id="nplace" name="nplace" type="number" placeholder="ex: 59" />
+								<Input id="nplace" name="nplace" type="number" placeholder="ex: 59" class="rounded-lg border-input bg-background px-3 py-2 text-sm shadow-xs transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" />
 							</div>
 						</div>
 
