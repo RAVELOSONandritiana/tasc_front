@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '@skeletonlabs/skeleton-svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
-	import XCircleIcon from '@lucide/svelte/icons/x-circle';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input';
@@ -13,14 +10,6 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock } from '@lucide/svelte/icons';
-
-	let themeChecked = $state(true);
-
-	let checked = $derived(themeChecked);
-
-	$effect(() => {
-		document.documentElement.classList.toggle('dark', themeChecked);
-	});
 
 	interface CompteEnAttente {
 		id: string;
