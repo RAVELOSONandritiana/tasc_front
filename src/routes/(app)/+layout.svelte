@@ -77,7 +77,7 @@
 		</Sidebar.Root>
 
 		<div class="flex flex-1 flex-col bg-background text-foreground">
-			<header class="flex items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 backdrop-blur-sm px-4 h-16 text-sidebar-foreground sticky top-0 z-50">
+			<header class="flex items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 backdrop-blur-sm px-4 h-16 text-sidebar-foreground sticky top-0 z-100 relative">
 				<div class="flex items-center space-x-2">
 					<Sidebar.Trigger />
 				</div>
