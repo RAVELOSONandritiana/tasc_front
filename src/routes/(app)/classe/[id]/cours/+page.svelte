@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, buttonVariants } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Table from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
@@ -13,6 +13,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
 
 	let searchCours = $state('');
 
@@ -171,52 +172,51 @@
 			<SearchInput placeholder="Rechercher un cours" bind:value={searchCours} />
 			<Dialog.Root>
 				<form>
-					<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
+					<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', class: 'h-9' })}>
 						<Calendar class="mr-1 size-4" />
 						Nouvel examen
 					</Dialog.Trigger>
-					<Dialog.Content class="sm:max-w-[425px]">
-						<Dialog.Header>
-							<Dialog.Title>Créer un examen global</Dialog.Title>
-							<Dialog.Description>
-								Cet examen pourra être utilisé par toutes les matières pour saisir les notes
-							</Dialog.Description>
-						</Dialog.Header>
-						<div class="grid gap-4 py-4">
-							<div class="grid gap-2">
-								<Label for="examen_nom">Nom de l'examen *</Label>
-								<Input
-									id="examen_nom"
-									bind:value={nouvelExamen.nom}
-									placeholder="Examen de mi-semestre"
-								/>
-							</div>
-							<div class="grid gap-2">
-								<Label for="examen_date">Date *</Label>
-								<Input
-									id="examen_date"
-									type="date"
-									bind:value={nouvelExamen.date}
-								/>
-							</div>
-							<div class="grid gap-2">
-								<Label for="examen_periode">Période</Label>
-								<Input
-									id="examen_periode"
-									bind:value={nouvelExamen.periode}
-									placeholder="Semestre 1"
-								/>
-							</div>
+<Dialog.Content class="sm:max-w-md">
+					<Dialog.Header class="mb-1 space-y-1">
+						<Dialog.Title class="text-xl font-semibold">Créer un examen global</Dialog.Title>
+						<Dialog.Description>Cet examen pourra être utilisé par toutes les matières pour saisir les notes</Dialog.Description>
+					</Dialog.Header>
+
+					<div class="space-y-4 py-2">
+						<div class="grid gap-2">
+							<Label for="examen_nom" class="text-sm font-medium">Nom de l'examen *</Label>
+							<Input
+								id="examen_nom"
+								bind:value={nouvelExamen.nom}
+								placeholder="Examen de mi-semestre"
+								class="mt-1.5"
+							/>
 						</div>
-						<Dialog.Footer>
-							<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
-								Annuler
-							</Dialog.Close>
-							<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterExamen}>
-								Créer
-							</Dialog.Close>
-						</Dialog.Footer>
-					</Dialog.Content>
+						<div class="grid gap-2">
+							<Label for="examen_date" class="text-sm font-medium">Date *</Label>
+							<Input
+								id="examen_date"
+								type="date"
+								bind:value={nouvelExamen.date}
+								class="mt-1.5"
+							/>
+						</div>
+						<div class="grid gap-2">
+							<Label for="examen_periode" class="text-sm font-medium">Période</Label>
+							<Input
+								id="examen_periode"
+								bind:value={nouvelExamen.periode}
+								placeholder="Semestre 1"
+								class="mt-1.5"
+							/>
+						</div>
+					</div>
+
+					<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
+						<Button variant="outline" size="sm">Annuler</Button>
+						<Button variant="default" size="sm" onclick={ajouterExamen}>Créer</Button>
+					</Dialog.Footer>
+				</Dialog.Content>
 				</form>
 			</Dialog.Root>
 		</div>
@@ -316,7 +316,12 @@
 				Sélectionnez les élèves participants au cours {coursParticipantsSelectionne?.nom}
 			</Dialog.Description>
 		</Dialog.Header>
-		<div class="py-4">
+		<div class="py-4 space-y-2">
+			<div class="flex-1">
+				<p class="text-sm text-muted-foreground mb-2">
+					Sélectionnez les élèves participants au cours {coursParticipantsSelectionne?.nom}
+				</p>
+			</div>
 			<div class="overflow-x-auto rounded-md border">
 				<Table.Root>
 					<Table.Header>
@@ -348,42 +353,36 @@
 			</p>
 		</div>
 		<Dialog.Footer>
-			<Dialog.Close onclick={() => (coursParticipantsSelectionne = null)}>
-				Annuler
-			</Dialog.Close>
-			<Dialog.Close onclick={sauvegarderParticipants}>
-				Sauvegarder
-			</Dialog.Close>
+			<Button variant="outline" size="sm" onclick={() => (coursParticipantsSelectionne = null)}>Annuler</Button>
+			<Button variant="default" size="sm" onclick={sauvegarderParticipants}>Sauvegarder</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
 </div>
 
 <Dialog.Root open={coursSelectionne !== null}>
-	<Dialog.Content class="sm:max-w-3xl">
+	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title>Modifier le coefficient</Dialog.Title>
 			<Dialog.Description>
 				Changez le coefficient du cours {coursSelectionne?.nom}
 			</Dialog.Description>
 		</Dialog.Header>
-		<div class="py-4">
-			<Label for="new_coeff">Nouveau coefficient</Label>
+		<div class="py-4 space-y-2">
+			<Label for="new_coeff" class="text-sm font-medium">Nouveau coefficient</Label>
 			<Input
 				id="new_coeff"
 				type="number"
 				min="1"
 				max="20"
 				bind:value={nouveauCoeff}
+				placeholder="Entrez le coefficient"
+				class="mt-1.5"
 			/>
 		</div>
 		<Dialog.Footer>
-			<Dialog.Close onclick={() => (coursSelectionne = null)}>
-				Annuler
-			</Dialog.Close>
-			<Dialog.Close onclick={sauvegarderCoefficient}>
-				Sauvegarder
-			</Dialog.Close>
+			<Button variant="outline" size="sm" onclick={() => (coursSelectionne = null)}>Annuler</Button>
+			<Button variant="default" size="sm" onclick={sauvegarderCoefficient}>Sauvegarder</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
