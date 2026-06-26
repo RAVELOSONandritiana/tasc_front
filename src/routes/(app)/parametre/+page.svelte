@@ -303,31 +303,5 @@
 				</AlertDialog.Content>
 			</AlertDialog.Root>
 		</Card>
-
-		<!-- Theme -->
-		<Card class="animate-slide-up stagger-3 opacity-0 p-5">
-			<div class="flex items-center justify-between">
-				<div class="flex items-center gap-3">
-					<div class="flex size-9 items-center justify-center rounded-lg bg-muted">
-						{#if themeChecked}
-							<span class="text-sm">🌙</span>
-						{:else}
-							<span class="text-sm">☀️</span>
-						{/if}
-					</div>
-					<div>
-						<h3 class="text-sm font-semibold">Thème sombre</h3>
-						<p class="text-xs text-muted-foreground">Basculer entre le mode clair et sombre</p>
-					</div>
-				</div>
-				<Switch checked={themeChecked} onCheckedChange={(details) => (themeChecked = details.checked)}>
-					<Switch.Label class="sr-only">Toggle theme</Switch.Label>
-					<Switch.Control>
-						<Switch.Thumb class="transition-transform duration-200" />
-					</Switch.Control>
-					<Switch.HiddenInput />
-				</Switch>
-			</div>
-		</Card>
 	</div>
 </div>
