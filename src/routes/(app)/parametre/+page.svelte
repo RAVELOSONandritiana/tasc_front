@@ -111,29 +111,35 @@
 	}
 </script>
 
-<div class="min-h-full bg-background text-foreground">
-	<div class="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
-		<!-- Header -->
-		<div class="animate-slide-down flex items-center gap-3">
-			<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
-				<Settings class="size-5 text-primary" />
-			</div>
-			<div>
-				<h1 class="text-xl font-bold tracking-tight">Paramètres</h1>
-				<p class="text-xs text-muted-foreground">Gérez votre établissement</p>
+<div class="h-screen flex flex-col bg-background text-foreground">
+	<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
+		<div class="mx-auto max-w-7xl space-y-4">
+			<!-- Header -->
+			<div class="animate-slide-down flex items-center gap-3">
+				<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+					<Settings class="size-5 text-primary" />
+				</div>
+				<div>
+					<h1 class="text-xl font-bold tracking-tight">Paramètres</h1>
+					<p class="text-xs text-muted-foreground">Gérez votre établissement</p>
+				</div>
 			</div>
 		</div>
+	</div>
 
-		<!-- Gestion des comptes -->
-		<Card class="animate-slide-up stagger-1 opacity-0 p-5 space-y-4">
-			<div class="flex flex-wrap items-center justify-between gap-4">
-				<div class="flex items-center gap-2">
-					<Shield class="size-4 text-primary" />
-					<h2 class="font-semibold">Gestion des comptes</h2>
-					<Badge variant="secondary" class="text-xs">{comptesFiltres.length}</Badge>
+	<!-- Content - scrollable -->
+	<div class="flex-1 overflow-y-auto p-4 md:p-6">
+		<div class="mx-auto max-w-7xl space-y-6">
+			<!-- Gestion des comptes -->
+			<Card class="animate-slide-up stagger-1 opacity-0 p-5 space-y-4">
+				<div class="flex flex-wrap items-center justify-between gap-4">
+					<div class="flex items-center gap-2">
+						<Shield class="size-4 text-primary" />
+						<h2 class="font-semibold">Gestion des comptes</h2>
+						<Badge variant="secondary" class="text-xs">{comptesFiltres.length}</Badge>
+					</div>
+					<SearchInput bind:value={searchCompte} placeholder="Rechercher un compte" class="w-64" />
 				</div>
-				<SearchInput bind:value={searchCompte} placeholder="Rechercher un compte" class="w-64" />
-			</div>
 
 			<div class="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
 				<div class="flex items-center gap-2">
@@ -292,5 +298,6 @@
 				</AlertDialog.Content>
 			</AlertDialog.Root>
 		</Card>
+		</div>
 	</div>
 </div>

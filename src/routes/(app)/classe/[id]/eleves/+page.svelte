@@ -78,8 +78,8 @@
 	}
 </script>
 
-<div class="min-h-full bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4">
+<div class="h-screen flex flex-col bg-sidebar text-sidebar-foreground">
+	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4 border-b border-sidebar-border">
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
 		<Dialog.Root>
@@ -119,7 +119,7 @@
 		</Dialog.Root>
 	</div>
 
-	<div class="p-4">
+	<div class="flex-1 overflow-y-auto p-4">
 		<p class="mb-4 text-sm text-muted-foreground">
 			Tous les élèves inscrits seront automatiquement affectés aux examens de chaque cours.
 		</p>

@@ -166,8 +166,8 @@
 	}
 </script>
 
-<div class="min-h-full bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex flex-col gap-4 bg-sidebar p-4">
+<div class="h-screen flex flex-col bg-sidebar text-sidebar-foreground">
+	<div class="sticky top-16 z-50 flex flex-col gap-4 bg-sidebar p-4 border-b border-sidebar-border">
 		<div class="flex justify-between">
 			<SearchInput placeholder="Rechercher un cours" bind:value={searchCours} />
 			<Dialog.Root>
@@ -232,79 +232,81 @@
 		{/if}
 	</div>
 
-	<div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
-		{#each coursFiltres as cours (cours.id)}
-			<CardUI>
-				<div class="flex h-full flex-col p-4">
-					<div class="flex-1">
-						<div class="flex items-start justify-between">
-							<h3 class="text-lg font-semibold">{cours.nom}</h3>
-							<div class="flex gap-1">
-								<Button
-									size="icon"
-									variant="ghost"
-									class="h-7 w-7"
-									onclick={() => modifierCoefficient(cours)}
-									aria-label="Modifier le coefficient"
-								>
-									<Pencil class="size-4" />
-								</Button>
-								<Button
-									size="icon"
-									variant="ghost"
-									class="h-7 w-7"
-									onclick={() => modifierParticipants(cours)}
-									aria-label="Modifier les participants"
-								>
-									<Users class="size-4" />
-								</Button>
+	<div class="flex-1 overflow-y-auto p-4">
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			{#each coursFiltres as cours (cours.id)}
+				<CardUI>
+					<div class="flex h-full flex-col p-4">
+						<div class="flex-1">
+							<div class="flex items-start justify-between">
+								<h3 class="text-lg font-semibold">{cours.nom}</h3>
+								<div class="flex gap-1">
+									<Button
+										size="icon"
+										variant="ghost"
+										class="h-7 w-7"
+										onclick={() => modifierCoefficient(cours)}
+										aria-label="Modifier le coefficient"
+									>
+										<Pencil class="size-4" />
+									</Button>
+									<Button
+										size="icon"
+										variant="ghost"
+										class="h-7 w-7"
+										onclick={() => modifierParticipants(cours)}
+										aria-label="Modifier les participants"
+									>
+										<Users class="size-4" />
+									</Button>
+								</div>
+							</div>
+							<div class="mt-3 space-y-2">
+								<p class="text-sm">
+									<span class="text-muted-foreground">Coefficient :</span>
+									<span class="ml-1 font-medium">{cours.coefficient}</span>
+								</p>
+								{#if cours.professeur}
+									<p class="text-sm">
+										<span class="text-muted-foreground">Professeur :</span>
+										<span class="ml-1 font-medium truncate">{cours.professeur}</span>
+									</p>
+								{/if}
+								<p class="text-sm">
+									<span class="text-muted-foreground">Participants :</span>
+									<span class="ml-1 font-medium truncate">{formaterParticipants(cours)}</span>
+								</p>
 							</div>
 						</div>
-						<div class="mt-3 space-y-2">
-							<p class="text-sm">
-								<span class="text-muted-foreground">Coefficient :</span>
-								<span class="ml-1 font-medium">{cours.coefficient}</span>
-							</p>
-							{#if cours.professeur}
-								<p class="text-sm">
-									<span class="text-muted-foreground">Professeur :</span>
-									<span class="ml-1 font-medium truncate">{cours.professeur}</span>
-								</p>
+						<div class="mt-4 flex flex-col gap-2">
+							<Button
+								size="sm"
+								variant="secondary"
+								class="w-full"
+								onclick={() => goto(`/classe/${$page.params.id}/cours/${cours.id}`)}
+							>
+								<Users class="mr-1 size-3" />
+								Gérer les notes
+							</Button>
+							{#if listeExamens.length > 0}
+								<select
+									class="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+									onchange={(e) => {
+										const examenId = e.currentTarget.value;
+										if (examenId) goto(`/classe/${$page.params.id}/cours/${cours.id}?examen=${examenId}`);
+									}}
+								>
+									<option value="">Sélectionner un examen...</option>
+									{#each listeExamens as examen (examen.id)}
+										<option value={examen.id}>{examen.nom}</option>
+									{/each}
+								</select>
 							{/if}
-							<p class="text-sm">
-								<span class="text-muted-foreground">Participants :</span>
-								<span class="ml-1 font-medium truncate">{formaterParticipants(cours)}</span>
-							</p>
 						</div>
 					</div>
-					<div class="mt-4 flex flex-col gap-2">
-						<Button
-							size="sm"
-							variant="secondary"
-							class="w-full"
-							onclick={() => goto(`/classe/${$page.params.id}/cours/${cours.id}`)}
-						>
-							<Users class="mr-1 size-3" />
-							Gérer les notes
-						</Button>
-						{#if listeExamens.length > 0}
-							<select
-								class="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
-								onchange={(e) => {
-									const examenId = e.currentTarget.value;
-									if (examenId) goto(`/classe/${$page.params.id}/cours/${cours.id}?examen=${examenId}`);
-								}}
-							>
-								<option value="">Sélectionner un examen...</option>
-								{#each listeExamens as examen (examen.id)}
-									<option value={examen.id}>{examen.nom}</option>
-								{/each}
-							</select>
-						{/if}
-					</div>
-				</div>
-			</CardUI>
-		{/each}
+				</CardUI>
+			{/each}
+		</div>
 	</div>
 
 

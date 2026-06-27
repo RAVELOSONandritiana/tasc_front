@@ -67,153 +67,159 @@
 	let open = $state(false);
 </script>
 
-<main class="bg-background text-foreground">
-	<div class="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
-		<!-- Header -->
-		<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-			<div class="flex items-center gap-3">
-				<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
-					<UserCog class="size-5 text-primary" />
+<main class="bg-background text-foreground h-screen flex flex-col">
+	<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
+		<div class="mx-auto max-w-7xl space-y-4">
+			<!-- Header -->
+			<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div class="flex items-center gap-3">
+					<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+						<UserCog class="size-5 text-primary" />
+					</div>
+					<div>
+						<h1 class="text-xl font-bold tracking-tight">Enseignants</h1>
+						<p class="text-xs text-muted-foreground">{listFiltered.length} enseignant{listFiltered.length > 1 ? 's' : ''}</p>
+					</div>
 				</div>
-				<div>
-					<h1 class="text-xl font-bold tracking-tight">Enseignants</h1>
-					<p class="text-xs text-muted-foreground">{listFiltered.length} enseignant{listFiltered.length > 1 ? 's' : ''}</p>
-				</div>
+				<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (open = true)}>
+					<Plus class="size-3.5" />
+					Nouveau
+				</Button>
 			</div>
-			<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (open = true)}>
-				<Plus class="size-3.5" />
-				Nouveau
-			</Button>
-		</div>
 
-		<!-- Search -->
-		<Card class="animate-slide-up stagger-1 opacity-0 p-4">
-			<SearchInput bind:value={searchText} placeholder="Rechercher un professeur" />
-		</Card>
-
-		<!-- List -->
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-			{#each listFiltered as p, i (p.phone || `${p.name}${p.lastname}`)}
-				<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
-					<PersonnelCard
-						personne={p}
-						role="Enseignant"
-						matieres={p.matiere}
-						hrefProfil={`/enseignant/${encodeURIComponent(p.phone)}`}
-					/>
-				</div>
-			{/each}
+			<!-- Search -->
+			<Card class="animate-slide-up stagger-1 opacity-0 p-4">
+				<SearchInput bind:value={searchText} placeholder="Rechercher un professeur" />
+			</Card>
 		</div>
 	</div>
 
-	<Dialog.Root bind:open>
-		<Dialog.Content class="sm:max-w-lg">
-			<Dialog.Header class="mb-1 space-y-1">
-				<Dialog.Title class="text-xl font-semibold">Ajouter un professeur</Dialog.Title>
-				<Dialog.Description>Créez un nouveau profil enseignant et associez-lui des matières.</Dialog.Description>
-			</Dialog.Header>
-
-			<div class="space-y-4 py-2">
-				<div class="grid gap-3">
-					<Label for="n">Nom complet</Label>
-					<Input
-						id="n"
-						placeholder="Entrer un nom ou un numéro de téléphone"
-						value={searchPersonnes}
-						oninput={(e) => (searchPersonnes = e.currentTarget.value)}
-					/>
-
-					{#if setPerson == null && searchPersonnes.length > 1}
-						<div class="mt-1 max-h-36 space-y-1 overflow-y-auto rounded-md border p-1">
-							{#each filteredMatieres as fp (fp.phone)}
-								<button
-									class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
-									onclick={() => setPersonne(fp)}
-								>
-									<span class="font-medium">{fp.name} {fp.lastname}</span>
-									<span class="text-xs text-muted-foreground">{fp.phone}</span>
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				{#if setPerson != null}
-					<div class="rounded-xl border border-sidebar-border bg-muted/40 p-4">
-						<div class="grid gap-4">
-							<div class="grid gap-2">
-								<Label for="nom">Nom</Label>
-								<Input id="nom" value={setPerson.name} disabled />
-							</div>
-							<div class="grid gap-2">
-								<Label for="prenom">Prénom</Label>
-								<Input id="prenom" value={setPerson.lastname} disabled />
-							</div>
-						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							class="mt-3 h-8 rounded-lg text-xs text-destructive hover:text-destructive"
-							onclick={removeFindPersonne}
-						>
-							Supprimer la sélection
-						</Button>
+	<!-- List - scrollable -->
+	<div class="flex-1 overflow-y-auto p-4 md:p-6">
+		<div class="mx-auto max-w-7xl">
+			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+				{#each listFiltered as p, i (p.phone || `${p.name}${p.lastname}`)}
+					<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
+						<PersonnelCard
+							personne={p}
+							role="Enseignant"
+							matieres={p.matiere}
+							hrefProfil={`/enseignant/${encodeURIComponent(p.phone)}`}
+						/>
 					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+</main>
 
-					<div class="grid gap-4 sm:grid-cols-2">
-						<div class="grid gap-2">
-							<Label for="matricule">Matricule</Label>
-							<Input id="matricule" placeholder="Ex : ENS-047" />
-						</div>
-						<div class="grid gap-2">
-							<Label for="poste">Poste</Label>
-							<NativeSelect.Root>
-								<NativeSelect.Option value="Enseignant">Enseignant</NativeSelect.Option>
-								<NativeSelect.Option value="Professeur Principal">Professeur Principal</NativeSelect.Option>
-							</NativeSelect.Root>
-						</div>
-					</div>
+<Dialog.Root bind:open>
+	<Dialog.Content class="sm:max-w-lg">
+		<Dialog.Header class="mb-1 space-y-1">
+			<Dialog.Title class="text-xl font-semibold">Ajouter un professeur</Dialog.Title>
+			<Dialog.Description>Créez un nouveau profil enseignant et associez-lui des matières.</Dialog.Description>
+		</Dialog.Header>
 
-					<div class="grid gap-2">
-						<Label for="matiere">Matières</Label>
-						<div class="flex gap-2">
-							<Input
-								id="matiere"
-								bind:value={currentMatiere}
-								placeholder="Ajouter une matière"
-								onkeydown={(e) => {
-									if (e.key === 'Enter') {
-										e.preventDefault();
-										addMatiere();
-									}
-								}}
-							/>
-							<Button type="button" variant="secondary" onclick={addMatiere}>Ajouter</Button>
-						</div>
-						{#if matiere.length}
-							<div class="flex flex-wrap gap-2 pt-1">
-								{#each matiere as m (m)}
-									<Badge variant="secondary" class="gap-1 px-2.5 py-1">
-										{m}
-										<button type="button" class="ml-1 inline-flex rounded-md p-0.5 hover:bg-sidebar-border/60" onclick={() => removeMatiere(m)}>
-											<X class="size-3" />
-										</button>
-									</Badge>
-								{/each}
-							</div>
-						{/if}
+		<div class="space-y-4 py-2">
+			<div class="grid gap-3">
+				<Label for="n">Nom complet</Label>
+				<Input
+					id="n"
+					placeholder="Entrer un nom ou un numéro de téléphone"
+					value={searchPersonnes}
+					oninput={(e) => (searchPersonnes = e.currentTarget.value)}
+				/>
+
+				{#if setPerson == null && searchPersonnes.length > 1}
+					<div class="mt-1 max-h-36 space-y-1 overflow-y-auto rounded-md border p-1">
+						{#each filteredMatieres as fp (fp.phone)}
+							<button
+								class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
+								onclick={() => setPersonne(fp)}
+							>
+								<span class="font-medium">{fp.name} {fp.lastname}</span>
+								<span class="text-xs text-muted-foreground">{fp.phone}</span>
+							</button>
+						{/each}
 					</div>
 				{/if}
 			</div>
 
-			<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
-				<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
-					Annuler
-				</Dialog.Close>
-				<Dialog.Close type="button" class={buttonVariants({ variant: 'default' })} onclick={onSubmit} disabled={!setPerson}>
-					Confirmer
-				</Dialog.Close>
-			</Dialog.Footer>
-		</Dialog.Content>
-	</Dialog.Root>
-</main>
+			{#if setPerson != null}
+				<div class="rounded-xl border border-sidebar-border bg-muted/40 p-4">
+					<div class="grid gap-4">
+						<div class="grid gap-2">
+							<Label for="nom">Nom</Label>
+							<Input id="nom" value={setPerson.name} disabled />
+						</div>
+						<div class="grid gap-2">
+							<Label for="prenom">Prénom</Label>
+							<Input id="prenom" value={setPerson.lastname} disabled />
+						</div>
+					</div>
+					<Button
+						variant="ghost"
+						size="sm"
+						class="mt-3 h-8 rounded-lg text-xs text-destructive hover:text-destructive"
+						onclick={removeFindPersonne}
+					>
+						Supprimer la sélection
+					</Button>
+				</div>
+
+				<div class="grid gap-4 sm:grid-cols-2">
+					<div class="grid gap-2">
+						<Label for="matricule">Matricule</Label>
+						<Input id="matricule" placeholder="Ex : ENS-047" />
+					</div>
+					<div class="grid gap-2">
+						<Label for="poste">Poste</Label>
+						<NativeSelect.Root>
+							<NativeSelect.Option value="Enseignant">Enseignant</NativeSelect.Option>
+							<NativeSelect.Option value="Professeur Principal">Professeur Principal</NativeSelect.Option>
+						</NativeSelect.Root>
+					</div>
+				</div>
+
+				<div class="grid gap-2">
+					<Label for="matiere">Matières</Label>
+					<div class="flex gap-2">
+						<Input
+							id="matiere"
+							bind:value={currentMatiere}
+							placeholder="Ajouter une matière"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									addMatiere();
+								}
+							}}
+						/>
+						<Button type="button" variant="secondary" onclick={addMatiere}>Ajouter</Button>
+					</div>
+					{#if matiere.length}
+						<div class="flex flex-wrap gap-2 pt-1">
+							{#each matiere as m (m)}
+								<Badge variant="secondary" class="gap-1 px-2.5 py-1">
+									{m}
+									<button type="button" class="ml-1 inline-flex rounded-md p-0.5 hover:bg-sidebar-border/60" onclick={() => removeMatiere(m)}>
+										<X class="size-3" />
+									</button>
+								</Badge>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
+			<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
+				Annuler
+			</Dialog.Close>
+			<Dialog.Close type="button" class={buttonVariants({ variant: 'default' })} onclick={onSubmit} disabled={!setPerson}>
+				Confirmer
+			</Dialog.Close>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
