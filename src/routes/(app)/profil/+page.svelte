@@ -105,7 +105,7 @@
 								<Avatar.Image src="https://github.com/vanessa.png" alt="Avatar" />
 								<Avatar.Fallback class="text-lg font-bold">{data.profil.prenom[0]}{data.profil.nom[0]}</Avatar.Fallback>
 							</Avatar.Root>
-							<button class="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110">
+							<button class="absolute bottom-1 left-1/2 -translate-x-1/2 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110">
 								<Camera class="size-3.5" />
 							</button>
 						</div>
