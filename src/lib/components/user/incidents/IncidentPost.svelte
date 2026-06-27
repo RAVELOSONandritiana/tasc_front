@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Avatar  from '$lib/components/ui/avatar';
-	import { AlertCircle, Info, Star, UserX, MessageCircle, Heart, Share2 } from '@lucide/svelte/icons';
+	import { AlertCircle, Info, Star, UserX, MessageCircle, Heart, Share2, Send } from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 
 	const { incident, eleves } = $props<{
@@ -12,6 +12,8 @@
 	}>();
 
 	let showComments = $state(false);
+	let commentText = $state('');
+	let reactions = $state(new Set<string>());
 
 	const typeConfig: Record<IncidentType, { icon: typeof Info; color: string; bg: string }> = {
 		info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -50,6 +52,34 @@
 
 	function handleToggleComments() {
 		showComments = !showComments;
+	}
+
+	function handleAddComment() {
+		if (commentText.trim()) {
+			incident.comments = [...(incident.comments || []), {
+				id: Date.now().toString(),
+				author: 'Moi',
+				text: commentText.trim(),
+				date: new Date().toISOString()
+			}];
+			commentText = '';
+		}
+	}
+
+	function handleReact() {
+		if (reactions.has(incident.id)) {
+			reactions.delete(incident.id);
+		} else {
+			reactions.add(incident.id);
+		}
+		reactions = new Set(reactions);
+	}
+
+	function handleShare() {
+		const url = window.location.origin + `/incidents`;
+		navigator.clipboard.writeText(url).then(() => {
+			alert('Lien copié dans le presse-papiers');
+		});
 	}
 </script>
 
@@ -104,20 +134,46 @@
 			<div class="mt-3 border-t border-sidebar-border">
 				<div class="flex items-center justify-between pt-3">
 					<div class="flex items-center gap-1">
-						<Button variant="ghost" size="sm" class="gap-1.5 text-xs">
-							<Heart class="size-3.5" />
-							<span>0</span>
+						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleReact}>
+							<Heart class="size-3.5 {reactions.has(incident.id) ? 'fill-red-500 text-red-500' : ''}" />
+							<span>{reactions.has(incident.id) ? 1 : 0}</span>
 						</Button>
 						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleToggleComments}>
 							<MessageCircle class="size-3.5" />
 							<span>{incident.comments?.length || 0}</span>
 						</Button>
-						<Button variant="ghost" size="sm" class="gap-1.5 text-xs">
+						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleShare}>
 							<Share2 class="size-3.5" />
 						</Button>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		{#if showComments}
+			<div class="border-t border-sidebar-border p-4 bg-muted/20">
+				<div class="flex items-center gap-2 mb-3">
+					<input
+						type="text"
+						bind:value={commentText}
+						placeholder="Ajouter un commentaire..."
+						class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+					/>
+					<Button size="sm" onclick={handleAddComment} disabled={!commentText.trim()}>
+						<Send class="size-3.5" />
+					</Button>
+				</div>
+				{#if incident.comments && incident.comments.length > 0}
+					<div class="space-y-2 max-h-60 overflow-y-auto">
+						{#each incident.comments as comment (comment.id)}
+							<div class="flex items-start gap-2 text-sm">
+								<span class="font-medium text-xs">{comment.author}</span>
+								<span class="text-xs text-muted-foreground">{comment.text}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 </div>
