@@ -3,6 +3,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import Profil from '$lib/components/user/Profil.svelte';
+	import LoadingBar from '$lib/components/ui/loading-bar/loading-bar.svelte';
 	import {
 		LayoutDashboard,
 		UserSquare2,
@@ -37,6 +38,7 @@
 </script>
 
 <Sidebar.Provider>
+	<LoadingBar />
 	<div class="flex min-h-screen w-full">
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
