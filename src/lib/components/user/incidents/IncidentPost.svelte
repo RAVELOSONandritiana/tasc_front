@@ -43,6 +43,14 @@
 		const e = eleves.find(el => el.id === id);
 		return e ? `${e.prenom[0]}${e.nom[0]}` : '??';
 	}
+
+	function handleEleveClick(id: string) {
+		goto(`/eleves/${id}`);
+	}
+
+	function handleToggleComments() {
+		showComments = !showComments;
+	}
 </script>
 
 <div class="w-full max-w-2xl mx-auto">
@@ -59,7 +67,7 @@
 						<div class="flex items-center gap-2">
 							<button
 								class="font-semibold text-sm hover:text-primary hover:underline transition-colors"
-								onclick={() => goto(`/eleves/${incident.eleveId}`)}
+								onclick={() => handleEleveClick(incident.eleveId)}
 							>
 								{getEleveName(incident.eleveId)}
 							</button>
@@ -100,7 +108,7 @@
 							<Heart class="size-3.5" />
 							<span>0</span>
 						</Button>
-						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={() => showComments = !showComments}>
+						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleToggleComments}>
 							<MessageCircle class="size-3.5" />
 							<span>{incident.comments?.length || 0}</span>
 						</Button>

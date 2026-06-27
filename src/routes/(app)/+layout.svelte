@@ -46,7 +46,10 @@
 					<div class="flex size-8 items-center justify-center rounded-lg bg-primary">
 						<span class="text-sm font-bold text-primary-foreground">T</span>
 					</div>
-					<span class="text-lg font-bold tracking-tight">Tasc</span>
+					<div>
+						<span class="text-lg font-bold tracking-tight">Tasc</span>
+						<p class="text-xs text-sidebar-foreground/60">Gestion scolaire</p>
+					</div>
 				</div>
 			</Sidebar.Header>
 			<Sidebar.Content>

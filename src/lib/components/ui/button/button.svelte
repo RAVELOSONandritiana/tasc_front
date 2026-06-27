@@ -51,8 +51,9 @@
 		type = "button",
 		disabled,
 		children,
-		...restProps
-	}: ButtonProps = $props();
+		onclick,
+		...props
+	}: ButtonProps & { onclick?: HTMLButtonAttributes["onclick"] } = $props();
 </script>
 
 {#if href}
@@ -64,7 +65,7 @@
 		aria-disabled={disabled}
 		role={disabled ? "link" : undefined}
 		tabindex={disabled ? -1 : undefined}
-		{...restProps}
+		{...props}
 	>
 		{@render children?.()}
 	</a>
@@ -75,7 +76,8 @@
 		class={cn(buttonVariants({ variant, size }), className)}
 		{type}
 		{disabled}
-		{...restProps}
+		{onclick}
+		{...props}
 	>
 		{@render children?.()}
 	</button>
