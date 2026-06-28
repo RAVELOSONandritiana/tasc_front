@@ -51,10 +51,8 @@
 		if (!setPerson) return;
 		listSurveillant.push({ ...setPerson, poste } as Surveillant);
 		setPerson = null;
-		close();
+		dialogOpen = false;
 	}
-
-	let open = $state(false);
 </script>
 
 <main class="bg-background text-foreground h-screen flex flex-col">
@@ -72,7 +70,7 @@
 								<p class="text-xs text-muted-foreground">{listFiltered.length} surveillant{listFiltered.length > 1 ? 's' : ''}</p>
 							</div>
 						</div>
-						<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (open = true)}>
+						<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (dialogOpen = true)}>
 							<Plus class="size-3.5" />
 							Nouveau
 						</Button>
@@ -174,10 +172,10 @@
 		</div>
 
 		<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
-			<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}> Annuler </Dialog.Close>
-			<Dialog.Close type="button" class={buttonVariants({ variant: 'default' })} onclick={onSubmit} disabled={!setPerson}>
+			<Button variant="outline" size="sm" onclick={() => (dialogOpen = false)}>Annuler</Button>
+			<Button variant="default" size="sm" onclick={onSubmit} disabled={!setPerson}>
 				Confirmer
-			</Dialog.Close>
+			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

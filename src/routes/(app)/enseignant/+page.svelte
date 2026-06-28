@@ -62,60 +62,51 @@
 		setPerson = null;
 		matiere = [];
 		currentMatiere = '';
-		open = false;
+		dialogOpen = false;
 	}
-
-	let open = $state(false);
 </script>
 
 <main class="bg-background text-foreground h-screen flex flex-col">
-		<div class="flex-1 overflow-y-auto">
-			<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
-				<div class="mx-auto max-w-7xl space-y-4">
-					<!-- Header -->
-					<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-						<div class="flex items-center gap-3">
-							<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
-								<UserCog class="size-5 text-primary" />
-							</div>
-							<div>
-								<h1 class="text-xl font-bold tracking-tight">Enseignants</h1>
-								<p class="text-xs text-muted-foreground">{listFiltered.length} enseignant{listFiltered.length > 1 ? 's' : ''}</p>
-							</div>
+	<div class="flex-1 overflow-y-auto">
+		<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
+			<div class="mx-auto max-w-7xl space-y-4">
+				<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex items-center gap-3">
+						<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
+							<UserCog class="size-5 text-primary" />
 						</div>
-						<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (open = true)}>
-							<Plus class="size-3.5" />
-							Nouveau
-						</Button>
+						<div>
+							<h1 class="text-xl font-bold tracking-tight">Enseignants</h1>
+							<p class="text-xs text-muted-foreground">{listFiltered.length} enseignant{listFiltered.length > 1 ? 's' : ''}</p>
+						</div>
 					</div>
-
-					<!-- Search -->
-					<Card class="animate-slide-up stagger-1 opacity-0 p-4">
-						<SearchInput bind:value={searchText} placeholder="Rechercher un professeur" />
-					</Card>
+					<Button class="h-9 rounded-lg px-5 text-sm font-medium gap-2" onclick={() => (dialogOpen = true)}>
+						<Plus class="size-3.5" />
+						Nouveau
+					</Button>
 				</div>
-			</div>
 
-			<!-- List -->
-			<div class="mx-auto max-w-7xl p-4 md:p-6">
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-					{#each listFiltered as p, i (p.phone || `${p.name}${p.lastname}`)}
-						<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
-							<PersonnelCard
-								personne={p}
-								role="Enseignant"
-								matieres={p.matiere}
-								hrefProfil={`/enseignant/${encodeURIComponent(p.phone)}`}
-							/>
-						</div>
-					{/each}
-				</div>
+				<Card class="animate-slide-up stagger-1 opacity-0 p-4">
+					<SearchInput bind:value={searchText} placeholder="Rechercher un professeur" />
+				</Card>
 			</div>
 		</div>
-	</main>
+
+		<div class="mx-auto max-w-7xl p-4 md:p-6">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				{#each listFiltered as prof, i (prof.id)}
+					<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
+						<PersonnelCard personnel={prof} />
+					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+</main>
 
 <Dialog.Root bind:open={dialogOpen}>
-	<Dialog.Content class="sm:max-w-lg">
+	<Dialog.Trigger type="button" class="hidden">Nouveau professeur</Dialog.Trigger>
+	<Dialog.Content class="sm:max-w-[425px]">
 		<Dialog.Header class="mb-1 space-y-1">
 			<Dialog.Title class="text-xl font-semibold">Ajouter un professeur</Dialog.Title>
 			<Dialog.Description>Créez un nouveau profil enseignant et associez-lui des matières.</Dialog.Description>
@@ -127,13 +118,12 @@
 				<Input
 					id="n"
 					placeholder="Entrer un nom ou un numéro de téléphone"
-					value={searchPersonnes}
-					oninput={(e) => (searchPersonnes = e.currentTarget.value)}
+					bind:value={searchPersonnes}
 				/>
 
-				{#if setPerson == null && searchPersonnes.length > 1}
+				{#if !setPerson && searchPersonnes.length > 1}
 					<div class="mt-1 max-h-36 space-y-1 overflow-y-auto rounded-md border p-1">
-						{#each filteredMatieres as fp (fp.phone)}
+						{#each filteredMatieres as fp (fp.id)}
 							<button
 								class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
 								onclick={() => setPersonne(fp)}
@@ -146,81 +136,48 @@
 				{/if}
 			</div>
 
-			{#if setPerson != null}
+			{#if setPerson}
 				<div class="rounded-xl border border-sidebar-border bg-muted/40 p-4">
-					<div class="grid gap-4">
-						<div class="grid gap-2">
-							<Label for="nom">Nom</Label>
-							<Input id="nom" value={setPerson.name} disabled />
+					<div class="mb-3 flex items-center gap-2">
+						<div class="flex size-8 items-center justify-center rounded-full bg-primary/10">
+							<span class="text-sm font-bold text-primary">{setPerson.name[0]}{setPerson.lastname[0]}</span>
 						</div>
-						<div class="grid gap-2">
-							<Label for="prenom">Prénom</Label>
-							<Input id="prenom" value={setPerson.lastname} disabled />
+						<div>
+							<p class="font-medium">{setPerson.name} {setPerson.lastname}</p>
+							<p class="text-xs text-muted-foreground">{setPerson.phone}</p>
 						</div>
 					</div>
-					<Button
-						variant="ghost"
-						size="sm"
-						class="mt-3 h-8 rounded-lg text-xs text-destructive hover:text-destructive"
-						onclick={removeFindPersonne}
-					>
-						Supprimer la sélection
-					</Button>
-				</div>
-
-				<div class="grid gap-4 sm:grid-cols-2">
-					<div class="grid gap-2">
-						<Label for="matricule">Matricule</Label>
-						<Input id="matricule" placeholder="Ex : ENS-047" />
-					</div>
-					<div class="grid gap-2">
-						<Label for="poste">Poste</Label>
-						<NativeSelect.Root>
-							<NativeSelect.Option value="Enseignant">Enseignant</NativeSelect.Option>
-							<NativeSelect.Option value="Professeur Principal">Professeur Principal</NativeSelect.Option>
-						</NativeSelect.Root>
-					</div>
-				</div>
-
-				<div class="grid gap-2">
-					<Label for="matiere">Matières</Label>
-					<div class="flex gap-2">
-						<Input
-							id="matiere"
-							bind:value={currentMatiere}
-							placeholder="Ajouter une matière"
-							onkeydown={(e) => {
-								if (e.key === 'Enter') {
-									e.preventDefault();
-									addMatiere();
-								}
-							}}
-						/>
-						<Button type="button" variant="secondary" onclick={addMatiere}>Ajouter</Button>
-					</div>
-					{#if matiere.length}
-						<div class="flex flex-wrap gap-2 pt-1">
-							{#each matiere as m (m)}
-								<Badge variant="secondary" class="gap-1 px-2.5 py-1">
-									{m}
-									<button type="button" class="ml-1 inline-flex rounded-md p-0.5 hover:bg-sidebar-border/60" onclick={() => removeMatiere(m)}>
-										<X class="size-3" />
-									</button>
-								</Badge>
-							{/each}
-						</div>
-					{/if}
+					<Button variant="outline" size="sm" onclick={removeFindPersonne}>Changer de personne</Button>
 				</div>
 			{/if}
+
+			<div class="grid gap-2">
+				<Label for="matiere">Matières (optionnel)</Label>
+				<div class="flex flex-wrap gap-2">
+					{#each matiere as m (m)}
+						<span class="inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold">
+							{m}
+							<button onclick={() => removeMatiere(m)} class="ml-1 text-muted-foreground hover:text-foreground">
+								<X class="size-3" />
+							</button>
+						</span>
+					{/each}
+				</div>
+				<div class="flex gap-2">
+					<Input
+						value={currentMatiere}
+						oninput={(e) => (currentMatiere = e.currentTarget.value)}
+						placeholder="Ajouter une matière"
+						class="flex-1"
+					/>
+					<Button variant="outline" size="sm" onclick={addMatiere}>Ajouter</Button>
+				</div>
+			</div>
 		</div>
 
 		<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
-			<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
-				Annuler
-			</Dialog.Close>
-			<Dialog.Close type="button" class={buttonVariants({ variant: 'default' })} onclick={onSubmit} disabled={!setPerson}>
-				Confirmer
-			</Dialog.Close>
+			<Button variant="outline" size="sm" onclick={() => (dialogOpen = false)}>Annuler</Button>
+			<Button variant="default" size="sm" onclick={onSubmit}>Créer</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

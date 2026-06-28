@@ -8,17 +8,30 @@
 	import { Card } from '$lib/components/ui/card';
 	import { ClipboardList, Plus } from '@lucide/svelte/icons';
 	import { Button } from '$lib/components/ui/button';
+	import type { Personne } from '$lib/types/Personne.type';
+	
 	const { data } = $props();
 
 	const { listClasse } = data;
 	let dialogOpen = $state(false);
 
 	let niveau = $state('0');
-	let serie = $state('ose');
-	let prof = $state('');
+	let serie = $state('');
+	let searchProf = $state('');
+	let selectedProf: Personne | null = $state(null);
+	
+	let profs = $state<Personne[]>([
+		{ id: '1', name: 'RANDRIANANTENAINA', lastname: 'Tsitoarimanjakely', email: 'tsito@example.com', phone: '+261 34 000 00 00' },
+		{ id: '2', name: 'ANDRIANTENAINA', lastname: 'Bako', email: 'bako@example.com', phone: '+261 34 000 00 01' }
+	]);
+
+	function selectProf(p: Personne) {
+		selectedProf = p;
+		searchProf = `${p.name} ${p.lastname}`;
+	}
 
 	function soumettre() {
-		console.log('Classe créée:', { niveau, serie, prof });
+		console.log('Classe créée:', { niveau, serie, prof: selectedProf });
 		dialogOpen = false;
 	}
 </script>
@@ -26,7 +39,6 @@
 <main class="bg-background text-foreground h-screen flex flex-col">
 	<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
 		<div class="mx-auto max-w-7xl space-y-4">
-			<!-- Header -->
 			<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div class="flex items-center gap-3">
 					<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
@@ -47,7 +59,7 @@
 							<Dialog.Title>Ajouter une classe</Dialog.Title>
 							<Dialog.Description>Remplissez les informations de la classe</Dialog.Description>
 						</Dialog.Header>
-						<form class="grid gap-4 py-4">
+						<div class="grid gap-4 py-4">
 							<div class="grid gap-3">
 								<Label for="niveau">Niveau</Label>
 								<NativeSelect.Root required class="w-full" bind:value={niveau}>
@@ -60,6 +72,7 @@
 							<div class="grid gap-3">
 								<Label for="serie">Série</Label>
 								<NativeSelect.Root class="w-full" bind:value={serie}>
+									<NativeSelect.Option value="">Aucune</NativeSelect.Option>
 									<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
 									<NativeSelect.Option value="s">S</NativeSelect.Option>
 									<NativeSelect.Option value="l">L</NativeSelect.Option>
@@ -68,14 +81,19 @@
 
 							<div class="grid gap-3">
 								<Label for="prof">Prof titulaire</Label>
-								<NativeSelect.Root class="w-full" bind:value={prof}>
-									<NativeSelect.Option value="">Aucun titulaire</NativeSelect.Option>
-									<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
-									<NativeSelect.Option value="s">S</NativeSelect.Option>
-									<NativeSelect.Option value="l">L</NativeSelect.Option>
-								</NativeSelect.Root>
+								<div class="relative">
+									<SearchInput bind:value={searchProf} placeholder="Rechercher un professeur..." class="w-full" />
+									{#if selectedProf}
+										<div class="flex items-center gap-2 mt-2 p-2 bg-muted/30 rounded-lg">
+											<div class="bg-primary/10 flex size-8 items-center justify-center rounded-full">
+												<span class="text-sm font-bold text-primary">{selectedProf.name[0]}{selectedProf.lastname[0]}</span>
+											</div>
+											<span class="text-sm font-medium">{selectedProf.name} {selectedProf.lastname}</span>
+										</div>
+									{/if}
+								</div>
 							</div>
-						</form>
+						</div>
 						<Dialog.Footer>
 							<Button variant="outline" size="sm" onclick={() => dialogOpen = false}>
 								Annuler
@@ -86,14 +104,12 @@
 				</Dialog.Root>
 			</div>
 
-			<!-- Search -->
 			<Card class="animate-slide-up stagger-1 opacity-0 p-4">
 				<SearchInput placeholder="Rechercher une classe..." />
 			</Card>
 		</div>
 	</div>
 
-	<!-- Classes Grid - scrollable -->
 	<div class="flex-1 overflow-y-auto p-4 md:p-6">
 		<div class="mx-auto max-w-7xl">
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
