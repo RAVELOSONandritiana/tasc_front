@@ -49,6 +49,11 @@
 		dialogOpen = false;
 		nouvelleSeance = { heureDebut: '', heureFin: '', coursId: '', salleId: null };
 	}
+
+	function handleClose() {
+		dialogOpen = false;
+		nouvelleSeance = { heureDebut: '', heureFin: '', coursId: '', salleId: null };
+	}
 </script>
 
 <div class="rounded-xl bg-card/50 p-4">
@@ -102,8 +107,8 @@
 				</div>
 			</div>
 			<Dialog.Footer>
-				<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>Annuler</Dialog.Close>
-				<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterSeance}>Ajouter</Dialog.Close>
+				<Button variant="outline" size="sm" onclick={handleClose}>Annuler</Button>
+				<Button variant="default" size="sm" onclick={ajouterSeance}>Ajouter</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>

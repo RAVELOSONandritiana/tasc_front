@@ -10,6 +10,7 @@
 	const { data } = $props();
 
 	const { listClasse } = data;
+	let dialogOpen = $state(false);
 </script>
 
 <main class="bg-background text-foreground h-screen flex flex-col">
@@ -26,7 +27,7 @@
 						<p class="text-xs text-muted-foreground">{listClasse.length} classe{listClasse.length > 1 ? 's' : ''} enregistrée{listClasse.length > 1 ? 's' : ''}</p>
 					</div>
 				</div>
-				<Dialog.Root>
+				<Dialog.Root bind:open={dialogOpen}>
 					<form>
 						<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 							<Plus class="size-4" />
@@ -67,10 +68,10 @@
 								</div>
 							</div>
 							<Dialog.Footer>
-								<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
+								<Button variant="outline" size="sm" onclick={() => dialogOpen = false}>
 									Annuler
-								</Dialog.Close>
-								<Dialog.Close class={buttonVariants({ variant: 'default' })}>Confirmer</Dialog.Close>
+								</Button>
+								<Button variant="default" size="sm" type="submit">Confirmer</Button>
 							</Dialog.Footer>
 						</Dialog.Content>
 					</form>

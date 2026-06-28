@@ -22,6 +22,7 @@
 	let setPerson: Personne | null = $state(null);
 	let matiere = $state<string[]>([]);
 	let currentMatiere = $state('');
+	let dialogOpen = $state(false);
 
 	const filteredMatieres = $derived(
 		personnes.filter((p) =>
@@ -113,7 +114,7 @@
 		</div>
 	</main>
 
-<Dialog.Root bind:open>
+<Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Content class="sm:max-w-lg">
 		<Dialog.Header class="mb-1 space-y-1">
 			<Dialog.Title class="text-xl font-semibold">Ajouter un professeur</Dialog.Title>

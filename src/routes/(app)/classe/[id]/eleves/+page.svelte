@@ -46,6 +46,7 @@
 		prenom: '',
 		dateNaissance: ''
 	});
+	let nouvelEleveDialogOpen = $state(false);
 
 	const elevesFiltres = $derived(
 		elevesInscrits.filter(
@@ -68,6 +69,7 @@
 		};
 		elevesInscrits = [...elevesInscrits, nouveau];
 		nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
+		nouvelEleveDialogOpen = false;
 	}
 
 	function toggleActif(eleveId: string) {
@@ -82,7 +84,7 @@
 	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4 border-b border-sidebar-border">
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
-		<Dialog.Root>
+		<Dialog.Root bind:open={nouvelEleveDialogOpen}>
 			<form>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 					Nouvel élève
@@ -107,12 +109,12 @@
 						</div>
 					</div>
 					<Dialog.Footer>
-						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
+						<Button variant="outline" size="sm" onclick={() => { nouvelEleve = { nom: '', prenom: '', dateNaissance: '' }; nouvelEleveDialogOpen = false; }}>
 							Annuler
-						</Dialog.Close>
-						<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterEleve}>
+						</Button>
+						<Button variant="default" size="sm" onclick={ajouterEleve}>
 							Ajouter
-						</Dialog.Close>
+						</Button>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>

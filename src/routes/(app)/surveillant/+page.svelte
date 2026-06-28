@@ -22,6 +22,7 @@
 	let searchPersonnes = $state('');
 	let setPerson: Personne | null = $state(null);
 	let poste = $state('Surveillant');
+	let dialogOpen = $state(false);
 
 	const findPersonnes = $derived(
 		personnes.filter((p) =>
@@ -101,7 +102,7 @@
 		</div>
 	</main>
 
-<Dialog.Root bind:open>
+<Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Content class="sm:max-w-lg">
 		<Dialog.Header class="mb-1 space-y-1">
 			<Dialog.Title class="text-xl font-semibold">Ajouter un surveillant</Dialog.Title>

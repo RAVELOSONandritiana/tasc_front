@@ -67,10 +67,11 @@
 	let bulletinExamenIds = $state<string[]>([]);
 	let bulletinTousEleves = $state(false);
 	let examensActifs = $state<string[]>(['e1']);
+	let examenDialogOpen = $state(false);
 
 	const notesBulletin = $derived(getNotesEleveExamens(bulletinEleve, bulletinExamenIds));
 
-	function ajouterExamen() {
+function ajouterExamen() {
 		if (!nouvelExamen.nom || !nouvelExamen.date) return;
 		const examen: Examen = {
 			id: Date.now().toString(),
@@ -80,8 +81,8 @@
 			periode: nouvelExamen.periode
 		};
 		listeExamens = [...listeExamens, examen];
-		examensActifs = [...examensActifs, examen.id];
 		nouvelExamen = { nom: '', date: '', periode: '' };
+		examenDialogOpen = false;
 	}
 
 	function toggleExamen(examenId: string) {
@@ -262,12 +263,12 @@
 		<div class="mb-6 flex items-center justify-between gap-4">
 			<h1 class="text-2xl font-bold">Bulletins de la classe</h1>
 			<div class="flex items-center gap-2">
-				<Dialog.Root>
-				<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
-					<Plus class="mr-1 size-4" />
-					Nouvel examen
-				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
+				<Dialog.Root bind:open={examenDialogOpen}>
+					<Dialog.Trigger class={buttonVariants({ variant: 'default' })}>
+						<Plus class="mr-1 size-4" />
+						Nouvel examen
+					</Dialog.Trigger>
+					<Dialog.Content class="sm:max-w-[425px]">
 					<Dialog.Header>
 						<Dialog.Title>Créer un examen global</Dialog.Title>
 						<Dialog.Description>
@@ -301,16 +302,16 @@
 						</div>
 					</div>
 					<Dialog.Footer>
-						<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}>
+						<Button variant="outline" size="sm" onclick={() => examenDialogOpen = false}>
 							Annuler
-						</Dialog.Close>
-						<Dialog.Close class={buttonVariants({ variant: 'default' })} onclick={ajouterExamen}>
+						</Button>
+						<Button variant="default" size="sm" onclick={ajouterExamen}>
 							Créer
-						</Dialog.Close>
+						</Button>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</Dialog.Root>
-				<Button
+			<Button
 				variant="outline"
 				onclick={ouvrirTousBulletins}
 			>

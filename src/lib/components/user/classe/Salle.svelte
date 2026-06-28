@@ -6,7 +6,6 @@
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import pb, { auth } from '$lib/pocketbase/pocketbase';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { buttonVariants } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 
@@ -132,10 +131,10 @@
 		</div>
 
 		<Dialog.Footer>
-			<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}> Annuler </Dialog.Close>
-			<Dialog.Close type="button" class={buttonVariants({ variant: 'default' })} onclick={saveEdit}>
+			<Button variant="outline" size="sm" onclick={() => editOpen = false}> Annuler </Button>
+			<Button type="button" variant="default" size="sm" onclick={saveEdit}>
 				Confirmer
-			</Dialog.Close>
+			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

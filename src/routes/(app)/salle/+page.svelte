@@ -10,7 +10,8 @@
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Building2, Plus } from '@lucide/svelte/icons';
 
-	const { data }: PageProps = $props();
+	let salleDialogOpen = $state(false);
+const { data }: PageProps = $props();
 </script>
 
 <main class="bg-background text-foreground h-screen flex flex-col">
@@ -28,7 +29,7 @@
 								<p class="text-xs text-muted-foreground">{data.list_salle.length} salle{data.list_salle.length > 1 ? 's' : ''} disponible{data.list_salle.length > 1 ? 's' : ''}</p>
 							</div>
 						</div>
-						<Dialog.Root>
+						<Dialog.Root bind:open={salleDialogOpen}>
 							<form>
 								<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 									<Plus class="size-4" />
@@ -53,8 +54,8 @@
 									</div>
 
 									<Dialog.Footer>
-										<Dialog.Close type="button" class={buttonVariants({ variant: 'outline' })}> Annuler </Dialog.Close>
-										<Dialog.Close class={buttonVariants({ variant: 'default' })}> Confirmer </Dialog.Close>
+										<Button variant="outline" size="sm" onclick={() => salleDialogOpen = false}> Annuler </Button>
+										<Button variant="default" size="sm" type="submit"> Confirmer </Button>
 									</Dialog.Footer>
 								</Dialog.Content>
 							</form>

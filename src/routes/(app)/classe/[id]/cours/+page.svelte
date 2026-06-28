@@ -26,9 +26,11 @@
 
 	let nouveauCoeff = $state(1);
 
-	let coursSelectionne = $state<Cours | null>(null);
+let coursSelectionne = $state<Cours | null>(null);
 	let coursParticipantsSelectionne = $state<Cours | null>(null);
 	let participantsSelectionnes = $state<string[]>([]);
+	let coursParticipantsDialogOpen = $state(false);
+	let coursCoeffDialogOpen = $state(false);
 
 	let listeCours = $state<Cours[]>([
 		{
@@ -92,6 +94,7 @@
 		date: '',
 		periode: ''
 	});
+	let examenDialogOpen = $state(false);
 
 	const coursFiltres = $derived(
 		listeCours.filter((c) => c.nom.toLowerCase().includes(searchCours.toLowerCase()) || (c.professeur?.toLowerCase() || '').includes(searchCours.toLowerCase()))
@@ -118,12 +121,14 @@
 	function modifierCoefficient(cours: Cours) {
 		coursSelectionne = cours;
 		nouveauCoeff = cours.coefficient;
+		coursCoeffDialogOpen = true;
 	}
 
 	function sauvegarderCoefficient() {
 		if (coursSelectionne) {
 			coursSelectionne.coefficient = nouveauCoeff;
 			coursSelectionne = null;
+			coursCoeffDialogOpen = false;
 		}
 	}
 
@@ -142,12 +147,14 @@
 	function modifierParticipants(cours: Cours) {
 		coursParticipantsSelectionne = cours;
 		participantsSelectionnes = cours.participants?.length ? [...cours.participants] : elevesClasse.map((e) => e.id);
+		coursParticipantsDialogOpen = true;
 	}
 
 	function sauvegarderParticipants() {
 		if (coursParticipantsSelectionne) {
 			coursParticipantsSelectionne.participants = [...participantsSelectionnes];
 			coursParticipantsSelectionne = null;
+			coursParticipantsDialogOpen = false;
 		}
 	}
 
@@ -163,6 +170,7 @@
 		};
 		listeExamens = [...listeExamens, examen];
 		nouvelExamen = { nom: '', date: '', periode: '' };
+		examenDialogOpen = false;
 	}
 </script>
 
@@ -170,8 +178,8 @@
 	<div class="sticky top-16 z-50 flex flex-col gap-4 bg-sidebar p-4 border-b border-sidebar-border">
 		<div class="flex justify-between">
 			<SearchInput placeholder="Rechercher un cours" bind:value={searchCours} />
-			<Dialog.Root>
-				<form>
+			<Dialog.Root bind:open={examenDialogOpen}>
+				<form onsubmit={(e) => { e.preventDefault(); ajouterExamen(); }}>
 					<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', class: 'h-9' })}>
 						<Calendar class="mr-1 size-4" />
 						Nouvel examen
@@ -213,8 +221,8 @@
 					</div>
 
 					<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
-						<Button variant="outline" size="sm">Annuler</Button>
-						<Button variant="default" size="sm" onclick={ajouterExamen}>Créer</Button>
+						<Button variant="outline" size="sm" onclick={() => examenDialogOpen = false}>Annuler</Button>
+						<Button variant="default" size="sm" type="submit">Créer</Button>
 					</Dialog.Footer>
 				</Dialog.Content>
 				</form>
@@ -310,8 +318,8 @@
 	</div>
 
 
-<Dialog.Root open={coursParticipantsSelectionne !== null}>
-	<Dialog.Content class="sm:max-w-3xl">
+<Dialog.Root bind:open={coursParticipantsDialogOpen}>
+		<Dialog.Content class="sm:max-w-3xl">
 		<Dialog.Header>
 			<Dialog.Title>Modifier les participants</Dialog.Title>
 			<Dialog.Description>
@@ -355,15 +363,15 @@
 			</p>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" size="sm" onclick={() => (coursParticipantsSelectionne = null)}>Annuler</Button>
+			<Button variant="outline" size="sm" onclick={() => { coursParticipantsSelectionne = null; coursParticipantsDialogOpen = false; }}>Annuler</Button>
 			<Button variant="default" size="sm" onclick={sauvegarderParticipants}>Sauvegarder</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
 </div>
 
-<Dialog.Root open={coursSelectionne !== null}>
-	<Dialog.Content class="sm:max-w-md">
+<Dialog.Root bind:open={coursCoeffDialogOpen}>
+		<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title>Modifier le coefficient</Dialog.Title>
 			<Dialog.Description>
@@ -383,7 +391,7 @@
 			/>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" size="sm" onclick={() => (coursSelectionne = null)}>Annuler</Button>
+			<Button variant="outline" size="sm" onclick={() => { coursSelectionne = null; coursCoeffDialogOpen = false; }}>Annuler</Button>
 			<Button variant="default" size="sm" onclick={sauvegarderCoefficient}>Sauvegarder</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
