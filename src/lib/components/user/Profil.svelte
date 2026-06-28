@@ -86,7 +86,7 @@
 				<Avatar.Fallback>VA</Avatar.Fallback>
 			</Avatar.Root>
 		</DropdownMenu.Trigger>
-		<DropdownMenu.Content>
+		<DropdownMenu.Content class="w-56 z-[100]">
 			<DropdownMenu.Label>Mon Compte</DropdownMenu.Label>
 			<DropdownMenu.Separator />
 			<DropdownMenu.Item>
