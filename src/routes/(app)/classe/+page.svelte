@@ -7,10 +7,20 @@
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import { Card } from '$lib/components/ui/card';
 	import { ClipboardList, Plus } from '@lucide/svelte/icons';
+	import { Button } from '$lib/components/ui/button';
 	const { data } = $props();
 
 	const { listClasse } = data;
 	let dialogOpen = $state(false);
+
+	let niveau = $state('0');
+	let serie = $state('ose');
+	let prof = $state('');
+
+	function soumettre() {
+		console.log('Classe créée:', { niveau, serie, prof });
+		dialogOpen = false;
+	}
 </script>
 
 <main class="bg-background text-foreground h-screen flex flex-col">
@@ -28,53 +38,51 @@
 					</div>
 				</div>
 				<Dialog.Root bind:open={dialogOpen}>
-					<form>
-						<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
-							<Plus class="size-4" />
-							Nouvelle classe
-						</Dialog.Trigger>
-						<Dialog.Content class="sm:max-w-[425px]">
-							<Dialog.Header>
-								<Dialog.Title>Ajouter une classe</Dialog.Title>
-								<Dialog.Description>Remplissez les informations de la classe</Dialog.Description>
-							</Dialog.Header>
-							<div class="grid gap-4">
-								<div class="grid gap-3">
-									<Label for="niveau">Niveau</Label>
-									<NativeSelect.Root required class="w-full">
-										<NativeSelect.Option value=0>2nd</NativeSelect.Option>
-										<NativeSelect.Option value=1>1ere</NativeSelect.Option>
-										<NativeSelect.Option value=2>Terminale</NativeSelect.Option>
-									</NativeSelect.Root>
-								</div>
-
-								<div class="grid gap-3">
-									<Label for="niveau">Série</Label>
-									<NativeSelect.Root class="w-full">
-										<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
-										<NativeSelect.Option value="s">S</NativeSelect.Option>
-										<NativeSelect.Option value="l">L</NativeSelect.Option>
-									</NativeSelect.Root>
-								</div>
-
-								<div class="grid gap-3">
-									<Label for="niveau">Prof titulaire</Label>
-									<NativeSelect.Root class="w-full">
-										<NativeSelect.Option value="">Aucun titulaire</NativeSelect.Option>
-										<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
-										<NativeSelect.Option value="s">S</NativeSelect.Option>
-										<NativeSelect.Option value="l">L</NativeSelect.Option>
-									</NativeSelect.Root>
-								</div>
+					<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
+						<Plus class="size-4" />
+						Nouvelle classe
+					</Dialog.Trigger>
+					<Dialog.Content class="sm:max-w-[425px]">
+						<Dialog.Header>
+							<Dialog.Title>Ajouter une classe</Dialog.Title>
+							<Dialog.Description>Remplissez les informations de la classe</Dialog.Description>
+						</Dialog.Header>
+						<form class="grid gap-4 py-4">
+							<div class="grid gap-3">
+								<Label for="niveau">Niveau</Label>
+								<NativeSelect.Root required class="w-full" bind:value={niveau}>
+									<NativeSelect.Option value="0">2nd</NativeSelect.Option>
+									<NativeSelect.Option value="1">1ere</NativeSelect.Option>
+									<NativeSelect.Option value="2">Terminale</NativeSelect.Option>
+								</NativeSelect.Root>
 							</div>
-							<Dialog.Footer>
-								<Button variant="outline" size="sm" onclick={() => dialogOpen = false}>
-									Annuler
-								</Button>
-								<Button variant="default" size="sm" type="submit">Confirmer</Button>
-							</Dialog.Footer>
-						</Dialog.Content>
-					</form>
+
+							<div class="grid gap-3">
+								<Label for="serie">Série</Label>
+								<NativeSelect.Root class="w-full" bind:value={serie}>
+									<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
+									<NativeSelect.Option value="s">S</NativeSelect.Option>
+									<NativeSelect.Option value="l">L</NativeSelect.Option>
+								</NativeSelect.Root>
+							</div>
+
+							<div class="grid gap-3">
+								<Label for="prof">Prof titulaire</Label>
+								<NativeSelect.Root class="w-full" bind:value={prof}>
+									<NativeSelect.Option value="">Aucun titulaire</NativeSelect.Option>
+									<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
+									<NativeSelect.Option value="s">S</NativeSelect.Option>
+									<NativeSelect.Option value="l">L</NativeSelect.Option>
+								</NativeSelect.Root>
+							</div>
+						</form>
+						<Dialog.Footer>
+							<Button variant="outline" size="sm" onclick={() => dialogOpen = false}>
+								Annuler
+							</Button>
+							<Button variant="default" size="sm" onclick={soumettre}>Confirmer</Button>
+						</Dialog.Footer>
+					</Dialog.Content>
 				</Dialog.Root>
 			</div>
 
