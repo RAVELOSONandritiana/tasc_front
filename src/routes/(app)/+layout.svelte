@@ -74,26 +74,10 @@
 				</Sidebar.Group>
 			</Sidebar.Content>
 			<Sidebar.Footer class="border-t border-sidebar-border p-4">
-				<div class="space-y-3">
-					<div class="space-y-1">
-						<p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Application</p>
-						<div class="flex items-center gap-2">
-							<button class="flex-1 rounded-lg bg-muted/30 px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors">
-								<span class="text-xs text-muted-foreground">Thème</span>
-							</button>
-							<button class="flex-1 rounded-lg bg-muted/30 px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors">
-								<span class="text-xs text-muted-foreground">Profil</span>
-							</button>
-							<button class="flex-1 rounded-lg bg-muted/30 px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors">
-								<span class="text-xs text-muted-foreground">Notifications</span>
-							</button>
-						</div>
-					</div>
-					<Button variant="outline" class="w-full gap-2 text-muted-foreground hover:text-destructive transition-colors" onclick={() => goto('/')}>
-						<LogOut class="size-4" />
-						Déconnexion
-					</Button>
-				</div>
+				<Button variant="outline" class="w-full gap-2 text-muted-foreground hover:text-destructive transition-colors" onclick={() => goto('/')}>
+					<LogOut class="size-4" />
+					Déconnexion
+				</Button>
 			</Sidebar.Footer>
 		</Sidebar.Root>
 
