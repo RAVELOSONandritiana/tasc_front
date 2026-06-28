@@ -7,9 +7,6 @@
 	import { Search } from '@lucide/svelte/icons';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
-	import XCircleIcon from '@lucide/svelte/icons/x-circle';
 	import type { EleveCours } from '$lib/types/Materiel.type';
 
 	let searchEleve = $state('');
@@ -21,7 +18,10 @@
 			prenom: 'Tsitoarimanjakely',
 			dateNaissance: '2008-05-15',
 			actif: true,
-			notes: []
+			notes: [],
+			incidents: [],
+			absences: [],
+			retards: []
 		},
 		{
 			id: '2',
@@ -29,7 +29,10 @@
 			prenom: 'Fanomezamasy',
 			dateNaissance: '2008-03-22',
 			actif: true,
-			notes: []
+			notes: [],
+			incidents: [],
+			absences: [],
+			retards: []
 		},
 		{
 			id: '3',
@@ -37,7 +40,10 @@
 			prenom: 'Bako',
 			dateNaissance: '2008-07-10',
 			actif: false,
-			notes: []
+			notes: [],
+			incidents: [],
+			absences: [],
+			retards: []
 		}
 	]);
 
@@ -65,18 +71,14 @@
 			prenom: nouvelEleve.prenom,
 			dateNaissance: nouvelEleve.dateNaissance,
 			actif: true,
-			notes: []
+			notes: [],
+			incidents: [],
+			absences: [],
+			retards: []
 		};
 		elevesInscrits = [...elevesInscrits, nouveau];
 		nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
 		nouvelEleveDialogOpen = false;
-	}
-
-	function toggleActif(eleveId: string) {
-		const eleve = elevesInscrits.find((e) => e.id === eleveId);
-		if (eleve) {
-			eleve.actif = !eleve.actif;
-		}
 	}
 </script>
 
@@ -130,19 +132,19 @@
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head class="w-12">Actif</Table.Head>
 						<Table.Head>Nom</Table.Head>
 						<Table.Head>Prénom</Table.Head>
 						<Table.Head>Date naissance</Table.Head>
 						<Table.Head class="text-center">Notes</Table.Head>
+						<Table.Head class="text-center">Moyenne</Table.Head>
+						<Table.Head class="text-center">Incidents</Table.Head>
+						<Table.Head class="text-center">Absences</Table.Head>
+						<Table.Head class="text-center">Retards</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
 					{#each elevesFiltres as eleve (eleve.id)}
 						<Table.Row>
-							<Table.Cell>
-								<Checkbox checked={eleve.actif} onchange={() => toggleActif(eleve.id)} />
-							</Table.Cell>
 							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
 							<Table.Cell>{eleve.prenom}</Table.Cell>
 							<Table.Cell>
@@ -150,6 +152,20 @@
 							</Table.Cell>
 							<Table.Cell class="text-center">
 								{eleve.notes?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.notes && eleve.notes.length > 0 
+									? (eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length).toFixed(1)
+									: '—'}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.incidents?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.absences?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.retards?.length || 0}
 							</Table.Cell>
 						</Table.Row>
 					{/each}

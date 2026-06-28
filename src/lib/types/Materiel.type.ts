@@ -32,6 +32,9 @@ export type EleveCours = {
 	dateNaissance: string;
 	actif: boolean;
 	notes?: Note[];
+	incidents?: Incident[];
+	absences?: Absence[];
+	retards?: Retard[];
 };
 
 export type Note = {
@@ -42,6 +45,25 @@ export type Note = {
 	libelle: string;
 	coursId: string;
 	examenId?: string;
+};
+
+export type Incident = {
+	id: string;
+	type: 'incident' | 'absence' | 'retard';
+	date: string;
+	description?: string;
+};
+
+export type Absence = {
+	id: string;
+	date: string;
+	justifie: boolean;
+};
+
+export type Retard = {
+	id: string;
+	date: string;
+	duree: string;
 };
 
 export type Examen = {
