@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Card } from '$lib/components/ui/card';
+	import { page } from '$app/stores';
 	import type { SeanceEDT, Salle } from '$lib/types/Materiel.type';
 	import SeanceCard from '$lib/components/user/edt/SeanceCard.svelte';
 
@@ -56,7 +57,7 @@
 				<div class="flex h-full flex-col p-3">
 					<h3 class="mb-2 font-semibold text-foreground">{jour}</h3>
 					<div class="flex-1">
-						<SeanceCard {jour} seances={seancesParJour[jour]} {salles} {heures} onAdd={ajouterSeance} />
+						<SeanceCard {jour} seances={seancesParJour[jour]} {salles} {heures} onAdd={ajouterSeance} classeId={$page.params.id} />
 					</div>
 				</div>
 			</Card>

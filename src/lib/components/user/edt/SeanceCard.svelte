@@ -1,19 +1,22 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Plus } from '@lucide/svelte/icons';
+	import { Plus, Play } from '@lucide/svelte/icons';
 	import type { SeanceEDT, Salle } from '$lib/types/Materiel.type';
 	import { matiere } from '$lib/variables/territoire';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { buttonVariants } from '$lib/components/ui/button';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
-	const { jour, seances, salles, heures, onAdd } = $props<{
+	const { jour, seances, salles, heures, onAdd, classeId } = $props<{
 		jour: string;
 		seances: SeanceEDT[];
 		salles: Salle[];
 		heures: string[];
 		onAdd: (seance: SeanceEDT) => void;
+		classeId: string;
 	}>();
 
 	let dialogOpen = $state(false);
@@ -119,13 +122,25 @@
 		{:else}
 			{#each seances as seance (seance.id)}
 				<div class="rounded-md border border-sidebar-border bg-sidebar-accent/30 p-2 text-xs">
-					<p class="font-medium">{seance.heureDebut} - {seance.heureFin}</p>
-					<p class="text-muted-foreground">{seance.coursId}</p>
-					{#if seance.salleId}
-						<p class="text-muted-foreground/70">
-							Salle: {salles.find((s: Salle) => s.id === seance.salleId)?.name || 'Inconnu'}
-						</p>
-					{/if}
+					<div class="flex items-start justify-between">
+						<div>
+							<p class="font-medium">{seance.heureDebut} - {seance.heureFin}</p>
+							<p class="text-muted-foreground">{matiere.find(m => m.toLowerCase() === seance.coursId)?.charAt(0).toUpperCase() + seance.coursId.slice(1) || seance.coursId}</p>
+							{#if seance.salleId}
+								<p class="text-muted-foreground/70">
+									Salle: {salles.find((s: Salle) => s.id === seance.salleId)?.name || 'Inconnu'}
+								</p>
+							{/if}
+						</div>
+						<Button 
+							variant="default" 
+							size="sm" 
+							class="h-6 px-2"
+							onclick={() => goto(`/classe/${classeId}/cours/${seance.id}/presence`)}
+						>
+							<Play class="size-3" />
+						</Button>
+					</div>
 				</div>
 			{/each}
 		{/if}

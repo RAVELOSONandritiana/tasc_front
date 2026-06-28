@@ -35,6 +35,7 @@ export type EleveCours = {
 	incidents?: Incident[];
 	absences?: Absence[];
 	retards?: Retard[];
+	url?: string;
 };
 
 export type Note = {
