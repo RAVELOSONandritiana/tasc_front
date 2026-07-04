@@ -6,9 +6,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
 	import * as NativeSelect from '$lib/components/ui/native-select';
-	import { buttonVariants } from '$lib/components/ui/button';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 
 	const { jour, seances, salles, heures, onAdd, classeId } = $props<{
 		jour: string;
@@ -27,17 +25,6 @@
 		salleId: null as number | null
 	});
 
-	function heureEnMinute(heure: string): number {
-		const [h, m] = heure.split(':').map(Number);
-		return h * 60 + m;
-	}
-
-	function chevauchement(s1: SeanceEDT, s2: SeanceEDT): boolean {
-		if (s1.jour !== s2.jour) return false;
-		return heureEnMinute(s1.heureDebut) < heureEnMinute(s2.heureFin) &&
-			   heureEnMinute(s1.heureFin) > heureEnMinute(s2.heureDebut);
-	}
-
 	function ajouterSeance() {
 		if (!nouvelleSeance.heureDebut || !nouvelleSeance.heureFin || !nouvelleSeance.coursId) return;
 		const nouvelle: SeanceEDT = {
@@ -52,7 +39,7 @@
 		dialogOpen = false;
 		nouvelleSeance = { heureDebut: '', heureFin: '', coursId: '', salleId: null };
 	}
-
+	
 	function handleClose() {
 		dialogOpen = false;
 		nouvelleSeance = { heureDebut: '', heureFin: '', coursId: '', salleId: null };

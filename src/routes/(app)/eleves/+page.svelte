@@ -57,7 +57,7 @@
 								<Badge variant={selectedClasse === '全部' ? 'default' : 'outline'} class="cursor-pointer transition-all hover:shadow-sm" onclick={() => selectedClasse = '全部'}>
 									Toutes les classes
 								</Badge>
-								{#each classes as c}
+								{#each classes as c (c)}
 									<Badge variant={selectedClasse === c ? 'default' : 'outline'} class="cursor-pointer transition-all hover:shadow-sm" onclick={() => selectedClasse = c}>
 										{c}
 									</Badge>
