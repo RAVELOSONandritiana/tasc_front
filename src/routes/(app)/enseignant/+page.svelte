@@ -94,9 +94,9 @@
 
 		<div class="mx-auto max-w-7xl p-4 md:p-6">
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each listFiltered as prof, i (prof.id)}
+				{#each listFiltered as prof, i (i)}
 					<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
-						<PersonnelCard personnel={prof} />
+						<PersonnelCard personne={prof} role="Enseignant" />
 					</div>
 				{/each}
 			</div>
@@ -123,7 +123,7 @@
 
 				{#if !setPerson && searchPersonnes.length > 1}
 					<div class="mt-1 max-h-36 space-y-1 overflow-y-auto rounded-md border p-1">
-						{#each filteredMatieres as fp (fp.id)}
+						{#each filteredMatieres as fp, j (j)}
 							<button
 								class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
 								onclick={() => setPersonne(fp)}

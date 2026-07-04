@@ -2,7 +2,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Avatar } from '$lib/components/ui/avatar';
+	import Avatar from '$lib/components/ui/avatar/avatar.svelte';
+	import AvatarFallback from '$lib/components/ui/avatar/avatar-fallback.svelte';
+	import AvatarImage from '$lib/components/ui/avatar/avatar-image.svelte';
 	import { User, Mail, Phone, Shield, Calendar, MapPin, Building, Clock, CheckCircle2, CalendarDays, Users, X } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
@@ -25,9 +27,9 @@
 		<Card class="p-6">
 			<div class="flex items-center gap-4">
 				<Avatar class="h-20 w-20">
-					<Avatar.Fallback class="text-xl font-bold text-primary bg-primary/10">
+					<AvatarFallback class="text-xl font-bold text-primary bg-primary/10">
 						{initial}
-					</Avatar.Fallback>
+					</AvatarFallback>
 				</Avatar>
 				<div>
 					<h2 class="text-2xl font-semibold">{prof.name} {prof.lastname}</h2>
