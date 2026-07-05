@@ -1,22 +1,27 @@
 <script lang="ts">
 	import Classe from '$lib/components/user/classe/Classe.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import { Input } from '$lib/components/ui/input';
 	import Label from '$lib/components/ui/label/label.svelte';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
 	import { Card } from '$lib/components/ui/card';
-	import { ClipboardList, Plus } from '@lucide/svelte/icons';
+	import { ClipboardList, Plus, UserRound } from '@lucide/svelte/icons';
 	import { Button } from '$lib/components/ui/button';
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import type { Personne } from '$lib/types/Personne.type';
+	import SearchInput from '$lib/components/user/SearchInput.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
 
-	const { data } = $props();
+	const { data }: PageProps = $props();
 
-	const { listClasse } = data;
+	let listClasse = $state(data.listClasse);
+	const enseignants = $state<Personne[]>(data.enseignants || []);
 	let dialogOpen = $state(false);
 	let submitting = $state(false);
+	let success = $state(false);
+	let errors = $state<Record<string, string>>({});
 
 	let nom = $state('');
 	let niveau = $state('0');
@@ -24,22 +29,13 @@
 	let searchProf = $state('');
 	let selectedProf: Personne | null = $state(null);
 
-	let profs = $state<Personne[]>([
-		{
-			id: '1',
-			name: 'RANDRIANANTENAINA',
-			lastname: 'Tsitoarimanjakely',
-			email: 'tsito@example.com',
-			phone: '+261 34 000 00 00'
-		},
-		{
-			id: '2',
-			name: 'ANDRIANTENAINA',
-			lastname: 'Bako',
-			email: 'bako@example.com',
-			phone: '+261 34 000 00 01'
-		}
-	]);
+	const searchResults = $derived(
+		searchProf.trim().length > 0 && !selectedProf
+			? enseignants.filter((p) =>
+				`${p.name} ${p.lastname} ${p.email} ${p.phone}`.toLowerCase().includes(searchProf.toLowerCase())
+			)
+			: []
+	);
 
 	function selectProf(p: Personne) {
 		selectedProf = p;
@@ -52,6 +48,8 @@
 		serie = '';
 		searchProf = '';
 		selectedProf = null;
+		errors = {};
+		success = false;
 	}
 </script>
 
@@ -83,11 +81,30 @@
 					<Dialog.Content class="sm:max-w-[425px]">
 						<form method="POST" action="?/create" use:enhance={() => {
 							submitting = true;
+							errors = {};
 							return async ({ result }: { result: ActionResult }) => {
 								submitting = false;
 								if (result.type === 'success') {
-									dialogOpen = false;
-									resetForm();
+									const newClasse = result.data?.classe;
+									if (newClasse) {
+										const niveauLibelle = newClasse.niveau === 0 ? '2nd' : newClasse.niveau === 1 ? '1ere' : 'Terminale';
+										listClasse = [
+											...listClasse,
+											{
+												id: newClasse.id,
+												nom: newClasse.nom || niveauLibelle + (newClasse.serie ? ' ' + newClasse.serie.toUpperCase() : ''),
+												niveau: newClasse.niveau,
+												series: newClasse.serie || '',
+												titulaire: newClasse.titulaire ? `${newClasse.titulaire.personne.name} ${newClasse.titulaire.personne.lastname}` : '',
+												titulaireId: newClasse.titulaireId || null,
+												eleves: newClasse.elevesCount || 0
+											}
+										];
+									}
+									success = true;
+									setTimeout(() => { dialogOpen = false; resetForm(); }, 800);
+								} else if (result.type === 'failure') {
+									errors = result.data?.errors || {};
 								}
 							};
 						}}>
@@ -96,6 +113,17 @@
 								<Dialog.Description>Remplissez les informations de la classe</Dialog.Description>
 							</Dialog.Header>
 							<div class="grid gap-4 py-4">
+								{#if success}
+									<div class="rounded-md border border-emerald-500 bg-emerald-500/10 p-4 text-center">
+										<p class="text-sm font-medium text-emerald-500">Classe créée avec succès !</p>
+									</div>
+								{/if}
+								{#if errors._form}
+									<div class="rounded-md border border-destructive bg-destructive/10 p-3">
+										<p class="text-sm text-destructive">{errors._form}</p>
+									</div>
+								{/if}
+
 								<div class="grid gap-3">
 									<Label for="nom">Nom</Label>
 									<input
@@ -109,7 +137,7 @@
 
 								<div class="grid gap-3">
 									<Label for="niveau">Niveau *</Label>
-									<NativeSelect.Root required class="w-full" bind:value={niveau}>
+									<NativeSelect.Root required class="w-full" bind:value={niveau} name="niveau">
 										<NativeSelect.Option value="0">2nd</NativeSelect.Option>
 										<NativeSelect.Option value="1">1ere</NativeSelect.Option>
 										<NativeSelect.Option value="2">Terminale</NativeSelect.Option>
@@ -118,7 +146,7 @@
 
 								<div class="grid gap-3">
 									<Label for="serie">Série</Label>
-									<NativeSelect.Root class="w-full" bind:value={serie}>
+									<NativeSelect.Root class="w-full" bind:value={serie} name="serie">
 										<NativeSelect.Option value="">Aucune</NativeSelect.Option>
 										<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
 										<NativeSelect.Option value="s">S</NativeSelect.Option>
@@ -127,36 +155,70 @@
 								</div>
 
 								<div class="grid gap-3">
-									<Label for="prof">Prof titulaire</Label>
+									<Label>Prof titulaire</Label>
 									<div class="relative">
-										<SearchInput
-											bind:value={searchProf}
+										<Input
+											id="prof"
 											placeholder="Rechercher un professeur..."
-											class="w-full"
+											value={searchProf}
+											oninput={(e) => searchProf = (e.target as HTMLInputElement).value.replace(/\s+/g, ' ').trim()}
 										/>
+										{#if searchResults.length > 0 && !selectedProf}
+											<div class="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+												{#each searchResults as p (p.id)}
+													<button
+														type="button"
+														class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+														onclick={() => selectProf(p)}
+													>
+														<p class="text-sm font-medium">{p.name} {p.lastname}</p>
+														<p class="text-xs text-muted-foreground">{p.email || ''}</p>
+														<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
+													</button>
+												{/each}
+											</div>
+										{/if}
 										{#if selectedProf}
-											<div class="mt-2 flex items-center gap-2 rounded-lg bg-muted/30 p-2">
-												<div
-													class="flex size-8 items-center justify-center rounded-full bg-primary/10"
-												>
-													<span class="text-sm font-bold text-primary"
-														>{selectedProf.name[0]}{selectedProf.lastname[0]}</span
+											<div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-muted/30 p-2">
+												<div class="flex items-center gap-2">
+													<div
+														class="flex size-8 items-center justify-center rounded-full bg-primary/10"
+													>
+														<span class="text-sm font-bold text-primary"
+															>{selectedProf.name[0]}{selectedProf.lastname[0]}</span
+														>
+													</div>
+													<span class="text-sm font-medium"
+														>{selectedProf.name} {selectedProf.lastname}</span
 													>
 												</div>
-												<span class="text-sm font-medium"
-													>{selectedProf.name} {selectedProf.lastname}</span
+												<button
+													type="button"
+													class="rounded-full p-1 hover:bg-muted"
+													onclick={() => { selectedProf = null; searchProf = ''; }}
 												>
+													<UserRound class="size-4 text-muted-foreground" />
+												</button>
 											</div>
 										{/if}
 									</div>
 								</div>
 							</div>
+
 							<Dialog.Footer>
-								<Button variant="outline" size="sm" type="button" onclick={() => (dialogOpen = false)} disabled={submitting}>
+								<input type="hidden" name="titulaireId" value={selectedProf?.id || ''} />
+								<Button variant="outline" size="sm" type="button" onclick={() => { dialogOpen = false; resetForm(); }} disabled={submitting}>
 									Annuler
 								</Button>
-								<Button variant="default" size="sm" type="submit" disabled={submitting}>
-									Confirmer
+								<Button variant="default" size="sm" type="submit" disabled={submitting || success}>
+									{#if submitting}
+										<Spinner class="mr-2 size-4" />
+										Création...
+									{:else if success}
+										Créé !
+									{:else}
+										Confirmer
+									{/if}
 								</Button>
 							</Dialog.Footer>
 						</form>

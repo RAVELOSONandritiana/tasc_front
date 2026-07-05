@@ -169,7 +169,14 @@ export async function searchPersonnesByName(query: string) {
 
 export async function getClasses() {
 	return prisma.classe.findMany({
-		include: {
+		select: {
+			id: true,
+			nom: true,
+			niveau: true,
+			serie: true,
+			imageUrl: true,
+			titulaireId: true,
+			elevesCount: true,
 			titulaire: {
 				include: {
 					personne: true
@@ -431,7 +438,10 @@ export async function createProfesseurFromPersonne(personneId: string, matricule
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
 			where: { id: personneId },
-			include: { compte: true }
+			include: { 
+				compte: true,
+				professeur: true 
+			}
 		});
 
 		if (personne.professeur) {
@@ -530,7 +540,21 @@ export async function createClasse(data: {
 			serie: data.serie || null,
 			titulaireId: data.titulaireId || null,
 			anneeId: annee.id
+		},
+		include: {
+			titulaire: {
+				include: {
+					personne: true
+				}
+			}
 		}
+	});
+}
+
+export async function updateClasseImage(id: string, imageUrl: string | null) {
+	return prisma.classe.update({
+		where: { id },
+		data: { imageUrl }
 	});
 }
 

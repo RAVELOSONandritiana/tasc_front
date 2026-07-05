@@ -1,26 +1,37 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasses, createClasse } from '$lib/server/prisma';
+import { getClasses, getProfesseurs, createClasse, updateClasseImage } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
 export const load: PageServerLoad = async () => {
 	const classes = await getClasses();
 	const listClasse = classes.map(
-		(c): { id: string; nom: string; niveau: number; series: string; titulaire: string; eleves: number } => ({
+		(c): { id: string; nom: string; niveau: number; series: string; titulaire: string; titulaireId: string | null; eleves: number; url?: string } => ({
 			id: c.id,
 			nom: c.nom || '',
 			niveau: c.niveau,
 			series: c.serie || '',
 			titulaire: c.titulaire ? `${c.titulaire.personne.name} ${c.titulaire.personne.lastname}` : '',
-			eleves: c.elevesCount
+			titulaireId: c.titulaireId,
+			eleves: c.elevesCount,
+			url: c.imageUrl || undefined
 		})
 	);
+	const profs = await getProfesseurs();
+	const enseignants = profs.map((p) => ({
+		id: p.id,
+		name: p.personne.name,
+		lastname: p.personne.lastname,
+		email: p.personne.email,
+		phone: p.personne.phone
+	}));
 	return {
-		listClasse
+		listClasse,
+		enseignants
 	};
 };
 
-export const actions = {
+export const actions: Actions = {
 	create: async ({ request, locals }) => {
 		const data = await request.formData();
 
@@ -54,8 +65,22 @@ export const actions = {
 			).catch(() => {});
 
 			return { success: true, classe };
-		} catch (e) {
-			return fail(500, { errors: { _form: "Erreur lors de la création" } });
+		} catch (e: any) {
+			return fail(500, { errors: { _form: e?.message || "Erreur lors de la création" } });
+		}
+	},
+	updateImage: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const imageUrl = formData.get('imageUrl') as string;
+		if (!id || !imageUrl) {
+			return fail(400, { error: 'id et imageUrl requis' });
+		}
+		try {
+			await updateClasseImage(id, imageUrl);
+			return { success: true };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour de l\'image' });
 		}
 	}
 };

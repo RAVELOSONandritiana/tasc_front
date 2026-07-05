@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne } from '$lib/server/prisma';
-import type { Professeur, Personne } from '$lib/types/Personne.type';
+import type { Professeur } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 

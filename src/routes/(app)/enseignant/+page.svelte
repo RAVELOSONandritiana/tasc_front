@@ -37,7 +37,7 @@
 	const searchResults = $derived(
 		searchQuery.trim().length > 0 && !selectedPersonne
 			? allPersonnel.filter((p) =>
-				`${p.name}${p.lastname}${p.email}${p.phone}`.toLowerCase().includes(searchQuery.toLowerCase())
+				`${p.name} ${p.lastname} ${p.email} ${p.phone}`.toLowerCase().includes(searchQuery.toLowerCase())
 			)
 			: []
 	);
@@ -46,15 +46,15 @@
 		matieres = matieres.filter((x) => x !== m);
 	}
 
-		function resetForm() {
-			searchQuery = '';
-			selectedPersonne = null;
-			matricule = '';
-			matieres = [];
-		}
+	function resetForm() {
+		searchQuery = '';
+		selectedPersonne = null;
+		matricule = '';
+		matieres = [];
+	}
 
 	function onSearchChange(value: string) {
-		searchQuery = value;
+		searchQuery = value.replaceAll(' ','').toLowerCase();
 	}
 
 	function selectPersonne(p: Personne) {
@@ -150,40 +150,46 @@
 						value={searchQuery}
 						oninput={(e) => onSearchChange((e.target as HTMLInputElement).value)}
 					/>
-				{#if searchResults.length > 0 && !selectedPersonne}
-					<div class="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
-						{#each searchResults as p (p.id)}
-							<button
-								type="button"
-								class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
-								onclick={() => selectPersonne(p)}
-							>
-								<p class="text-sm font-medium">{p.name} {p.lastname}</p>
-								<p class="text-xs text-muted-foreground">{p.email || ''}</p>
-								<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
-							</button>
-						{/each}
-					</div>
-				{/if}
+					{#if searchResults.length > 0 && !selectedPersonne}
+						<div class="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+							{#each searchResults as p (p.id)}
+								<button
+									type="button"
+									class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+									onclick={() => selectPersonne(p)}
+								>
+									<p class="text-sm font-medium">{p.name} {p.lastname}</p>
+									<p class="text-xs text-muted-foreground">{p.email || ''}</p>
+									<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
+								</button>
+							{/each}
+						</div>
+					{/if}
 				</div>
 
 				{#if selectedPersonne}
-					<div class="rounded-md border p-3">
-						<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
-						<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
-						<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
-						<p class="text-xs text-muted-foreground">{selectedPersonne.domicile || ''} {selectedPersonne.commune || ''}</p>
+					<div class="flex items-center justify-between gap-2 rounded-md border p-3">
+						<div>
+							<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
+							<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
+							<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
+						</div>
+						<button
+							type="button"
+							class="rounded-full p-1 hover:bg-muted"
+							onclick={() => { selectedPersonne = null; searchQuery = ''; matricule = ''; matieres = []; }}
+						>
+							<X class="size-4 text-muted-foreground" />
+						</button>
 					</div>
 				{/if}
 
-			{#if selectedPersonne}
-				<div class="grid gap-2">
-					<Label for="matricule">Matricule</Label>
-					<Input id="matricule" name="matricule" bind:value={matricule} placeholder="Ex: ENS-047" />
-				</div>
-			{/if}
-
-
+				{#if selectedPersonne}
+					<div class="grid gap-2">
+						<Label for="matricule">Matricule</Label>
+						<Input id="matricule" name="matricule" bind:value={matricule} placeholder="Ex: ENS-047" />
+					</div>
+				{/if}
 
 				{#if selectedPersonne}
 					<div class="grid gap-2">

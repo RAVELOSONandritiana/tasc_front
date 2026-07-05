@@ -5,7 +5,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import UploadFile from '../form/UploadFile.svelte';
 	import pb, { auth } from '$lib/pocketbase/pocketbase';
-	import { env } from '$env/dynamic/public';
 	const { classe: cl } = $props();
 
 	let c = $state(cl);
@@ -48,28 +47,57 @@
 		try {
 			const record = await pb.collection('tasc_statics').create(formdata);
 			if (record && record.file) {
-				c.url = pb.files.getURL(record, record.file);
+					const url = pb.files.getURL(record, record.file);
+					c.url = url;
+					try {
+						const fd = new FormData();
+						fd.append('id', c.id);
+						fd.append('imageUrl', url);
+						await fetch('/classe?/updateImage', { method: 'POST', body: fd });
+					} catch (e) {
+						console.error('Failed to save image to DB:', e);
+					}
 			}
 		} catch (e) {
 			console.error('Upload failed:', e);
 		}
 		open = false;
 	}
+
+	let imageError = $state(false);
 </script>
 
 <CardUI>
-	<div class="h-50 w-full">
-		<img
-			src={c.url ?? env.PUBLIC_DEFAULT_IMAGE}
-			alt="image classe"
-			class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
-		/>
+	<div class="h-50 w-full overflow-hidden">
+		{#if c.url && !imageError}
+			<img
+				src={c.url}
+				alt="image classe"
+				class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
+				onerror={() => (imageError = true)}
+			/>
+		{:else}
+			<div class="flex h-full w-full items-center justify-center bg-muted/30">
+				<span class="text-lg font-bold text-muted-foreground">
+					CLASSE - {niveau} {c.nom ? c.nom.toUpperCase() : ''}
+				</span>
+			</div>
+		{/if}
 	</div>
 	<div class={color + ' h-2 w-full'} />
 	<div class="flex flex-col gap-4 bg-white/5 p-4">
-		<Label>Classe - {niveau} {c.series?.toUpperCase()}</Label>
+		<div class="flex items-center gap-2">
+			<span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CLASSE -</span>
+			<span class="text-sm font-bold">{niveau} {c.nom ? c.nom.toUpperCase() : ''}</span>
+		</div>
 		<Label>Nombre d'eleves - {c.eleves}</Label>
-		<Label>Titulaire - {c.titulaire}</Label>
+		{#if c.titulaireId}
+			<a href="/enseignant/{c.titulaireId}" class="text-sm font-medium text-primary hover:underline">
+				Titulaire - {c.titulaire}
+			</a>
+		{:else}
+			<Label>Titulaire - {c.titulaire}</Label>
+		{/if}
 		<div class="flex w-full items-center justify-between gap-2">
 			<Button
 				variant="outline"
