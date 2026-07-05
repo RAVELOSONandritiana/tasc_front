@@ -4,6 +4,7 @@
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
 	import { Bell, Sun, Moon, X, Check } from '@lucide/svelte/icons';
 	import * as Drawer from '$lib/components/ui/drawer';
+	import { browser } from '$app/environment';
 
 	let checked = $state(true);
 	let notificationOpen = $state(false);
@@ -48,8 +49,34 @@
 
 	let selectedNotification = $state<number | null>(null);
 
+	const THEME_KEY = 'theme-mode';
+
+	function applyTheme(dark: boolean) {
+		document.documentElement.classList.toggle('dark', dark);
+	}
+
+	function persistTheme(dark: boolean) {
+		try {
+			localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+		} catch (e) {
+			// ignore
+		}
+	}
+
+	if (browser) {
+		try {
+			const saved = localStorage.getItem(THEME_KEY);
+			checked = saved ? saved === 'dark' : true;
+		} catch (e) {
+			checked = true;
+		}
+		applyTheme(checked);
+	}
+
 	$effect(() => {
-		document.documentElement.classList.toggle('dark', checked);
+		if (!browser) return;
+		applyTheme(checked);
+		persistTheme(checked);
 	});
 
 	function deleteNotification(id: number) {

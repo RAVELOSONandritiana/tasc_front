@@ -53,7 +53,16 @@
 						const fd = new FormData();
 						fd.append('id', c.id);
 						fd.append('imageUrl', url);
-						await fetch('/classe?/updateImage', { method: 'POST', body: fd });
+						const res = await fetch('/classe?/updateImage', { method: 'POST', body: fd });
+						const result = await res.json().catch(() => null);
+						const oldImageUrl = result?.oldImageUrl;
+						if (oldImageUrl && oldImageUrl !== url) {
+							const segments = oldImageUrl.split('/');
+							const recordId = segments[segments.length - 2];
+							if (recordId) {
+								await pb.collection('tasc_statics').delete(recordId).catch(() => {});
+							}
+						}
 					} catch (e) {
 						console.error('Failed to save image to DB:', e);
 					}

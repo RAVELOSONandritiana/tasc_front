@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasses, getProfesseurs, createClasse, updateClasseImage } from '$lib/server/prisma';
+import { getClasses, getProfesseurs, createClasse, updateClasseImage, prisma } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
@@ -77,10 +77,14 @@ export const actions: Actions = {
 			return fail(400, { error: 'id et imageUrl requis' });
 		}
 		try {
+			const oldClasse = await prisma.classe.findUnique({
+				where: { id },
+				select: { imageUrl: true }
+			});
 			await updateClasseImage(id, imageUrl);
-			return { success: true };
+			return { success: true, oldImageUrl: oldClasse?.imageUrl || null };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour de l\'image' });
+			return fail(500, { error: e?.message || "Erreur lors de la mise à jour de l'image" });
 		}
 	}
 };
