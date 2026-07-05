@@ -7,6 +7,9 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import type { EleveCours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
+	import { Trash } from '@lucide/svelte/icons';
 
 	const { data }: PageProps = $props();
 
@@ -42,6 +45,10 @@
 		elevesInscrits = [...elevesInscrits, nouveau];
 		nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
 		nouvelEleveDialogOpen = false;
+	}
+
+	function removeEleve(id: string) {
+		elevesInscrits = elevesInscrits.filter((e) => e.id !== id);
 	}
 </script>
 
@@ -112,48 +119,63 @@
 
 		<div class="overflow-x-auto rounded-md border">
 			<Table.Root>
-				<Table.Header>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>Nom</Table.Head>
+					<Table.Head>Prénom</Table.Head>
+					<Table.Head>Date naissance</Table.Head>
+					<Table.Head class="text-center">Notes</Table.Head>
+					<Table.Head class="text-center">Moyenne</Table.Head>
+					<Table.Head class="text-center">Incidents</Table.Head>
+					<Table.Head class="text-center">Absences</Table.Head>
+					<Table.Head class="text-center">Retards</Table.Head>
+					<Table.Head class="text-center">Action</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each elevesFiltres as eleve (eleve.id)}
 					<Table.Row>
-						<Table.Head>Nom</Table.Head>
-						<Table.Head>Prénom</Table.Head>
-						<Table.Head>Date naissance</Table.Head>
-						<Table.Head class="text-center">Notes</Table.Head>
-						<Table.Head class="text-center">Moyenne</Table.Head>
-						<Table.Head class="text-center">Incidents</Table.Head>
-						<Table.Head class="text-center">Absences</Table.Head>
-						<Table.Head class="text-center">Retards</Table.Head>
+						<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
+						<Table.Cell>{eleve.prenom}</Table.Cell>
+						<Table.Cell>
+							{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							{eleve.notes?.length || 0}
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							{eleve.notes && eleve.notes.length > 0
+								? (
+										eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length
+									).toFixed(1)
+								: '—'}
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							{eleve.incidents?.length || 0}
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							{eleve.absences?.length || 0}
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							{eleve.retards?.length || 0}
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							<form method="POST" action="?/delete" use:enhance={() => {
+								return async ({ result }: { result: ActionResult }) => {
+									if (result.type === 'success') {
+										removeEleve(eleve.id);
+									}
+								};
+							}}>
+								<input type="hidden" name="id" value={eleve.id} />
+								<Button type="submit" variant="destructive" size="icon" class="size-8">
+									<Trash class="size-4" />
+								</Button>
+							</form>
+						</Table.Cell>
 					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each elevesFiltres as eleve (eleve.id)}
-						<Table.Row>
-							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
-							<Table.Cell>{eleve.prenom}</Table.Cell>
-							<Table.Cell>
-								{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.notes?.length || 0}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.notes && eleve.notes.length > 0
-									? (
-											eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length
-										).toFixed(1)
-									: '—'}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.incidents?.length || 0}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.absences?.length || 0}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.retards?.length || 0}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
+				{/each}
+			</Table.Body>
 			</Table.Root>
 		</div>
 	</div>

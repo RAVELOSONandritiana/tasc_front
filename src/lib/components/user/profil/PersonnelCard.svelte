@@ -12,13 +12,16 @@
 		Shield,
 		X,
 		CheckCircle2,
-		BookOpen
+		BookOpen,
+		Trash
 	} from '@lucide/svelte/icons';
 	import Avatar from '$lib/components/ui/avatar/avatar.svelte';
 	import AvatarFallback from '$lib/components/ui/avatar/avatar-fallback.svelte';
 	import AvatarImage from '$lib/components/ui/avatar/avatar-image.svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
 
 	type PersonWithStats = Personne & {
 		matiere?: string[];
@@ -35,13 +38,17 @@
 		role,
 		matieres,
 		id: personId,
-		hrefProfil = '/enseignant'
+		hrefProfil = '/enseignant',
+		deleteAction = '',
+		...restProps
 	}: {
 		personne: PersonWithStats;
 		role: string;
 		matieres?: string[];
 		id?: string;
 		hrefProfil?: string;
+		deleteAction?: string;
+		[key: string]: any;
 	} = $props();
 
 	const initial = $derived((personne.name?.charAt(0) || '') + (personne.lastname?.charAt(0) || ''));
@@ -58,6 +65,26 @@
 			class="absolute inset-0 bg-linear-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"
 		></div>
 		<div class="absolute inset-0 bg-linear-to-b from-transparent to-sidebar/80"></div>
+		{#if deleteAction}
+			<form method="POST" action={deleteAction} use:enhance={() => {
+				return async ({ result }: { result: ActionResult }) => {
+					if (result.type === 'success') {
+						window.location.reload();
+					}
+				};
+			}}>
+				<input type="hidden" name="id" value={personId} />
+				<Button
+					size="icon"
+					variant="destructive"
+					class="absolute right-4 top-4 size-8 rounded-full shadow-sm"
+					type="submit"
+					title="Supprimer"
+				>
+					<Trash class="size-4" />
+				</Button>
+			</form>
+		{/if}
 	</div>
 	<div class="flex-1 px-8 pt-0 pb-5">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">

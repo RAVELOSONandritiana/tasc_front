@@ -16,7 +16,7 @@
 
 	const { data }: PageProps = $props();
 
-	const listProfesseur = $state(data.professeur);
+	let listProfesseur = $state(data.professeur);
 	const allPersonnel = $state<Personne[]>(data.personnel || []);
 
 	let searchText = $state('');
@@ -113,7 +113,7 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<PersonnelCard personne={prof} role="Enseignant" hrefProfil={`/enseignant/${prof.id}`} />
+						<PersonnelCard personne={prof} role="Enseignant" id={prof.id} hrefProfil={`/enseignant/${prof.id}`} deleteAction="?/delete" />
 					</div>
 				{/each}
 			</div>
@@ -128,6 +128,30 @@
 			return async ({ result }: { result: ActionResult }) => {
 				submitting = false;
 				if (result.type === 'success') {
+					const newProf = result.data?.result;
+					if (newProf?.professeur && newProf?.personne) {
+						const mappedProf = {
+							id: newProf.professeur.id,
+							name: newProf.personne.name,
+							lastname: newProf.personne.lastname,
+							domicile: newProf.personne.domicile || '',
+							fokontany: newProf.personne.fokontany || '',
+							commune: newProf.personne.commune || '',
+							phone: newProf.personne.phone,
+							email: newProf.personne.email,
+							matiere: newProf.professeur.matiere,
+							compte: newProf.compte,
+							stats: {
+								retards: newProf.professeur.retards,
+								absences: newProf.professeur.absences,
+								heuresCours: newProf.professeur.heuresCours,
+								incidents: newProf.professeur.incidents,
+								notesPositives: newProf.professeur.notesPositives,
+								notesNegatives: newProf.professeur.notesNegatives
+							}
+						};
+						listProfesseur = [...listProfesseur, mappedProf];
+					}
 					success = true;
 					setTimeout(() => { dialogOpen = false; resetForm(); }, 800);
 				}

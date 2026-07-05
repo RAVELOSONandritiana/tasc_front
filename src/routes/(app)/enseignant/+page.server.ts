@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne } from '$lib/server/prisma';
+import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur } from '$lib/server/prisma';
 import type { Professeur } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
@@ -65,6 +65,22 @@ export const actions: Actions = {
 			return { success: true, result };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la création' });
+		}
+	},
+	delete: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		if (!id) return fail(400, { error: 'ID requis' });
+		try {
+			await deleteProfesseur(id);
+			logActivity(
+				locals.user,
+				'suppression_enseignant',
+				'Suppression de l\'enseignant'
+			).catch(() => {});
+			return { success: true };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
 		}
 	}
 };

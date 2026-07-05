@@ -558,6 +558,35 @@ export async function updateClasseImage(id: string, imageUrl: string | null) {
 	});
 }
 
+export async function deleteEleve(id: string) {
+	return prisma.$transaction(async (tx) => {
+		const eleve = await tx.eleve.findUnique({ where: { id } });
+		if (!eleve) throw new Error('Élève introuvable');
+		await tx.eleve.delete({ where: { id } });
+		return { success: true };
+	});
+}
+
+export async function deleteProfesseur(id: string) {
+	return prisma.$transaction(async (tx) => {
+		const prof = await tx.professeur.findUnique({ where: { id }, include: { personne: true } });
+		if (!prof) throw new Error('Enseignant introuvable');
+		await tx.professeur.delete({ where: { id } });
+		await tx.compte.updateMany({ where: { personneId: prof.personneId }, data: { role: 'PERSONNEL' } });
+		return { success: true };
+	});
+}
+
+export async function deletePersonnel(personneId: string) {
+	return prisma.$transaction(async (tx) => {
+		const personnel = await tx.personnel.findUnique({ where: { personneId }, include: { personne: true } });
+		if (!personnel) throw new Error('Personnel introuvable');
+		await tx.personnel.delete({ where: { id: personnel.id } });
+		await tx.personne.delete({ where: { id: personneId } });
+		return { success: true, personne: personnel.personne };
+	});
+}
+
 export async function updateUserPassword(userId: string, newPassword: string) {
 	const hashed = await import('./auth').then((m) => m.hashPassword(newPassword));
 	return prisma.compte.update({

@@ -1,6 +1,8 @@
-import type { PageServerLoad } from './$types';
-import { getElevesByClasseId } from '$lib/server/prisma';
+import type { PageServerLoad, Actions } from './$types';
+import { getElevesByClasseId, deleteEleve } from '$lib/server/prisma';
 import type { EleveCours } from '$lib/types/Materiel.type';
+import { fail } from '@sveltejs/kit';
+import { logActivity } from '$lib/server/activity';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const inscriptions = await getElevesByClasseId(params.id);
@@ -43,4 +45,23 @@ export const load: PageServerLoad = async ({ params }) => {
 	return {
 		elevesInscrits
 	};
+};
+
+export const actions: Actions = {
+	delete: async ({ request, params, locals }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		if (!id) return fail(400, { error: 'ID requis' });
+		try {
+			await deleteEleve(id);
+			logActivity(
+				locals.user,
+				'suppression_eleve',
+				'Suppression de l\'élève'
+			).catch(() => {});
+			return { success: true };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
+		}
+	}
 };

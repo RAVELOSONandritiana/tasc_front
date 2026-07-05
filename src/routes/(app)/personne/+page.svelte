@@ -65,7 +65,7 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<PersonnelCard personne={{ ...p, stats: { retards: 0, absences: 0, incidents: 0, heuresCours: 0, notesPositives: 0, notesNegatives: 0 } }} role="Personnel" hrefProfil={`/profil/${p.compte?.id || p.id}`} />
+						<PersonnelCard personne={{ ...p, stats: { retards: 0, absences: 0, incidents: 0, heuresCours: 0, notesPositives: 0, notesNegatives: 0 } }} role="Personnel" id={p.id} hrefProfil={`/profil/${p.compte?.id || p.id}`} deleteAction="?/delete" />
 					</div>
 				{/each}
 			</div>
