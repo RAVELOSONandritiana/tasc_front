@@ -1,4 +1,3 @@
-import type { Personne } from '$lib/types/Personne.type';
 import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { getPersonnes, deletePersonnel } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
@@ -27,11 +26,11 @@ export const actions: Actions = {
 		const id = data.get('id') as string;
 		if (!id) return fail(400, { error: 'ID requis' });
 		try {
-			const result = await deletePersonnel(id);
+			await deletePersonnel(id);
 			logActivity(
 				locals.user,
 				'suppression_personnel',
-				`Suppression du personnel ${result?.personne?.name || ''} ${result?.personne?.lastname || ''}`
+				'Suppression du personnel'
 			).catch(() => {});
 			return { success: true };
 		} catch (e: any) {

@@ -578,13 +578,8 @@ export async function deleteProfesseur(id: string) {
 }
 
 export async function deletePersonnel(personneId: string) {
-	return prisma.$transaction(async (tx) => {
-		const personnel = await tx.personnel.findUnique({ where: { personneId }, include: { personne: true } });
-		if (!personnel) throw new Error('Personnel introuvable');
-		await tx.personnel.delete({ where: { id: personnel.id } });
-		await tx.personne.delete({ where: { id: personneId } });
-		return { success: true, personne: personnel.personne };
-	});
+	await prisma.personne.delete({ where: { id: personneId } });
+	return { success: true };
 }
 
 export async function updateUserPassword(userId: string, newPassword: string) {

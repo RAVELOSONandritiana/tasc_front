@@ -22,6 +22,7 @@
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	type PersonWithStats = Personne & {
 		matiere?: string[];
@@ -55,6 +56,7 @@
 
 	const stats = personne.stats;
 	const displayMatieres = matieres || personne.matiere;
+	let submittingDelete = $state(false);
 </script>
 
 <CardUI
@@ -65,26 +67,41 @@
 			class="absolute inset-0 bg-linear-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"
 		></div>
 		<div class="absolute inset-0 bg-linear-to-b from-transparent to-sidebar/80"></div>
-		{#if deleteAction}
-			<form method="POST" action={deleteAction} use:enhance={() => {
-				return async ({ result }: { result: ActionResult }) => {
-					if (result.type === 'success') {
-						window.location.reload();
-					}
-				};
-			}}>
-				<input type="hidden" name="id" value={personId} />
-				<Button
-					size="icon"
-					variant="destructive"
-					class="absolute right-4 top-4 size-8 rounded-full shadow-sm"
-					type="submit"
-					title="Supprimer"
-				>
+	{#if deleteAction}
+		<form method="POST" action={deleteAction} use:enhance={() => {
+			console.log('[Delete] Submitting for personId:', personId, 'action:', deleteAction);
+			submittingDelete = true;
+			return async ({ result }: { result: ActionResult }) => {
+				submittingDelete = false;
+				console.log('[Delete] Result:', result);
+				if (result.type === 'success') {
+					window.location.reload();
+				} else if (result.type === 'failure') {
+					console.error('[Delete] Failure:', result.data);
+					alert(result.data?.error || 'Suppression impossible');
+				} else {
+					console.error('[Delete] Error:', result);
+					alert('Erreur lors de la suppression');
+				}
+			};
+		}}>
+			<input type="hidden" name="id" value={personId} />
+			<Button
+				size="icon"
+				variant="destructive"
+				class="absolute right-4 top-4 size-8 rounded-full shadow-sm"
+				type="submit"
+				title="Supprimer"
+				disabled={submittingDelete}
+			>
+				{#if submittingDelete}
+					<Spinner class="size-4" />
+				{:else}
 					<Trash class="size-4" />
-				</Button>
-			</form>
-		{/if}
+				{/if}
+			</Button>
+		</form>
+	{/if}
 	</div>
 	<div class="flex-1 px-8 pt-0 pb-5">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">

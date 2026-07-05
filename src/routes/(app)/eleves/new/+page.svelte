@@ -35,7 +35,10 @@
 		telephonePere: '',
 		nomMere: '',
 		prenomMere: '',
-		telephoneMere: ''
+		telephoneMere: '',
+		nomTuteur: '',
+		prenomTuteur: '',
+		telephoneTuteur: ''
 	});
 
 	function resetForm() {
@@ -60,7 +63,10 @@
 			telephonePere: '',
 			nomMere: '',
 			prenomMere: '',
-			telephoneMere: ''
+			telephoneMere: '',
+			nomTuteur: '',
+			prenomTuteur: '',
+			telephoneTuteur: ''
 		};
 		errors = {};
 		success = false;
@@ -511,7 +517,11 @@
 			</Accordion.Root>
 
 		<div class="flex items-center justify-end gap-2">
-			<Button type="submit" disabled={submitting || success}>
+			
+				<Button type="button" variant="outline" onclick={resetForm} disabled={submitting || success}>
+					Effacer
+				</Button>
+				<Button type="submit" disabled={submitting || success}>
 					{#if submitting}
 						<Spinner class="mr-2 size-4" />
 						Création...
@@ -520,9 +530,6 @@
 					{:else}
 						Créer l'élève
 					{/if}
-				</Button>
-				<Button type="button" variant="outline" onclick={resetForm} disabled={submitting || success}>
-					Effacer
 				</Button>
 			</div>
 		</form>

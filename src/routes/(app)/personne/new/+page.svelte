@@ -350,19 +350,19 @@
 				</Accordion.Item>
 			</Accordion.Root>
 
-			<div class="flex items-center gap-4 pt-4">
-				<Button type="button" variant="outline" onclick={resetForm} disabled={submitting}>Effacer</Button>
-				<Button type="submit" disabled={submitting || success}>
-					{#if submitting}
-						<Spinner class="mr-2 size-4" />
-						Création...
-					{:else if success}
-						Créé !
-					{:else}
-						Créer le personnel
-					{/if}
-				</Button>
-			</div>
+		<div class="flex items-center justify-end gap-4 pt-4">
+			<Button type="button" variant="outline" onclick={resetForm} disabled={submitting}>Effacer</Button>
+			<Button type="submit" disabled={submitting || success}>
+				{#if submitting}
+					<Spinner class="mr-2 size-4" />
+					Création...
+				{:else if success}
+					Créé !
+				{:else}
+					Créer le personnel
+				{/if}
+			</Button>
+		</div>
 		</form>
 	</div>
 </main>
