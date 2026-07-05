@@ -49,7 +49,7 @@ model Matiere {
 /// Classe rattachee a une annee scolaire.
 model Classe {
   id       String  @id @default(uuid())
-  nom      String // ex: "2nde S", "1ere L", "Tle OSE"
+  nom      String? // ex: "2nde S", "1ere L", "Tle OSE"
   niveau   Int // 0 = 2nde, 1 = 1ere, 2 = Terminale
   serie    String? // ex: "S", "L", "OSE"
   capacite Int? // nombre de places

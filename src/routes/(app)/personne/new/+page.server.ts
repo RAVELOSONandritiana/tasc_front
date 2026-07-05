@@ -1,28 +1,46 @@
 import type { Actions } from './$types';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { createPersonnel } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
-import { capitalize } from '$lib/actions/capitalize';
 
-export const actions = {
+export const actions: Actions = {
 	create: async ({ request, locals }) => {
+		console.log('=== CREATE PERSONNEL ACTION CALLED ===');
 		const data = await request.formData();
 
-		const nom = data.get('nom') as string;
-		const prenom = data.get('prenom') as string;
-		const dateNaissance = data.get('dateNaissance') as string;
-		const lieuNaissance = data.get('lieuNaissance') as string;
-		const communeNaissance = data.get('communeNaissance') as string;
-		const regionNaissance = data.get('regionNaissance') as string;
-		const provinceNaissance = data.get('provinceNaissance') as string;
-		const domicile = data.get('domicile') as string;
-		const fokontany = data.get('fokontany') as string;
-		const communeResidence = data.get('communeResidence') as string;
-		const regionResidence = data.get('regionResidence') as string;
-		const provinceResidence = data.get('provinceResidence') as string;
-		const telephone = data.get('telephone') as string;
-		const email = data.get('email') as string;
-		const cin = data.get('cin') as string;
+		const nom = (data.get('nom') as string | null)?.trim() || '';
+		const prenom = (data.get('prenom') as string | null)?.trim() || '';
+		const dateNaissance = (data.get('dateNaissance') as string | null)?.trim() || '';
+		const lieuNaissance = (data.get('lieuNaissance') as string | null)?.trim() || '';
+		const communeNaissance = (data.get('communeNaissance') as string | null)?.trim() || '';
+		const regionNaissance = (data.get('regionNaissance') as string | null)?.trim() || '';
+		const provinceNaissance = (data.get('provinceNaissance') as string | null)?.trim() || '';
+		const domicile = (data.get('domicile') as string | null)?.trim() || '';
+		const fokontany = (data.get('fokontany') as string | null)?.trim() || '';
+		const communeResidence = (data.get('communeResidence') as string | null)?.trim() || '';
+		const regionResidence = (data.get('regionResidence') as string | null)?.trim() || '';
+		const provinceResidence = (data.get('provinceResidence') as string | null)?.trim() || '';
+		const telephone = (data.get('telephone') as string | null)?.trim() || '';
+		const email = (data.get('email') as string | null)?.trim() || '';
+		const cin = (data.get('cin') as string | null)?.trim() || '';
+
+		console.log('Form data received:', {
+			nom,
+			prenom,
+			dateNaissance,
+			lieuNaissance,
+			communeNaissance,
+			regionNaissance,
+			provinceNaissance,
+			domicile,
+			fokontany,
+			communeResidence,
+			regionResidence,
+			provinceResidence,
+			telephone,
+			email,
+			cin
+		});
 
 		const errors: Record<string, string> = {};
 
@@ -39,28 +57,34 @@ export const actions = {
 		if (!cin?.trim()) errors.cin = 'Le CIN est obligatoire';
 		else if (!/^[0-9]{12}$/.test(cin.replace(/\s/g, ''))) errors.cin = '12 chiffres requis';
 
+		console.log('Validation errors:', errors);
+
 		if (Object.keys(errors).length > 0) {
+			console.log('Returning validation errors');
 			return fail(400, { errors });
 		}
 
 		try {
-			await createPersonnel({
+			console.log('Creating personnel in DB...');
+			const result = await createPersonnel({
 				name: nom.trim(),
 				lastname: prenom.trim(),
-			email: email.trim() || `${Date.now()}@tmp.com`,
-			phone: telephone.trim(),
-			domicile: domicile.trim().toUpperCase(),
-			fokontany: fokontany.trim().toUpperCase(),
-			commune: communeResidence.trim().toUpperCase(),
-			region: regionResidence.trim().toUpperCase() || undefined,
-			province: provinceResidence.trim() || undefined,
-			lieuNaissance: lieuNaissance.trim().toUpperCase() || undefined,
-			regionNaissance: regionNaissance.trim().toUpperCase() || undefined,
-			provinceNaissance: provinceNaissance.trim() || undefined,
+				email: email.trim() || `${Date.now()}@tmp.com`,
+				phone: telephone.trim(),
+				domicile: domicile.trim().toUpperCase(),
+				fokontany: fokontany.trim().toUpperCase(),
+				commune: communeResidence.trim().toUpperCase(),
+				region: regionResidence.trim().toUpperCase() || undefined,
+				province: provinceResidence.trim() || undefined,
+				lieuNaissance: lieuNaissance.trim().toUpperCase() || undefined,
+				regionNaissance: regionNaissance.trim().toUpperCase() || undefined,
+				provinceNaissance: provinceNaissance.trim() || undefined,
 				dateNaissance: dateNaissance || undefined,
 				cin: cin.replace(/\s/g, '')
 			});
+			console.log('Personnel created successfully:', result);
 		} catch (e) {
+			console.error('Error creating personnel:', e);
 			return fail(500, { errors: { _form: 'Erreur lors de la création' } });
 		}
 

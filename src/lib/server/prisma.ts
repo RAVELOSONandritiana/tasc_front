@@ -102,6 +102,9 @@ export async function getSurveillantById(id: string) {
 
 export async function getPersonnes() {
 	return prisma.personne.findMany({
+		where: {
+			eleve: null
+		},
 		include: {
 			compte: {
 				select: {
@@ -256,6 +259,7 @@ export async function createPersonnel(data: {
 	dateNaissance?: string;
 	cin?: string;
 }) {
+	console.log('createPersonnel DB call with:', data);
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.create({
 			data: {
@@ -412,6 +416,34 @@ export async function createEleve(data: {
 		});
 
 		return { personne, eleve };
+	});
+}
+
+export async function getActiveAnneeScolaire() {
+	return prisma.anneeScolaire.findFirst({
+		where: { active: true },
+		orderBy: { dateCreation: 'desc' }
+	});
+}
+
+export async function createClasse(data: {
+	nom?: string;
+	niveau: number;
+	serie?: string;
+	titulaireId?: string;
+}) {
+	const annee = await getActiveAnneeScolaire();
+	if (!annee) {
+		throw new Error('Aucune année scolaire active');
+	}
+	return prisma.classe.create({
+		data: {
+			nom: data.nom || `${data.niveau === 0 ? '2nde' : data.niveau === 1 ? '1ère' : 'Terminale'}${data.serie ? ' ' + data.serie.toUpperCase() : ''}`,
+			niveau: data.niveau,
+			serie: data.serie || null,
+			titulaireId: data.titulaireId || null,
+			anneeId: annee.id
+		}
 	});
 }
 

@@ -15,13 +15,7 @@
 	import { provincesVariable } from '$lib/variables/territoire';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
-
-	function toTitle(value: string): string {
-		return value
-			.split(' ')
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-			.join(' ');
-	}
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	let checked = $state(false);
 
@@ -570,7 +564,7 @@
 			<div class="flex items-center gap-4 pt-4">
 				<Button type="reset" variant="outline" onclick={resetForm} disabled={submitting}>Effacer</Button>
 				<AlertDialog.Root open={success}>
-					<AlertDialog.Trigger class={buttonVariants({ variant: 'default' })}>
+					<AlertDialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 						Créer l'élève
 					</AlertDialog.Trigger>
 					<AlertDialog.Content>
@@ -583,7 +577,12 @@
 						<AlertDialog.Footer>
 							<AlertDialog.Cancel disabled={submitting}>Annuler</AlertDialog.Cancel>
 							<AlertDialog.Action type="submit" disabled={submitting}>
-								Confirmer
+								{#if submitting}
+									<Spinner class="mr-2 size-4" />
+									Création...
+								{:else}
+									Confirmer
+								{/if}
 							</AlertDialog.Action>
 						</AlertDialog.Footer>
 					</AlertDialog.Content>

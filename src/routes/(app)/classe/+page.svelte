@@ -8,13 +8,17 @@
 	import { Card } from '$lib/components/ui/card';
 	import { ClipboardList, Plus } from '@lucide/svelte/icons';
 	import { Button } from '$lib/components/ui/button';
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
 	import type { Personne } from '$lib/types/Personne.type';
 
 	const { data } = $props();
 
 	const { listClasse } = data;
 	let dialogOpen = $state(false);
+	let submitting = $state(false);
 
+	let nom = $state('');
 	let niveau = $state('0');
 	let serie = $state('');
 	let searchProf = $state('');
@@ -42,9 +46,12 @@
 		searchProf = `${p.name} ${p.lastname}`;
 	}
 
-	function soumettre() {
-		console.log('Classe créée:', { niveau, serie, prof: selectedProf });
-		dialogOpen = false;
+	function resetForm() {
+		nom = '';
+		niveau = '0';
+		serie = '';
+		searchProf = '';
+		selectedProf = null;
 	}
 </script>
 
@@ -74,61 +81,85 @@
 						Nouvelle classe
 					</Dialog.Trigger>
 					<Dialog.Content class="sm:max-w-[425px]">
-						<Dialog.Header>
-							<Dialog.Title>Ajouter une classe</Dialog.Title>
-							<Dialog.Description>Remplissez les informations de la classe</Dialog.Description>
-						</Dialog.Header>
-						<div class="grid gap-4 py-4">
-							<div class="grid gap-3">
-								<Label for="niveau">Niveau</Label>
-								<NativeSelect.Root required class="w-full" bind:value={niveau}>
-									<NativeSelect.Option value="0">2nd</NativeSelect.Option>
-									<NativeSelect.Option value="1">1ere</NativeSelect.Option>
-									<NativeSelect.Option value="2">Terminale</NativeSelect.Option>
-								</NativeSelect.Root>
-							</div>
-
-							<div class="grid gap-3">
-								<Label for="serie">Série</Label>
-								<NativeSelect.Root class="w-full" bind:value={serie}>
-									<NativeSelect.Option value="">Aucune</NativeSelect.Option>
-									<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
-									<NativeSelect.Option value="s">S</NativeSelect.Option>
-									<NativeSelect.Option value="l">L</NativeSelect.Option>
-								</NativeSelect.Root>
-							</div>
-
-							<div class="grid gap-3">
-								<Label for="prof">Prof titulaire</Label>
-								<div class="relative">
-									<SearchInput
-										bind:value={searchProf}
-										placeholder="Rechercher un professeur..."
-										class="w-full"
+						<form method="POST" action="?/create" use:enhance={() => {
+							submitting = true;
+							return async ({ result }: { result: ActionResult }) => {
+								submitting = false;
+								if (result.type === 'success') {
+									dialogOpen = false;
+									resetForm();
+								}
+							};
+						}}>
+							<Dialog.Header>
+								<Dialog.Title>Ajouter une classe</Dialog.Title>
+								<Dialog.Description>Remplissez les informations de la classe</Dialog.Description>
+							</Dialog.Header>
+							<div class="grid gap-4 py-4">
+								<div class="grid gap-3">
+									<Label for="nom">Nom</Label>
+									<input
+										id="nom"
+										name="nom"
+										bind:value={nom}
+										placeholder="Ex: 2nde S, 1ère L..."
+										class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 									/>
-									{#if selectedProf}
-										<div class="mt-2 flex items-center gap-2 rounded-lg bg-muted/30 p-2">
-											<div
-												class="flex size-8 items-center justify-center rounded-full bg-primary/10"
-											>
-												<span class="text-sm font-bold text-primary"
-													>{selectedProf.name[0]}{selectedProf.lastname[0]}</span
+								</div>
+
+								<div class="grid gap-3">
+									<Label for="niveau">Niveau *</Label>
+									<NativeSelect.Root required class="w-full" bind:value={niveau}>
+										<NativeSelect.Option value="0">2nd</NativeSelect.Option>
+										<NativeSelect.Option value="1">1ere</NativeSelect.Option>
+										<NativeSelect.Option value="2">Terminale</NativeSelect.Option>
+									</NativeSelect.Root>
+								</div>
+
+								<div class="grid gap-3">
+									<Label for="serie">Série</Label>
+									<NativeSelect.Root class="w-full" bind:value={serie}>
+										<NativeSelect.Option value="">Aucune</NativeSelect.Option>
+										<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
+										<NativeSelect.Option value="s">S</NativeSelect.Option>
+										<NativeSelect.Option value="l">L</NativeSelect.Option>
+									</NativeSelect.Root>
+								</div>
+
+								<div class="grid gap-3">
+									<Label for="prof">Prof titulaire</Label>
+									<div class="relative">
+										<SearchInput
+											bind:value={searchProf}
+											placeholder="Rechercher un professeur..."
+											class="w-full"
+										/>
+										{#if selectedProf}
+											<div class="mt-2 flex items-center gap-2 rounded-lg bg-muted/30 p-2">
+												<div
+													class="flex size-8 items-center justify-center rounded-full bg-primary/10"
+												>
+													<span class="text-sm font-bold text-primary"
+														>{selectedProf.name[0]}{selectedProf.lastname[0]}</span
+													>
+												</div>
+												<span class="text-sm font-medium"
+													>{selectedProf.name} {selectedProf.lastname}</span
 												>
 											</div>
-											<span class="text-sm font-medium"
-												>{selectedProf.name} {selectedProf.lastname}</span
-											>
-										</div>
-									{/if}
+										{/if}
+									</div>
 								</div>
 							</div>
-						</div>
-						<Dialog.Footer>
-							<Button variant="outline" size="sm" onclick={() => (dialogOpen = false)}>
-								Annuler
-							</Button>
-							<Button variant="default" size="sm" onclick={soumettre}>Confirmer</Button>
-						</Dialog.Footer>
+							<Dialog.Footer>
+								<Button variant="outline" size="sm" type="button" onclick={() => (dialogOpen = false)} disabled={submitting}>
+									Annuler
+								</Button>
+								<Button variant="default" size="sm" type="submit" disabled={submitting}>
+									Confirmer
+								</Button>
+							</Dialog.Footer>
+						</form>
 					</Dialog.Content>
 				</Dialog.Root>
 			</div>

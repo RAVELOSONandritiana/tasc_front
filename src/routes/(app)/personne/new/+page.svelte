@@ -14,13 +14,7 @@
 	import { provincesVariable } from '$lib/variables/territoire';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
-
-	function toTitle(value: string): string {
-		return value
-			.split(' ')
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-			.join(' ');
-	}
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	let open = $state(false);
 	let value = $state<CalendarDate | undefined>();
@@ -92,13 +86,6 @@
 		errors = {};
 		value = undefined;
 	}
-
-	function handleSubmit() {
-		if (Object.keys(errors).length === 0) {
-			success = true;
-			setTimeout(() => goto('/personne'), 800);
-		}
-	}
 </script>
 
 <main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
@@ -146,7 +133,6 @@
 									bind:value={form.nom}
 									placeholder="Entrer le nom"
 									class={errors.nom ? 'border-destructive' : ''}
-									
 								/>
 								{#if errors.nom}
 									<span class="text-xs text-destructive">{errors.nom}</span>
@@ -160,7 +146,6 @@
 									bind:value={form.prenom}
 									placeholder="Entrer le prénom"
 									class={errors.prenom ? 'border-destructive' : ''}
-									
 								/>
 								{#if errors.prenom}
 									<span class="text-xs text-destructive">{errors.prenom}</span>
@@ -195,6 +180,7 @@
 										/>
 									</Popover.Content>
 								</Popover.Root>
+								<input type="hidden" name="dateNaissance" value={form.dateNaissance} />
 								{#if errors.dateNaissance}
 									<span class="text-xs text-destructive">{errors.dateNaissance}</span>
 								{/if}
@@ -215,7 +201,7 @@
 													bind:value={form.lieuNaissance}
 													placeholder="Ex: Antananarivo"
 													class={errors.lieuNaissance ? 'border-destructive' : ''}
-													oninput={(e) => (form.lieuNaissance = toTitle((e.target as HTMLInputElement).value))}
+													oninput={(e) => form.lieuNaissance = (e.target as HTMLInputElement).value.toUpperCase()}
 												/>
 												{#if errors.lieuNaissance}
 													<span class="text-xs text-destructive">{errors.lieuNaissance}</span>
@@ -377,9 +363,9 @@
 			</Accordion.Root>
 
 			<div class="flex items-center gap-4 pt-4">
-				<Button type="reset" variant="outline" onclick={resetForm}>Effacer</Button>
-				<AlertDialog.Root open={!success}>
-					<AlertDialog.Trigger class={buttonVariants({ variant: 'default' })}>
+				<Button type="reset" variant="outline" onclick={resetForm} disabled={submitting}>Effacer</Button>
+				<AlertDialog.Root open={success}>
+					<AlertDialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 						Créer le personnel
 					</AlertDialog.Trigger>
 					<AlertDialog.Content>
@@ -390,8 +376,15 @@
 							</AlertDialog.Description>
 						</AlertDialog.Header>
 						<AlertDialog.Footer>
-							<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-							<AlertDialog.Action type="submit" disabled={submitting}>Confirmer</AlertDialog.Action>
+							<AlertDialog.Cancel disabled={submitting}>Annuler</AlertDialog.Cancel>
+							<AlertDialog.Action type="submit" disabled={submitting}>
+								{#if submitting}
+									<Spinner class="mr-2 size-4" />
+									Création...
+								{:else}
+									Confirmer
+								{/if}
+							</AlertDialog.Action>
 						</AlertDialog.Footer>
 					</AlertDialog.Content>
 				</AlertDialog.Root>
