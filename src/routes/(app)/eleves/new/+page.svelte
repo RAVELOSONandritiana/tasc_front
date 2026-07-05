@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import Calendar from '$lib/components/ui/calendar/calendar.svelte';
@@ -11,12 +13,23 @@
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { provincesVariable } from '$lib/variables/territoire';
+	import type { ActionResult } from '@sveltejs/kit';
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
+
+	function toTitle(value: string): string {
+		return value
+			.split(' ')
+			.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+			.join(' ');
+	}
 
 	let checked = $state(false);
 
 	let open = $state(false);
 	let value = $state<CalendarDate | undefined>();
+
+	let submitting = $state(false);
+	let success = $state(false);
 
 	interface EleveForm {
 		nom: string;
@@ -80,84 +93,6 @@
 
 	let errors = $state<Record<string, string>>({});
 
-	function handleSubmit(event: Event) {
-		event.preventDefault();
-
-		const newErrors: Record<string, string> = {};
-
-		if (!form.nom.trim()) {
-			newErrors.nom = 'Le nom est obligatoire';
-		} else if (form.nom.length < 2) {
-			newErrors.nom = 'Le nom doit contenir au moins 2 caractères';
-		}
-
-		if (!form.prenom.trim()) {
-			newErrors.prenom = 'Le prénom est obligatoire';
-		} else if (form.prenom.length < 2) {
-			newErrors.prenom = 'Le prénom doit contenir au moins 2 caractères';
-		}
-
-		if (!form.dateNaissance) {
-			newErrors.dateNaissance = 'La date de naissance est obligatoire';
-		}
-
-		if (!form.lieuNaissance.trim()) {
-			newErrors.lieuNaissance = 'Le lieu de naissance est obligatoire';
-		}
-
-		if (!form.domicile.trim()) {
-			newErrors.domicile = 'Le domicile est obligatoire';
-		}
-
-		if (!form.fokontany.trim()) {
-			newErrors.fokontany = 'Le fokontany est obligatoire';
-		}
-
-		if (!form.communeResidence.trim()) {
-			newErrors.communeResidence = 'La commune de résidence est obligatoire';
-		}
-
-		if (!form.regionResidence.trim()) {
-			newErrors.regionResidence = 'La région de résidence est obligatoire';
-		}
-
-		if (form.telephoneEleve.trim() && !/^(\+261|0)[0-9]{9,10}$/.test(form.telephoneEleve)) {
-			newErrors.telephoneEleve = 'Format de téléphone invalide (ex: +261xxxxxxxx ou 0xxxxxxxxxx)';
-		}
-
-		if (form.emailEleve.trim() && !/^[\w.-]+@[\w.-]+\.\w+$/.test(form.emailEleve)) {
-			newErrors.emailEleve = "Format d'email invalide";
-		}
-
-		if (!form.cin.trim()) {
-			newErrors.cin = 'Le CIN est obligatoire';
-		} else if (!/^[0-9]{12}$/.test(form.cin.replace(/\s/g, ''))) {
-			newErrors.cin = 'Le CIN doit contenir 12 chiffres';
-		}
-
-		if (!form.nomPere.trim()) {
-			newErrors.nomPere = 'Le nom du père est obligatoire';
-		}
-
-		if (!form.prenomPere.trim()) {
-			newErrors.prenomPere = 'Le prénom du père est obligatoire';
-		}
-
-		if (!form.nomMere.trim()) {
-			newErrors.nomMere = 'Le nom de la mère est obligatoire';
-		}
-
-		if (!form.prenomMere.trim()) {
-			newErrors.prenomMere = 'Le prénom de la mère est obligatoire';
-		}
-
-		errors = newErrors;
-
-		if (Object.keys(errors).length === 0) {
-			console.log('Formulaire soumis avec les données:', form);
-		}
-	}
-
 	function resetForm() {
 		form = {
 			nom: '',
@@ -201,7 +136,29 @@
 			</p>
 		</div>
 
-		<form method="POST" onsubmit={handleSubmit} class="space-y-6">
+		{#if success}
+			<div class="rounded-md border border-emerald-500 bg-emerald-500/10 p-4 text-center">
+				<p class="text-sm font-medium text-emerald-500">Élève créé avec succès !</p>
+			</div>
+		{/if}
+
+		<form
+			method="POST"
+			action="?/create"
+			use:enhance={() => {
+				submitting = true;
+				return async ({ result }: { result: ActionResult }) => {
+					submitting = false;
+					if (result.type === 'success') {
+						success = true;
+						setTimeout(() => goto('/eleves'), 800);
+					} else if (result.type === 'failure') {
+						errors = result.data?.errors || {};
+					}
+				};
+			}}
+			class="space-y-6"
+		>
 			<Accordion.Root type="single">
 				<Accordion.Item value="infos-perso">
 					<Accordion.Trigger class="text-lg font-semibold"
@@ -213,6 +170,7 @@
 								<Label for="nom">Nom *</Label>
 								<Input
 									id="nom"
+									name="nom"
 									bind:value={form.nom}
 									placeholder="Entrer le nom"
 									class={errors.nom ? 'border-destructive' : ''}
@@ -226,6 +184,7 @@
 								<Label for="prenom">Prénom *</Label>
 								<Input
 									id="prenom"
+									name="prenom"
 									bind:value={form.prenom}
 									placeholder="Entrer le prénom"
 									class={errors.prenom ? 'border-destructive' : ''}
@@ -266,7 +225,8 @@
 											maxValue={today(getLocalTimeZone())}
 										/>
 									</Popover.Content>
-								</Popover.Root>
+									</Popover.Root>
+								<input type="hidden" name="dateNaissance" value={form.dateNaissance} />
 								{#if errors.dateNaissance}
 									<span class="text-xs text-destructive">{errors.dateNaissance}</span>
 								{/if}
@@ -281,35 +241,44 @@
 										<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 											<div class="grid gap-2">
 												<Label for="lieu">Lieu *</Label>
-												<Input
-													id="lieu"
-													bind:value={form.lieuNaissance}
-													placeholder="Ex: Antananarivo"
-													class={errors.lieuNaissance ? 'border-destructive' : ''}
-												/>
+											<Input
+												id="lieu"
+												name="lieuNaissance"
+												bind:value={form.lieuNaissance}
+												placeholder="Ex: Antananarivo"
+												class={errors.lieuNaissance ? 'border-destructive' : ''}
+												oninput={(e) => (form.lieuNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
+											/>
 												{#if errors.lieuNaissance}
 													<span class="text-xs text-destructive">{errors.lieuNaissance}</span>
 												{/if}
 											</div>
 											<div class="grid gap-2">
 												<Label for="commune-naiss">Commune *</Label>
-												<Input
-													id="commune-naiss"
-													bind:value={form.communeNaissance}
-													placeholder="Ex: Isoraka"
-												/>
+											<Input
+												id="commune-naiss"
+												name="communeNaissance"
+												bind:value={form.communeNaissance}
+												placeholder="Ex: Isoraka"
+												oninput={(e) => (form.communeNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
+											/>
 											</div>
 											<div class="grid gap-2">
 												<Label for="region-naiss">Région *</Label>
-												<Input
-													id="region-naiss"
-													bind:value={form.regionNaissance}
-													placeholder="Ex: Analamanga"
-												/>
+											<Input
+												id="region-naiss"
+												name="regionNaissance"
+												bind:value={form.regionNaissance}
+												placeholder="Ex: Analamanga"
+												oninput={(e) => (form.regionNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
+											/>
+											{#if errors.regionNaissance}
+												<span class="text-xs text-destructive">{errors.regionNaissance}</span>
+											{/if}
 											</div>
 											<div class="grid gap-2">
 												<Label for="province-naiss">Province *</Label>
-												<NativeSelect.Root bind:value={form.provinceNaissance}>
+												<NativeSelect.Root name="provinceNaissance" bind:value={form.provinceNaissance}>
 													{#each provincesVariable as p (p)}
 														<NativeSelect.Option value={p.toLowerCase()}>{p}</NativeSelect.Option>
 													{/each}
@@ -334,9 +303,11 @@
 									<Label for="domicile">Domicile *</Label>
 									<Input
 										id="domicile"
+										name="domicile"
 										bind:value={form.domicile}
 										placeholder="Ex: Lot C234 Ambatonakanga"
 										class={errors.domicile ? 'border-destructive' : ''}
+										oninput={(e) => (form.domicile = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.domicile}
 										<span class="text-xs text-destructive">{errors.domicile}</span>
@@ -346,21 +317,26 @@
 									<Label for="fokontany">Fokontany *</Label>
 									<Input
 										id="fokontany"
+										name="fokontany"
 										bind:value={form.fokontany}
 										placeholder="Ex: Ambatonakanga"
 										class={errors.fokontany ? 'border-destructive' : ''}
+										oninput={(e) => (form.fokontany = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.fokontany}
 										<span class="text-xs text-destructive">{errors.fokontany}</span>
 									{/if}
 								</div>
+								</div>
 								<div class="grid gap-2">
 									<Label for="commune_res">Commune *</Label>
 									<Input
 										id="commune_res"
+										name="communeResidence"
 										bind:value={form.communeResidence}
 										placeholder="Ex: Toamasina"
 										class={errors.communeResidence ? 'border-destructive' : ''}
+										oninput={(e) => (form.communeResidence = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.communeResidence}
 										<span class="text-xs text-destructive">{errors.communeResidence}</span>
@@ -370,12 +346,24 @@
 									<Label for="region_res">Région *</Label>
 									<Input
 										id="region_res"
+										name="regionResidence"
 										bind:value={form.regionResidence}
 										placeholder="Ex: Toamasina"
-										class={errors.regionResidence ? 'border-destructive' : ''}
+										oninput={(e) => (form.regionResidence = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.regionResidence}
 										<span class="text-xs text-destructive">{errors.regionResidence}</span>
+									{/if}
+								</div>
+								<div class="grid gap-2">
+									<Label for="province_res">Province *</Label>
+									<NativeSelect.Root name="provinceResidence" bind:value={form.provinceResidence}>
+										{#each provincesVariable as p (p)}
+											<NativeSelect.Option value={p.toLowerCase()}>{p}</NativeSelect.Option>
+										{/each}
+									</NativeSelect.Root>
+									{#if errors.provinceResidence}
+										<span class="text-xs text-destructive">{errors.provinceResidence}</span>
 									{/if}
 								</div>
 							</div>
@@ -390,7 +378,7 @@
 													<Label for="telephone_eleve">Téléphone élève</Label>
 													<Input
 														id="telephone_eleve"
-														bind:value={form.telephoneEleve}
+														name="telephoneEleve" bind:value={form.telephoneEleve}
 														type="tel"
 														placeholder="+261xxxxxxxx"
 													/>
@@ -402,7 +390,7 @@
 													<Label for="email_eleve">Email élève</Label>
 													<Input
 														id="email_eleve"
-														bind:value={form.emailEleve}
+														name="emailEleve" bind:value={form.emailEleve}
 														type="email"
 														placeholder="exemple@email.com"
 													/>
@@ -411,10 +399,10 @@
 													{/if}
 												</div>
 												<div class="grid gap-2">
-													<Label for="cin">CIN *</Label>
+													<Label for="cin">CIN</Label>
 													<Input
 														id="cin"
-														bind:value={form.cin}
+														name="cin" bind:value={form.cin}
 														placeholder="Entrer le CIN"
 														maxlength={12}
 													/>
@@ -427,7 +415,6 @@
 									</Accordion.Content>
 								</Accordion.Item>
 							</Accordion.Root>
-						</div>
 					</Accordion.Content>
 				</Accordion.Item>
 			</Accordion.Root>
@@ -444,7 +431,7 @@
 									<Label for="name_father">Nom du père *</Label>
 									<Input
 										id="name_father"
-										bind:value={form.nomPere}
+										name="nomPere" bind:value={form.nomPere}
 										placeholder="Entrer le nom"
 										class={errors.nomPere ? 'border-destructive' : ''}
 										oninput={(e) =>
@@ -458,7 +445,7 @@
 									<Label for="lastname_father">Prénom du père *</Label>
 									<Input
 										id="lastname_father"
-										bind:value={form.prenomPere}
+										name="prenomPere" bind:value={form.prenomPere}
 										placeholder="Entrer le prénom"
 										class={errors.prenomPere ? 'border-destructive' : ''}
 										oninput={(e) =>
@@ -474,7 +461,7 @@
 									<Label for="contact_father">Téléphone du père</Label>
 									<Input
 										id="contact_father"
-										bind:value={form.telephonePere}
+										name="telephonePere" bind:value={form.telephonePere}
 										type="tel"
 										placeholder="+261...."
 									/>
@@ -486,7 +473,7 @@
 									<Label for="name_mother">Nom de la mère *</Label>
 									<Input
 										id="name_mother"
-										bind:value={form.nomMere}
+										name="nomMere" bind:value={form.nomMere}
 										placeholder="Entrer le nom"
 										class={errors.nomMere ? 'border-destructive' : ''}
 										oninput={(e) =>
@@ -500,7 +487,7 @@
 									<Label for="lastname_mother">Prénom de la mère *</Label>
 									<Input
 										id="lastname_mother"
-										bind:value={form.prenomMere}
+										name="prenomMere" bind:value={form.prenomMere}
 										placeholder="Entrer le prénom"
 										class={errors.prenomMere ? 'border-destructive' : ''}
 										oninput={(e) =>
@@ -516,7 +503,7 @@
 									<Label for="contact_mother">Téléphone de la mère</Label>
 									<Input
 										id="contact_mother"
-										bind:value={form.telephoneMere}
+										name="telephoneMere" bind:value={form.telephoneMere}
 										type="tel"
 										placeholder="+261...."
 									/>
@@ -543,7 +530,7 @@
 													<Label for="name_tuteur">Nom du tuteur(trice)</Label>
 													<Input
 														id="name_tuteur"
-														bind:value={form.nomTuteur}
+														name="nomTuteur" bind:value={form.nomTuteur}
 														placeholder="Entrer le nom"
 														oninput={(e) =>
 															(form.nomTuteur = (e.target as HTMLInputElement).value.toUpperCase())}
@@ -553,7 +540,7 @@
 													<Label for="lastname_tuteur">Prénom du tuteur(trice)</Label>
 													<Input
 														id="lastname_tuteur"
-														bind:value={form.prenomTuteur}
+														name="prenomTuteur" bind:value={form.prenomTuteur}
 														placeholder="Entrer le prénom"
 														oninput={(e) =>
 															(form.prenomTuteur = (e.target as HTMLInputElement).value
@@ -565,7 +552,7 @@
 													<Label for="contact_tuteur">Téléphone du tuteur(trice)</Label>
 													<Input
 														id="contact_tuteur"
-														bind:value={form.telephoneTuteur}
+														name="telephoneTuteur" bind:value={form.telephoneTuteur}
 														type="tel"
 														placeholder="+261...."
 													/>
@@ -581,8 +568,8 @@
 			</Accordion.Root>
 
 			<div class="flex items-center gap-4 pt-4">
-				<Button type="reset" variant="outline" onclick={resetForm}>Effacer</Button>
-				<AlertDialog.Root>
+				<Button type="reset" variant="outline" onclick={resetForm} disabled={submitting}>Effacer</Button>
+				<AlertDialog.Root open={success}>
 					<AlertDialog.Trigger class={buttonVariants({ variant: 'default' })}>
 						Créer l'élève
 					</AlertDialog.Trigger>
@@ -594,8 +581,8 @@
 							</AlertDialog.Description>
 						</AlertDialog.Header>
 						<AlertDialog.Footer>
-							<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-							<AlertDialog.Action type="submit" onclick={handleSubmit}>
+							<AlertDialog.Cancel disabled={submitting}>Annuler</AlertDialog.Cancel>
+							<AlertDialog.Action type="submit" disabled={submitting}>
 								Confirmer
 							</AlertDialog.Action>
 						</AlertDialog.Footer>

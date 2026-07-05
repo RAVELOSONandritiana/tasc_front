@@ -3,8 +3,6 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import * as NativeSelect from '$lib/components/ui/native-select';
-	import { Search } from '@lucide/svelte/icons';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import type { EleveCours } from '$lib/types/Materiel.type';

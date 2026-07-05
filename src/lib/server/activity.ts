@@ -12,6 +12,7 @@ export type ActivityAction =
 	| 'creation_personnel'
 	| 'creation_surveillant'
 	| 'creation_enseignant'
+	| 'creation_eleve'
 	| 'changement_mot_de_passe';
 
 export async function logActivity(

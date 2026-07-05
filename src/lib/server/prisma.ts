@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { capitalize } from '$lib/actions/capitalize';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -262,9 +263,9 @@ export async function createPersonnel(data: {
 				lastname: data.lastname,
 				email: data.email,
 				phone: data.phone,
-				domicile: data.domicile,
-				fokontany: data.fokontany,
-				commune: data.commune
+				domicile: capitalize(data.domicile),
+				fokontany: capitalize(data.fokontany),
+				commune: capitalize(data.commune)
 			}
 		});
 
@@ -375,9 +376,48 @@ export async function createProfesseur(data: {
 	});
 }
 
+export async function createEleve(data: {
+	name: string;
+	lastname: string;
+	email: string;
+	phone: string;
+	domicile: string;
+	fokontany: string;
+	commune: string;
+	region?: string;
+	province?: string;
+	dateNaissance: string;
+	lieuNaissance?: string;
+	regionNaissance?: string;
+	provinceNaissance?: string;
+}) {
+	return prisma.$transaction(async (tx) => {
+		const personne = await tx.personne.create({
+			data: {
+				name: data.name,
+				lastname: data.lastname,
+				email: data.email,
+				phone: data.phone,
+				domicile: capitalize(data.domicile),
+				fokontany: capitalize(data.fokontany),
+				commune: capitalize(data.commune)
+			}
+		});
+
+		const eleve = await tx.eleve.create({
+			data: {
+				personneId: personne.id,
+				dateNaissance: new Date(data.dateNaissance)
+			}
+		});
+
+		return { personne, eleve };
+	});
+}
+
 export async function updateUserPassword(userId: string, newPassword: string) {
 	const hashed = await import('./auth').then((m) => m.hashPassword(newPassword));
-	await prisma.compte.update({
+	return prisma.compte.update({
 		where: { id: userId },
 		data: { password: hashed }
 	});

@@ -105,7 +105,7 @@
 	<div class="mx-auto max-w-4xl">
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouveau personnel</h1>
-			<p class="text-sm text-muted-foreground">Tous les champs sont obligatoires.</p>
+			<p class="text-sm text-muted-foreground">Tous les champs sont obligatoires sauf l'email.</p>
 		</div>
 
 		{#if success}
@@ -215,7 +215,7 @@
 													bind:value={form.lieuNaissance}
 													placeholder="Ex: Antananarivo"
 													class={errors.lieuNaissance ? 'border-destructive' : ''}
-													
+													oninput={(e) => (form.lieuNaissance = toTitle((e.target as HTMLInputElement).value))}
 												/>
 												{#if errors.lieuNaissance}
 													<span class="text-xs text-destructive">{errors.lieuNaissance}</span>
@@ -228,7 +228,7 @@
 													name="communeNaissance"
 													bind:value={form.communeNaissance}
 													placeholder="Ex: Isoraka"
-													
+													oninput={(e) => form.communeNaissance = (e.target as HTMLInputElement).value.toUpperCase()}
 												/>
 											</div>
 											<div class="grid gap-2">
@@ -238,7 +238,7 @@
 													name="regionNaissance"
 													bind:value={form.regionNaissance}
 													placeholder="Ex: Analamanga"
-													
+													oninput={(e) => form.regionNaissance = (e.target as HTMLInputElement).value.toUpperCase()}
 												/>
 											</div>
 											<div class="grid gap-2">
@@ -272,7 +272,7 @@
 										bind:value={form.domicile}
 										placeholder="Ex: Lot C234 Ambatonakanga"
 										class={errors.domicile ? 'border-destructive' : ''}
-										
+										oninput={(e) => form.domicile = (e.target as HTMLInputElement).value.toUpperCase()}
 									/>
 									{#if errors.domicile}
 										<span class="text-xs text-destructive">{errors.domicile}</span>
@@ -286,7 +286,7 @@
 										bind:value={form.fokontany}
 										placeholder="Ex: Ambatonakanga"
 										class={errors.fokontany ? 'border-destructive' : ''}
-										
+										oninput={(e) => form.fokontany = (e.target as HTMLInputElement).value.toUpperCase()}
 									/>
 									{#if errors.fokontany}
 										<span class="text-xs text-destructive">{errors.fokontany}</span>
@@ -294,27 +294,27 @@
 								</div>
 								<div class="grid gap-2">
 									<Label for="commune_res">Commune *</Label>
-									<Input
-										id="commune_res"
-										name="communeResidence"
-										bind:value={form.communeResidence}
-										placeholder="Ex: Toamasina"
-										class={errors.communeResidence ? 'border-destructive' : ''}
-										
-									/>
+								<Input
+									id="commune_res"
+									name="communeResidence"
+									bind:value={form.communeResidence}
+									placeholder="Ex: Toamasina"
+									class={errors.communeResidence ? 'border-destructive' : ''}
+									oninput={(e) => form.communeResidence = (e.target as HTMLInputElement).value.toUpperCase()}
+								/>
 									{#if errors.communeResidence}
 										<span class="text-xs text-destructive">{errors.communeResidence}</span>
 									{/if}
 								</div>
 								<div class="grid gap-2">
 									<Label for="region_res">Région *</Label>
-									<Input
-										id="region_res"
-										name="regionResidence"
-										bind:value={form.regionResidence}
-										placeholder="Ex: Toamasina"
-										
-									/>
+								<Input
+									id="region_res"
+									name="regionResidence"
+									bind:value={form.regionResidence}
+									placeholder="Ex: Toamasina"
+									oninput={(e) => form.regionResidence = (e.target as HTMLInputElement).value.toUpperCase()}
+								/>
 								</div>
 							</div>
 
@@ -339,7 +339,7 @@
 													{/if}
 												</div>
 												<div class="grid gap-2">
-													<Label for="email_personnel">Email *</Label>
+													<Label for="email_personnel">Email</Label>
 													<Input
 														id="email_personnel"
 														name="email"
