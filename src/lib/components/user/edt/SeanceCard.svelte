@@ -54,7 +54,7 @@
 				Ajouter une séance
 			</Button>
 		</Dialog.Trigger>
-		<Dialog.Content class="sm:max-w-[400px]">
+		<Dialog.Content class="sm:max-w-100">
 			<Dialog.Header>
 				<Dialog.Title>Ajouter une séance pour {jour}</Dialog.Title>
 				<Dialog.Description>Planifiez un cours dans l'emploi du temps</Dialog.Description>

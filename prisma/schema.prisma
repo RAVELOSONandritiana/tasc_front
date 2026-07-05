@@ -1,0 +1,569 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+//  Secteur : Scolarite
+// ============================================================
+
+/// Annee scolaire active. Une seule annee peut etre active a la fois.
+model AnneeScolaire {
+  id           String   @id @default(uuid())
+  nom          String // ex: "2025-2026"
+  dateCreation DateTime @default(now())
+  active       Boolean  @default(false)
+
+  // Relations
+  classes        Classe[]
+  inscriptions   Inscription[]
+  examens        Examen[]
+  cours          Cours[]
+  emploisDuTemps EmploiDuTemps[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("annees_scolaires")
+}
+
+/// Catalogue des matieres enseignees.
+model Matiere {
+  id      String  @id @default(uuid())
+  nom     String  @unique // ex: "Mathematiques", "Physique"
+  couleur String? // pour l'affichage des badges
+  icone   String?
+
+  // Relations
+  cours Cours[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("matieres")
+}
+
+/// Classe rattachee a une annee scolaire.
+model Classe {
+  id       String  @id @default(uuid())
+  nom      String // ex: "2nde S", "1ere L", "Tle OSE"
+  niveau   Int // 0 = 2nde, 1 = 1ere, 2 = Terminale
+  serie    String? // ex: "S", "L", "OSE"
+  capacite Int? // nombre de places
+
+  // Image de la classe (URL stockee dans PocketBase)
+  imageUrl String?
+
+  // Relations
+  anneeId       String
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+
+  titulaireId String?
+  titulaire   Professeur? @relation("TitulaireClasse", fields: [titulaireId], references: [id])
+
+  inscriptions   Inscription[]
+  cours          Cours[]
+  examens        Examen[]
+  emploisDuTemps EmploiDuTemps[]
+
+  elevesCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("classes")
+}
+
+/// Inscription d'un eleve dans une classe pour une annee donnee.
+model Inscription {
+  id              String   @id @default(uuid())
+  actif           Boolean  @default(true)
+  dateInscription DateTime @default(now())
+
+  // Relations
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  classeId String
+  classe   Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+
+  anneeId       String
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+
+  notes     Note[]
+  absences  Absence[]
+  retards   Retard[]
+  incidents Incident[]
+
+  @@unique([eleveId, classeId, anneeId])
+  @@map("inscriptions")
+}
+
+/// Cours = matiere enseignee dans une classe par un professeur.
+model Cours {
+  id          String @id @default(uuid())
+  coefficient Int    @default(1)
+
+  // Relations
+  classeId String
+  classe   Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+
+  matiereId String
+  matiere   Matiere @relation(fields: [matiereId], references: [id])
+
+  professeurId String
+  professeur   Professeur @relation(fields: [professeurId], references: [id])
+
+  anneeId       String
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+
+  // Participants : si vide = tous les eleves de la classe
+  participants String[] // stocke les IDs des eleves inscrits
+
+  notes   Note[]
+  seances SeanceEDT[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cours")
+}
+
+/// Note / resultat d'un eleve a un cours.
+model Note {
+  id          String   @id @default(uuid())
+  valeur      Float // /20
+  coefficient Int      @default(1)
+  date        DateTime @default(now())
+  libelle     String? // ex: "Examen de mi-semestre"
+
+  // Relations
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  inscriptionId String?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id], onDelete: SetNull)
+
+  coursId String
+  cours   Cours  @relation(fields: [coursId], references: [id], onDelete: Cascade)
+
+  examenId String?
+  examen   Examen? @relation(fields: [examenId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
+}
+
+/// Examen = evaluation planifiee pour une classe.
+model Examen {
+  id      String   @id @default(uuid())
+  nom     String
+  date    DateTime
+  periode String? // ex: "Semestre 1"
+
+  actif Boolean @default(true)
+
+  // Relations
+  classeId String
+  classe   Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+
+  anneeId       String
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+
+  notes Note[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("examens")
+}
+
+// ============================================================
+//  Secteur : Ressources humaines
+// ============================================================
+
+/// Personne physique (base partagee).
+model Personne {
+  id        String  @id @default(uuid())
+  name      String
+  lastname  String
+  domicile  String?
+  fokontany String?
+  commune   String?
+  phone     String
+  email     String  @unique
+
+  // Relations
+  professeur  Professeur?
+  surveillant Surveillant?
+  personnel   Personnel?
+  eleve       Eleve?
+  compte      Compte?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("personnes")
+}
+
+/// Enseignant.
+model Professeur {
+  id         String   @id @default(uuid())
+  personneId String   @unique
+  personne   Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
+
+  matiere String[] // matieres enseignees
+
+  // Statistiques denormalisees (peut etre recalculees par un job)
+  retards        Int @default(0)
+  absences       Int @default(0)
+  heuresCours    Int @default(0)
+  incidents      Int @default(0)
+  notesPositives Int @default(0)
+  notesNegatives Int @default(0)
+
+  // Un professeur peut etre titulaire d'une classe
+  classesTitulaire Classe[] @relation("TitulaireClasse")
+
+  // Un professeur enseigne plusieurs cours
+  cours Cours[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("professeurs")
+}
+
+/// Surveillant.
+model Surveillant {
+  id         String   @id @default(uuid())
+  personneId String   @unique
+  personne   Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
+
+  poste String // ex: "Surveillant General"
+
+  // Statistiques
+  retards        Int @default(0)
+  absences       Int @default(0)
+  heuresCours    Int @default(0)
+  incidents      Int @default(0)
+  notesPositives Int @default(0)
+  notesNegatives Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("surveillants")
+}
+
+/// Personnel administratif ou technique.
+model Personnel {
+  id         String   @id @default(uuid())
+  personneId String   @unique
+  personne   Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
+
+  poste String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("personnel")
+}
+
+/// Eleve.
+model Eleve {
+  id         String   @id @default(uuid())
+  personneId String   @unique
+  personne   Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
+
+  dateNaissance DateTime
+
+  // Photo de profil (URL stockee dans PocketBase)
+  photoUrl String?
+
+  // Relations
+  inscriptions Inscription[]
+  notes        Note[]
+  incidents    Incident[]
+  absences     Absence[]
+  retards      Retard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("eleves")
+}
+
+// ============================================================
+//  Secteur : Authentification
+// ============================================================
+
+model Compte {
+  id              String       @id @default(uuid())
+  matricule       String       @unique // ex: "ENS-047", "SRV-012"
+  password        String
+  role            RoleCompte
+  statut          StatutCompte @default(EN_ATTENTE)
+  dateCreation    DateTime     @default(now())
+  dateInscription DateTime     @default(now())
+
+  // Relations
+  personneId String   @unique
+  personne   Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
+
+  profil Profil?
+
+  @@map("comptes")
+}
+
+enum RoleCompte {
+  ADMINISTRATEUR
+  ENSEIGNANT
+  SURVEILLANT
+  PERSONNEL
+}
+
+enum StatutCompte {
+  EN_ATTENTE
+  ACTIF
+  BLOQUE
+}
+
+model Profil {
+  id              String   @id @default(uuid())
+  nom             String
+  prenom          String
+  email           String
+  phone           String?
+  role            String
+  adresse         String?
+  bio             String?
+  dateInscription DateTime
+
+  // Photo de profil (URL stockee dans PocketBase)
+  photoUrl String?
+
+  // Relations
+  compteId String @unique
+  compte   Compte @relation(fields: [compteId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profils")
+}
+
+// ============================================================
+//  Secteur : Emploi du temps & Ressources
+// ============================================================
+
+model Salle {
+  id       String  @id @default(uuid())
+  num      Int // numero de salle
+  nom      String // ex: "Salle 5"
+  capacite Int // nombre de places
+  occupe   Boolean @default(false)
+
+  // Photo de la salle (URL stockee dans PocketBase)
+  imageUrl String?
+
+  // Relations
+  seances SeanceEDT[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("salles")
+}
+
+model EmploiDuTemps {
+  id String @id @default(uuid())
+
+  // Relations
+  classeId String
+  classe   Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+
+  anneeId       String
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+
+  seances SeanceEDT[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("emplois_du_temps")
+}
+
+model SeanceEDT {
+  id         String @id @default(uuid())
+  jour       String // "Lundi", "Mardi", etc.
+  heureDebut String // "08:00"
+  heureFin   String // "10:00"
+
+  // Relations
+  edtId String
+  edt   EmploiDuTemps @relation(fields: [edtId], references: [id], onDelete: Cascade)
+
+  coursId String
+  cours   Cours  @relation(fields: [coursId], references: [id], onDelete: Cascade)
+
+  salleId String?
+  salle   Salle?  @relation(fields: [salleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("seances_edt")
+}
+
+// ============================================================
+//  Secteur : Suivi eleve
+// ============================================================
+
+/// Absence d'un eleve.
+model Absence {
+  id       String   @id @default(uuid())
+  date     DateTime @default(now())
+  justifie Boolean  @default(false)
+  motif    String?
+
+  // Relations
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  inscriptionId String?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("absences")
+}
+
+/// Retard d'un eleve.
+model Retard {
+  id    String   @id @default(uuid())
+  date  DateTime @default(now())
+  duree String // ex: "10min", "15min"
+  motif String?
+
+  // Relations
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  inscriptionId String?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("retards")
+}
+
+// ============================================================
+//  Secteur : Actus / Incidents
+// ============================================================
+
+/// Incident / actu concernant un eleve.
+model Incident {
+  id      String       @id @default(uuid())
+  type    TypeIncident // info, erreur, note, absent
+  message String
+  auteur  String
+  date    DateTime     @default(now())
+
+  // Relations
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  inscriptionId String?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id], onDelete: SetNull)
+
+  reactions Reaction[]
+  comments  Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("incidents")
+}
+
+enum TypeIncident {
+  INFO
+  ERREUR
+  NOTE
+  ABSENT
+}
+
+model Reaction {
+  id    String @id @default(uuid())
+  emoji String
+  user  String
+
+  // Relations
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("reactions")
+}
+
+model Comment {
+  id     String   @id @default(uuid())
+  author String
+  text   String
+  date   DateTime @default(now())
+
+  // Relations
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("comments")
+}
+
+// ============================================================
+//  Secteur : Notifications
+// ============================================================
+
+model Notification {
+  id          String  @id @default(uuid())
+  title       String
+  description String
+  time        String // ex: "2 min", "30 min"
+  read        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// ============================================================
+//  Secteur : Medias (fichiers stockes dans PocketBase)
+// ============================================================
+
+/// Fichier media stocke dans PocketBase.
+/// On ne stocke que l'URL de reference, pas le fichier binaire.
+model Media {
+  id     String  @id @default(uuid())
+  url    String // URL PocketBase complete
+  nom    String? // nom du fichier
+  type   String? // mime type
+  taille Int? // taille en octets
+
+  // Pour savoir a quelle entite appartient le media
+  ownerType String? // ex: "Eleve", "Classe", "Salle", "Profil"
+  ownerId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("media")
+}
