@@ -120,6 +120,53 @@ export async function getPersonnes() {
 	});
 }
 
+export async function getAllPersonnes(): Promise<any[]> {
+	return prisma.personne.findMany({
+		where: {
+			eleve: null,
+			professeur: null
+		},
+		include: {
+			compte: {
+				select: {
+					id: true,
+					role: true,
+					matricule: true
+				}
+			}
+		},
+		orderBy: {
+			name: 'asc'
+		}
+	});
+}
+
+export async function searchPersonnesByName(query: string) {
+	if (!query.trim()) return [];
+	return prisma.personne.findMany({
+		where: {
+			eleve: null,
+			professeur: null,
+			name: {
+				contains: query.trim(),
+				mode: 'insensitive'
+			}
+		},
+		include: {
+			compte: {
+				select: {
+					id: true,
+					role: true,
+					matricule: true
+				}
+			}
+		},
+		orderBy: {
+			name: 'asc'
+		}
+	});
+}
+
 export async function getClasses() {
 	return prisma.classe.findMany({
 		include: {
@@ -373,6 +420,46 @@ export async function createProfesseur(data: {
 			data: {
 				personneId: personne.id,
 				matiere: data.matiere
+			}
+		});
+
+		return { personne, compte, professeur };
+	});
+}
+
+export async function createProfesseurFromPersonne(personneId: string, matricule: string, matiere: string[]) {
+	return prisma.$transaction(async (tx) => {
+		const personne = await tx.personne.findUniqueOrThrow({
+			where: { id: personneId },
+			include: { compte: true }
+		});
+
+		if (personne.professeur) {
+			throw new Error('Cette personne est déjà enseignante');
+		}
+
+		let compte = personne.compte;
+		if (!compte) {
+			compte = await tx.compte.create({
+				data: {
+					matricule,
+					password: '123456',
+					role: 'ENSEIGNANT',
+					statut: 'EN_ATTENTE',
+					personneId
+				}
+			});
+		} else {
+			compte = await tx.compte.update({
+				where: { id: compte.id },
+				data: { matricule, role: 'ENSEIGNANT', statut: 'EN_ATTENTE' }
+			});
+		}
+
+		const professeur = await tx.professeur.create({
+			data: {
+				personneId,
+				matiere
 			}
 		});
 

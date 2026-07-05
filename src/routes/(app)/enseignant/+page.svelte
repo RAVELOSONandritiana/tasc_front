@@ -1,38 +1,32 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Input } from '$lib/components/ui/input';
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import PersonnelCard from '$lib/components/user/profil/PersonnelCard.svelte';
-	import Badge from '$lib/components/ui/badge/badge.svelte';
 	import type { PageProps } from './$types';
+	import type { Personne } from '$lib/types/Personne.type';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Card } from '$lib/components/ui/card';
 	import { UserCog, Plus, X } from '@lucide/svelte/icons';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import type { ActionResult } from '@sveltejs/kit';
+	import { matiere as matiereList } from '$lib/variables/territoire';
 
 	const { data }: PageProps = $props();
 
 	const listProfesseur = $state(data.professeur);
+	const allPersonnel = $state<Personne[]>(data.personnel || []);
 
 	let searchText = $state('');
 	let dialogOpen = $state(false);
 	let submitting = $state(false);
 	let success = $state(false);
-
-	let name = $state('');
-	let lastname = $state('');
-	let email = $state('');
-	let phone = $state('');
-	let matiereInput = $state('');
+	let searchQuery = $state('');
+	let selectedPersonne = $state<Personne | null>(null);
 	let matieres = $state<string[]>([]);
-
-	function toTitle(value: string): string {
-		return value
-			.split(' ')
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-			.join(' ');
-	}
+	let matricule = $state('');
 
 	const listFiltered = $derived(
 		listProfesseur.filter((p) =>
@@ -40,24 +34,42 @@
 		)
 	);
 
-	function addMatiere() {
-		if (matiereInput.trim() && !matieres.includes(matiereInput.trim())) {
-			matieres = [...matieres, matiereInput.trim()];
-			matiereInput = '';
-		}
-	}
+	const searchResults = $derived(
+		searchQuery.trim().length > 0 && !selectedPersonne
+			? allPersonnel.filter((p) =>
+				`${p.name}${p.lastname}${p.email}${p.phone}`.toLowerCase().includes(searchQuery.toLowerCase())
+			)
+			: []
+	);
 
 	function removeMatiere(m: string) {
 		matieres = matieres.filter((x) => x !== m);
 	}
 
-	function resetForm() {
-		name = '';
-		lastname = '';
-		email = '';
-		phone = '';
+		function resetForm() {
+			searchQuery = '';
+			selectedPersonne = null;
+			matricule = '';
+			matieres = [];
+		}
+
+	function onSearchChange(value: string) {
+		searchQuery = value;
+	}
+
+	function selectPersonne(p: Personne) {
+		selectedPersonne = p;
+		searchQuery = p.name;
+		matricule = p.compte?.matricule || '';
 		matieres = [];
-		matiereInput = '';
+	}
+
+	function toggleMatiere(m: string) {
+		if (matieres.includes(m)) {
+			matieres = matieres.filter((x) => x !== m);
+		} else {
+			matieres = [...matieres, m];
+		}
 	}
 </script>
 
@@ -81,7 +93,7 @@
 					</div>
 					<Button
 						class="h-9 gap-2 rounded-lg px-5 text-sm font-medium"
-						onclick={() => (dialogOpen = true)}
+						onclick={() => { resetForm(); dialogOpen = true; }}
 					>
 						<Plus class="size-3.5" />
 						Nouveau
@@ -110,71 +122,116 @@
 </main>
 
 <Dialog.Root bind:open={dialogOpen}>
-	<Dialog.Content class="sm:max-w-[425px]">
-		<form method="POST" action="?/create" use:enhance={() => {
+	<Dialog.Content class="sm:max-w-106.25">
+		<form method="POST" action="?/createFromPersonne" use:enhance={() => {
 			submitting = true;
-			return async () => {
+			return async ({ result }: { result: ActionResult }) => {
 				submitting = false;
+				if (result.type === 'success') {
+					success = true;
+					setTimeout(() => { dialogOpen = false; resetForm(); }, 800);
+				}
 			};
 		}}>
 			<Dialog.Header class="mb-1 space-y-1">
 				<Dialog.Title class="text-xl font-semibold">Ajouter un professeur</Dialog.Title>
-				<Dialog.Description
-					>Créer un nouveau profil enseignant et associez-lui des matières.</Dialog.Description
-				>
+				<Dialog.Description>
+					Recherchez un personnel existant et associez-lui un profil enseignant.
+				</Dialog.Description>
 			</Dialog.Header>
 
 			<div class="space-y-4 py-2">
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<div class="grid gap-2">
-						<Label for="name">Nom *</Label>
-						<Input id="name" name="name" bind:value={name} placeholder="Nom"  required />
-					</div>
-					<div class="grid gap-2">
-						<Label for="lastname">Prénom *</Label>
-						<Input id="lastname" name="lastname" bind:value={lastname} placeholder="Prénom"  required />
-					</div>
-				</div>
-
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<div class="grid gap-2">
-						<Label for="email">Email *</Label>
-						<Input id="email" name="email" type="email" bind:value={email} placeholder="exemple@email.com" required />
-					</div>
-					<div class="grid gap-2">
-						<Label for="phone">Téléphone *</Label>
-						<Input id="phone" name="phone" type="tel" bind:value={phone} placeholder="+261xxxxxxxx" required />
-					</div>
-				</div>
-
 				<div class="grid gap-2">
-					<Label for="matiere">Matières (séparées par des virgules)</Label>
+					<Label for="search">Nom *</Label>
 					<Input
-						id="matiere"
-						name="matiere"
-						bind:value={matiereInput}
-						placeholder="Mathématiques, Physiques"
-						onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addMatiere())}
+						id="search"
+						name="search"
+						placeholder="Rechercher par nom..."
+						value={searchQuery}
+						oninput={(e) => onSearchChange((e.target as HTMLInputElement).value)}
 					/>
-					{#if matieres.length > 0}
-						<div class="flex flex-wrap gap-2 mt-2">
-							{#each matieres as m}
-								<span class="inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold">
+				{#if searchResults.length > 0 && !selectedPersonne}
+					<div class="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+						{#each searchResults as p (p.id)}
+							<button
+								type="button"
+								class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+								onclick={() => selectPersonne(p)}
+							>
+								<p class="text-sm font-medium">{p.name} {p.lastname}</p>
+								<p class="text-xs text-muted-foreground">{p.email || ''}</p>
+								<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
+							</button>
+						{/each}
+					</div>
+				{/if}
+				</div>
+
+				{#if selectedPersonne}
+					<div class="rounded-md border p-3">
+						<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
+						<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
+						<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
+						<p class="text-xs text-muted-foreground">{selectedPersonne.domicile || ''} {selectedPersonne.commune || ''}</p>
+					</div>
+				{/if}
+
+			{#if selectedPersonne}
+				<div class="grid gap-2">
+					<Label for="matricule">Matricule</Label>
+					<Input id="matricule" name="matricule" bind:value={matricule} placeholder="Ex: ENS-047" />
+				</div>
+			{/if}
+
+
+
+				{#if selectedPersonne}
+					<div class="grid gap-2">
+						<Label>Matières</Label>
+						<div class="flex flex-wrap gap-2 rounded-md border p-2">
+							{#each matiereList as m (m)}
+								<button
+									type="button"
+									class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+									class:bg-primary={matieres.includes(m)}
+									class:text-primary-foreground={matieres.includes(m)}
+									onclick={() => toggleMatiere(m)}
+								>
 									{m}
-									<button type="button" onclick={() => removeMatiere(m)} class="ml-1 text-muted-foreground hover:text-foreground">
-										<X class="size-3" />
-									</button>
-								</span>
+								</button>
 							{/each}
 						</div>
-					{/if}
-				</div>
+						{#if matieres.length > 0}
+							<div class="flex flex-wrap gap-2 mt-2">
+								{#each matieres as m (m)}
+									<span class="inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold">
+										{m}
+										<button type="button" onclick={() => removeMatiere(m)} class="ml-1 text-muted-foreground hover:text-foreground">
+											<X class="size-3" />
+										</button>
+									</span>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
+
+			<input type="hidden" name="personneId" value={selectedPersonne?.id || ''} />
+			<input type="hidden" name="matiere" value={matieres.join(',')} />
+			<input type="hidden" name="matricule" value={matricule} />
 
 			<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
 				<Button type="button" variant="outline" size="sm" onclick={() => { resetForm(); dialogOpen = false; }}>Annuler</Button>
-				<Button type="submit" variant="default" size="sm" disabled={submitting || success}>
-					{success ? 'Créé !' : 'Confirmer'}
+				<Button type="submit" variant="default" size="sm" disabled={submitting || success || !selectedPersonne}>
+					{#if submitting}
+						<Spinner class="mr-2 size-4" />
+						Création...
+					{:else if success}
+						Créé !
+					{:else}
+						Confirmer
+					{/if}
 				</Button>
 			</Dialog.Footer>
 		</form>

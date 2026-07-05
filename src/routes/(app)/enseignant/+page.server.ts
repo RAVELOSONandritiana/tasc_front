@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getProfesseurs, createProfesseur } from '$lib/server/prisma';
+import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne } from '$lib/server/prisma';
 import type { Professeur, Personne } from '$lib/types/Personne.type';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
 function mapProfesseur(prismaProf: any): Professeur {
@@ -29,64 +29,42 @@ function mapProfesseur(prismaProf: any): Professeur {
 export const load: PageServerLoad = async () => {
 	const profs = await getProfesseurs();
 	const listProfesseur: Professeur[] = profs.map(mapProfesseur);
-	const personnes: Personne[] = listProfesseur.map((p) => ({
-		id: p.id,
-		name: p.name,
-		lastname: p.lastname,
-		domicile: p.domicile,
-		fokontany: p.fokontany,
-		commune: p.commune,
-		phone: p.phone,
-		email: p.email
-	}));
+	const personnel = await getAllPersonnes();
 	return {
-		personnes,
-		professeur: listProfesseur
+		professeur: listProfesseur,
+		personnel
 	};
 };
 
-export const actions = {
-	create: async ({ request, locals }) => {
+export const actions: Actions = {
+	createFromPersonne: async ({ request, locals }) => {
 		const data = await request.formData();
-
-		const name = data.get('name') as string;
-		const lastname = data.get('lastname') as string;
-		const email = data.get('email') as string;
-		const phone = data.get('phone') as string;
-		const matiere = data.get('matiere') as string;
+		const personneId = data.get('personneId') as string;
+		const matricule = (data.get('matricule') as string | null)?.trim() || '';
+		const matiere = (data.get('matiere') as string | null)?.trim() || '';
+		const matieres = matiere ? matiere.split(',').map((m) => m.trim()).filter(Boolean) : [];
 
 		const errors: Record<string, string> = {};
-		if (!name?.trim()) errors.name = 'Le nom est obligatoire';
-		if (!lastname?.trim()) errors.lastname = 'Le prénom est obligatoire';
-		if (!email?.trim()) errors.email = "L'email est obligatoire";
-		if (!phone?.trim()) errors.phone = 'Le téléphone est obligatoire';
+		if (!personneId) errors.personneId = 'Personne requise';
+		if (!matricule) errors.matricule = 'Matricule requise';
+		if (matieres.length === 0) errors.matiere = 'Matière requise';
 
 		if (Object.keys(errors).length > 0) {
 			return fail(400, { errors });
 		}
 
 		try {
-			await createProfesseur({
-				name: name.trim(),
-				lastname: lastname.trim(),
-				email: email.trim(),
-				phone: phone.trim(),
-				domicile: '',
-				fokontany: '',
-				commune: '',
-				matiere: matiere ? matiere.split(',').map((m) => m.trim()).filter(Boolean) : []
-			});
+			const result = await createProfesseurFromPersonne(personneId, matricule, matieres);
 
 			logActivity(
 				locals.user,
 				'creation_enseignant',
-				`Création de l'enseignant ${name} ${lastname}`
+				`Création de l'enseignant ${result.personne.name} ${result.personne.lastname}`
 			).catch(() => {});
 
-			throw redirect(303, '/enseignant');
+			return { success: true, result };
 		} catch (e: any) {
-			if (e?.message === 'NEXT_REDIRECT') throw e;
-			return fail(500, { error: 'Erreur lors de la création' });
+			return fail(500, { error: e?.message || 'Erreur lors de la création' });
 		}
 	}
 };
