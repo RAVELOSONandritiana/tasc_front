@@ -70,7 +70,9 @@
 					</Button>
 				</div>
 
-				<Button class="w-full" type="submit">Se connecter</Button>
+		<Button class="w-full" type="submit">
+			Se connecter
+		</Button>
 
 				<div class="text-center text-sm">
 					Pas encore de compte ?
