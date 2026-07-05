@@ -16,6 +16,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		commune: prismaSurv.personne.commune || '',
 		phone: prismaSurv.personne.phone,
 		email: prismaSurv.personne.email,
+		compte: prismaSurv.personne.compte as { id: string; role: string; matricule: string } | undefined,
+		personneId: prismaSurv.personne.id,
 		poste: prismaSurv.poste,
 		stats: {
 			retards: prismaSurv.retards,

@@ -7,11 +7,6 @@ export type EmployeeStats = {
 	notesNegatives: number;
 };
 
-export type Professeur = Personne & {
-	matiere: string[];
-	stats?: EmployeeStats;
-};
-
 export type Personne = {
 	id: string;
 	name: string;
@@ -28,9 +23,16 @@ export type Personne = {
 	};
 };
 
+export type Professeur = Personne & {
+	matiere: string[];
+	stats?: EmployeeStats;
+	personneId?: string;
+};
+
 export type Surveillant = Personne & {
 	poste: string;
 	stats?: EmployeeStats;
+	personneId?: string;
 };
 
 export type EleveStats = {

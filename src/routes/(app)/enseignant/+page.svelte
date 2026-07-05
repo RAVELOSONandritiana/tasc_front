@@ -113,7 +113,7 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<PersonnelCard personne={prof} role="Enseignant" id={prof.id} hrefProfil={`/enseignant/${prof.id}`} deleteAction="?/delete" />
+						<PersonnelCard personne={prof} role="Enseignant" id={prof.id} hrefProfil={`/profil/${prof.compte?.id || prof.personneId}`} deleteAction="?/delete" />
 					</div>
 				{/each}
 			</div>

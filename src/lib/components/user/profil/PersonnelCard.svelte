@@ -175,7 +175,7 @@
 			size="sm"
 			variant="default"
 			class="h-8 w-full justify-center rounded-lg px-3 text-xs"
-			onclick={() => goto(personId ? `/enseignant/${personId}` : hrefProfil)}
+			onclick={() => goto(hrefProfil)}
 		>
 			Voir profil
 		</Button>

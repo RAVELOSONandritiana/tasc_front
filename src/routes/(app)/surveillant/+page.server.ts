@@ -1,7 +1,7 @@
 import type { Personne, Surveillant } from '$lib/types/Personne.type';
 import type { Actions, PageServerLoad } from './$types';
-import { getSurveillants, createSurveillant } from '$lib/server/prisma';
-import { fail, redirect } from '@sveltejs/kit';
+import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPersonne } from '$lib/server/prisma';
+import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
 function mapSurveillant(prismaSurv: any): Surveillant {
@@ -14,6 +14,8 @@ function mapSurveillant(prismaSurv: any): Surveillant {
 		commune: prismaSurv.personne.commune || '',
 		phone: prismaSurv.personne.phone,
 		email: prismaSurv.personne.email,
+		compte: prismaSurv.personne.compte as { id: string; role: string; matricule: string } | undefined,
+		personneId: prismaSurv.personne.id,
 		poste: prismaSurv.poste,
 		stats: {
 			retards: prismaSurv.retards,
@@ -29,70 +31,41 @@ function mapSurveillant(prismaSurv: any): Surveillant {
 export const load: PageServerLoad = async () => {
 	const surveillants = await getSurveillants();
 	const listSurveillant: Surveillant[] = surveillants.map(mapSurveillant);
-	const personnes: Personne[] = listSurveillant.map((p) => ({
-		id: p.id,
-		name: p.name,
-		lastname: p.lastname,
-		domicile: p.domicile,
-		fokontany: p.fokontany,
-		commune: p.commune,
-		phone: p.phone,
-		email: p.email
-	}));
+	const personnel = await getAllPersonnesForSurveillant();
 	return {
-		personnes,
-		listSurveillant
+		listSurveillant,
+		personnel
 	};
 };
 
-export const actions = {
-	create: async ({ request, locals }) => {
+export const actions: Actions = {
+	createFromPersonne: async ({ request, locals }) => {
 		const data = await request.formData();
-
-		const name = data.get('name') as string;
-		const lastname = data.get('lastname') as string;
-		const email = data.get('email') as string;
-		const phone = data.get('phone') as string;
-		const poste = (data.get('poste') as string) || 'Surveillant';
-		const domicile = data.get('domicile') as string;
-		const fokontany = data.get('fokontany') as string;
-		const commune = data.get('commune') as string;
+		const personneId = data.get('personneId') as string;
+		const matricule = (data.get('matricule') as string | null)?.trim() || '';
+		const poste = (data.get('poste') as string | null)?.trim() || 'Surveillant';
 
 		const errors: Record<string, string> = {};
-		if (!name?.trim()) errors.name = 'Le nom est obligatoire';
-		if (!lastname?.trim()) errors.lastname = 'Le prénom est obligatoire';
-		if (!email?.trim()) errors.email = "L'email est obligatoire";
-		if (!phone?.trim()) errors.phone = 'Le téléphone est obligatoire';
-		if (!domicile?.trim()) errors.domicile = 'Le domicile est obligatoire';
-		if (!fokontany?.trim()) errors.fokontany = 'Le fokontany est obligatoire';
-		if (!commune?.trim()) errors.commune = 'La commune est obligatoire';
+		if (!personneId) errors.personneId = 'Personne requise';
+		if (!matricule) errors.matricule = 'Matricule requise';
+		if (!poste) errors.poste = 'Poste requis';
 
 		if (Object.keys(errors).length > 0) {
 			return fail(400, { errors });
 		}
 
 		try {
-			await createSurveillant({
-				name: name.trim(),
-				lastname: lastname.trim(),
-				email: email.trim(),
-				phone: phone.trim(),
-				domicile: domicile.trim(),
-				fokontany: fokontany.trim(),
-				commune: commune.trim(),
-				poste
-			});
+			const result = await createSurveillantFromPersonne(personneId, matricule, poste);
 
 			logActivity(
 				locals.user,
 				'creation_surveillant',
-				`Création du surveillant ${name} ${lastname}`
+				`Création du surveillant ${result.personne.name} ${result.personne.lastname}`
 			).catch(() => {});
 
-			throw redirect(303, '/surveillant');
+			return { success: true, result };
 		} catch (e: any) {
-			if (e?.message === 'NEXT_REDIRECT') throw e;
-			return fail(500, { error: 'Erreur lors de la création' });
+			return fail(500, { error: e?.message || 'Erreur lors de la création' });
 		}
 	}
 };

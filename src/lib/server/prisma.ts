@@ -59,7 +59,17 @@ export async function getEleveById(id: string) {
 export async function getProfesseurs() {
 	return prisma.professeur.findMany({
 		include: {
-			personne: true
+			personne: {
+				include: {
+					compte: {
+						select: {
+							id: true,
+							role: true,
+							matricule: true
+						}
+					}
+				}
+			}
 		},
 		orderBy: {
 			personne: {
@@ -73,7 +83,17 @@ export async function getProfesseurById(id: string) {
 	return prisma.professeur.findUnique({
 		where: { id },
 		include: {
-			personne: true
+			personne: {
+				include: {
+					compte: {
+						select: {
+							id: true,
+							role: true,
+							matricule: true
+						}
+					}
+				}
+			}
 		}
 	});
 }
@@ -81,7 +101,17 @@ export async function getProfesseurById(id: string) {
 export async function getSurveillants() {
 	return prisma.surveillant.findMany({
 		include: {
-			personne: true
+			personne: {
+				include: {
+					compte: {
+						select: {
+							id: true,
+							role: true,
+							matricule: true
+						}
+					}
+				}
+			}
 		},
 		orderBy: {
 			personne: {
@@ -95,7 +125,17 @@ export async function getSurveillantById(id: string) {
 	return prisma.surveillant.findUnique({
 		where: { id },
 		include: {
-			personne: true
+			personne: {
+				include: {
+					compte: {
+						select: {
+							id: true,
+							role: true,
+							matricule: true
+						}
+					}
+				}
+			}
 		}
 	});
 }
@@ -117,6 +157,66 @@ export async function getPersonnes() {
 		orderBy: {
 			name: 'asc'
 		}
+	});
+}
+
+export async function getAllPersonnesForSurveillant(): Promise<any[]> {
+	return prisma.personne.findMany({
+		where: {
+			surveillant: null
+		},
+		include: {
+			compte: {
+				select: {
+					id: true,
+					role: true,
+					matricule: true
+				}
+			}
+		},
+		orderBy: {
+			name: 'asc'
+		}
+	});
+}
+
+export async function createSurveillantFromPersonne(personneId: string, matricule: string, poste: string) {
+	return prisma.$transaction(async (tx) => {
+		const personne = await tx.personne.findUniqueOrThrow({
+			where: { id: personneId },
+			include: { compte: true }
+		});
+
+		if (personne.surveillant) {
+			throw new Error('Cette personne est déjà surveillante');
+		}
+
+		let compte = personne.compte;
+		if (!compte) {
+			compte = await tx.compte.create({
+				data: {
+					matricule,
+					password: '123456',
+					role: 'SURVEILLANT',
+					statut: 'EN_ATTENTE',
+					personneId
+				}
+			});
+		} else {
+			compte = await tx.compte.update({
+				where: { id: compte.id },
+				data: { matricule, role: 'SURVEILLANT', statut: 'EN_ATTENTE' }
+			});
+		}
+
+		const surveillant = await tx.surveillant.create({
+			data: {
+				personneId,
+				poste
+			}
+		});
+
+		return { personne, compte, surveillant };
 	});
 }
 

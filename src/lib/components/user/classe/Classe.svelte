@@ -13,7 +13,7 @@
 		try {
 			await auth();
 		} catch (e) {
-			console.error('PocketBase unavailable');
+			console.error('PocketBase unavailable' , e);
 		}
 	}
 
@@ -79,6 +79,7 @@
 <CardUI>
 	<div class="h-50 w-full overflow-hidden">
 		{#if c.url && !imageError}
+			<!-- svelte-ignore a11y_img_redundant_alt -->
 			<img
 				src={c.url}
 				alt="image classe"
@@ -93,7 +94,7 @@
 			</div>
 		{/if}
 	</div>
-	<div class={color + ' h-2 w-full'} />
+	<div class={color + ' h-2 w-full'} ></div>
 	<div class="flex flex-col gap-4 bg-white/5 p-4">
 		<div class="flex items-center gap-2">
 			<span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CLASSE -</span>
