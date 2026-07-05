@@ -1,68 +1,28 @@
-import type { Eleve } from "$lib/types/Personne.type";
-import type { PageServerLoad } from "./$types";
+import type { PageServerLoad } from './$types';
+import { getEleves } from '$lib/server/prisma';
+import type { Eleve } from '$lib/types/Personne.type';
+
+function mapEleve(prismaEleve: any): Eleve {
+	const inscription = prismaEleve.inscriptions?.[0];
+	return {
+		id: prismaEleve.id,
+		nom: prismaEleve.personne.name,
+		prenom: prismaEleve.personne.lastname,
+		dateNaissance: prismaEleve.personne.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
+		classe: inscription?.classe?.nom || '',
+		stats: {
+			retards: 0,
+			absences: 0,
+			incidents: 0,
+			notesPositives: 0,
+			notesNegatives: 0,
+			heuresCours: 0
+		}
+	};
+}
 
 export const load: PageServerLoad = async () => {
-    let list_eleve: Eleve[] = [
-        { 
-            id: '1', 
-            nom: 'RANDRIANANTENAINA', 
-            prenom: 'Tsitoarimanjakely', 
-            dateNaissance: '2008-05-15', 
-            classe: '2nd S',
-            stats: {
-                retards: 2,
-                absences: 1,
-                incidents: 0,
-                notesPositives: 15,
-                notesNegatives: 3,
-                heuresCours: 38
-            }
-        },
-        { 
-            id: '2', 
-            nom: 'RAKOTO', 
-            prenom: 'Fanomezamasy', 
-            dateNaissance: '2008-03-22', 
-            classe: '1ere L',
-            stats: {
-                retards: 0,
-                absences: 0,
-                incidents: 1,
-                notesPositives: 18,
-                notesNegatives: 2,
-                heuresCours: 42
-            }
-        },
-        { 
-            id: '3', 
-            nom: 'ANDRIANTENAINA', 
-            prenom: 'Bako', 
-            dateNaissance: '2008-07-10', 
-            classe: 'Tle OSE',
-            stats: {
-                retards: 1,
-                absences: 2,
-                incidents: 2,
-                notesPositives: 12,
-                notesNegatives: 5,
-                heuresCours: 35
-            }
-        },
-        { 
-            id: '4', 
-            nom: 'RABE', 
-            prenom: 'Mialy', 
-            dateNaissance: '2009-01-12', 
-            classe: '2nd S',
-            stats: {
-                retards: 3,
-                absences: 0,
-                incidents: 0,
-                notesPositives: 16,
-                notesNegatives: 1,
-                heuresCours: 40
-            }
-        },
-    ];
-    return { list_eleve };
+	const eleves = await getEleves();
+	const list_eleve: Eleve[] = eleves.map(mapEleve);
+	return { list_eleve };
 };

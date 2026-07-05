@@ -2,8 +2,17 @@
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import * as Avatar  from '$lib/components/ui/avatar';
-	import { AlertCircle, Info, Star, UserX, MessageCircle, Heart, Share2, Send } from '@lucide/svelte/icons';
+	import * as Avatar from '$lib/components/ui/avatar';
+	import {
+		AlertCircle,
+		Info,
+		Star,
+		UserX,
+		MessageCircle,
+		Heart,
+		Share2,
+		Send
+	} from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 
 	const { incident, eleves } = $props<{
@@ -37,12 +46,12 @@
 	}
 
 	function getEleveName(id: string) {
-		const e = eleves.find(el => el.id === id);
+		const e = eleves.find((el) => el.id === id);
 		return e ? `${e.prenom} ${e.nom}` : 'Inconnu';
 	}
 
 	function getEleveInitials(id: string) {
-		const e = eleves.find(el => el.id === id);
+		const e = eleves.find((el) => el.id === id);
 		return e ? `${e.prenom[0]}${e.nom[0]}` : '??';
 	}
 
@@ -56,12 +65,15 @@
 
 	function handleAddComment() {
 		if (commentText.trim()) {
-			incident.comments = [...(incident.comments || []), {
-				id: Date.now().toString(),
-				author: 'Moi',
-				text: commentText.trim(),
-				date: new Date().toISOString()
-			}];
+			incident.comments = [
+				...(incident.comments || []),
+				{
+					id: Date.now().toString(),
+					author: 'Moi',
+					text: commentText.trim(),
+					date: new Date().toISOString()
+				}
+			];
 			commentText = '';
 		}
 	}
@@ -83,20 +95,22 @@
 	}
 </script>
 
-<div class="w-full max-w-2xl mx-auto">
-	<div class="bg-card rounded-xl border border-sidebar-border shadow-sm hover:shadow-md transition-shadow duration-200">
+<div class="mx-auto w-full max-w-2xl">
+	<div
+		class="rounded-xl border border-sidebar-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md"
+	>
 		<div class="p-4">
 			<div class="flex items-start justify-between">
 				<div class="flex items-center gap-3">
 					<Avatar.Root class="size-10">
-						<Avatar.Fallback class="text-xs font-bold bg-primary/10">
+						<Avatar.Fallback class="bg-primary/10 text-xs font-bold">
 							{getEleveInitials(incident.eleveId)}
 						</Avatar.Fallback>
 					</Avatar.Root>
 					<div>
 						<div class="flex items-center gap-2">
 							<button
-								class="font-semibold text-sm hover:text-primary hover:underline transition-colors"
+								class="text-sm font-semibold transition-colors hover:text-primary hover:underline"
 								onclick={() => handleEleveClick(incident.eleveId)}
 							>
 								{getEleveName(incident.eleveId)}
@@ -104,12 +118,15 @@
 							<span class="text-xs text-muted-foreground">·</span>
 							<span class="text-xs text-muted-foreground">{incident.auteur}</span>
 						</div>
-						<div class="flex items-center gap-2 mt-0.5">
+						<div class="mt-0.5 flex items-center gap-2">
 							<span class="text-xs text-muted-foreground">{timeAgo(incident.date)}</span>
 						</div>
 					</div>
 				</div>
-				<Badge variant="outline" class="gap-1.5 text-xs {typeConfig[incident.type].bg} {typeConfig[incident.type].color} border-0">
+			<Badge
+				variant="outline"
+				class="gap-1.5 text-xs {(typeConfig[incident.type] || typeConfig['info']).bg} {(typeConfig[incident.type] || typeConfig['info']).color} border-0"
+			>
 					{#if incident.type === 'note'}
 						<Star class="size-3" />
 					{:else if incident.type === 'erreur'}
@@ -119,15 +136,27 @@
 					{:else}
 						<UserX class="size-3" />
 					{/if}
-					{incident.type === 'note' ? 'Note' : incident.type === 'erreur' ? 'Erreur' : incident.type === 'info' ? 'Info' : 'Absence'}
+					{incident.type === 'note'
+						? 'Note'
+						: incident.type === 'erreur'
+							? 'Erreur'
+							: incident.type === 'info'
+								? 'Info'
+								: 'Absence'}
 				</Badge>
 			</div>
 
 			<p class="mt-3 text-sm leading-relaxed">{incident.message}</p>
 
 			<div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-				<span class="flex items-center gap-1 {typeConfig[incident.type].color}">
-					{incident.type === 'note' ? 'Positive' : incident.type === 'erreur' ? 'Problème' : incident.type === 'info' ? 'Info' : 'Absent'}
+				<span class="flex items-center gap-1 {(typeConfig[incident.type] || typeConfig['info']).color}">
+					{incident.type === 'note'
+						? 'Positive'
+						: incident.type === 'erreur'
+							? 'Problème'
+							: incident.type === 'info'
+								? 'Info'
+								: 'Absent'}
 				</span>
 			</div>
 
@@ -135,10 +164,17 @@
 				<div class="flex items-center justify-between pt-3">
 					<div class="flex items-center gap-1">
 						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleReact}>
-							<Heart class="size-3.5 {reactions.has(incident.id) ? 'fill-red-500 text-red-500' : ''}" />
+							<Heart
+								class="size-3.5 {reactions.has(incident.id) ? 'fill-red-500 text-red-500' : ''}"
+							/>
 							<span>{reactions.has(incident.id) ? 1 : 0}</span>
 						</Button>
-						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleToggleComments}>
+						<Button
+							variant="ghost"
+							size="sm"
+							class="gap-1.5 text-xs"
+							onclick={handleToggleComments}
+						>
 							<MessageCircle class="size-3.5" />
 							<span>{incident.comments?.length || 0}</span>
 						</Button>
@@ -151,23 +187,23 @@
 		</div>
 
 		{#if showComments}
-			<div class="border-t border-sidebar-border p-4 bg-muted/20">
-				<div class="flex items-center gap-2 mb-3">
+			<div class="border-t border-sidebar-border bg-muted/20 p-4">
+				<div class="mb-3 flex items-center gap-2">
 					<input
 						type="text"
 						bind:value={commentText}
 						placeholder="Ajouter un commentaire..."
-						class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+						class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none"
 					/>
 					<Button size="sm" onclick={handleAddComment} disabled={!commentText.trim()}>
 						<Send class="size-3.5" />
 					</Button>
 				</div>
 				{#if incident.comments && incident.comments.length > 0}
-					<div class="space-y-2 max-h-60 overflow-y-auto">
+					<div class="max-h-60 space-y-2 overflow-y-auto">
 						{#each incident.comments as comment (comment.id)}
 							<div class="flex items-start gap-2 text-sm">
-								<span class="font-medium text-xs">{comment.author}</span>
+								<span class="text-xs font-medium">{comment.author}</span>
 								<span class="text-xs text-muted-foreground">{comment.text}</span>
 							</div>
 						{/each}

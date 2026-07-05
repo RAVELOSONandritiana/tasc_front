@@ -14,14 +14,44 @@
 	const coursId = $page.params.coursId || '1';
 
 	let listeCours = $state<Cours[]>([
-		{ id: '1', nom: 'Mathématiques', coefficient: 6, professeur: 'RANDRIANANTENAINA Tsitoarimanjakely', participants: ['1', '2', '3'] },
-		{ id: '2', nom: 'Physique', coefficient: 4, professeur: 'ANDRIANTENAINA Bako', participants: ['1', '3'] },
-		{ id: '3', nom: 'Français', coefficient: 5, professeur: 'RAKOTO Fanomezamasy', participants: ['2', '3'] }
+		{
+			id: '1',
+			nom: 'Mathématiques',
+			coefficient: 6,
+			professeur: 'RANDRIANANTENAINA Tsitoarimanjakely',
+			participants: ['1', '2', '3']
+		},
+		{
+			id: '2',
+			nom: 'Physique',
+			coefficient: 4,
+			professeur: 'ANDRIANTENAINA Bako',
+			participants: ['1', '3']
+		},
+		{
+			id: '3',
+			nom: 'Français',
+			coefficient: 5,
+			professeur: 'RAKOTO Fanomezamasy',
+			participants: ['2', '3']
+		}
 	]);
 
 	let listeExamens = $state<Examen[]>([
-		{ id: 'e1', nom: 'Examen de mi-semestre', date: '2026-02-15', classeId: classeId, periode: 'Semestre 1' },
-		{ id: 'e2', nom: 'Examen de fin de semestre', date: '2026-03-20', classeId: classeId, periode: 'Semestre 1' }
+		{
+			id: 'e1',
+			nom: 'Examen de mi-semestre',
+			date: '2026-02-15',
+			classeId: classeId,
+			periode: 'Semestre 1'
+		},
+		{
+			id: 'e2',
+			nom: 'Examen de fin de semestre',
+			date: '2026-03-20',
+			classeId: classeId,
+			periode: 'Semestre 1'
+		}
 	]);
 
 	let elevesClasse = $state<EleveCours[]>([
@@ -32,7 +62,15 @@
 			dateNaissance: '2008-05-15',
 			actif: true,
 			notes: [
-				{ id: 'n1', valeur: 15, coefficient: 4, date: '2026-02-15', libelle: 'Examen de mi-semestre', coursId: '1', examenId: 'e1' }
+				{
+					id: 'n1',
+					valeur: 15,
+					coefficient: 4,
+					date: '2026-02-15',
+					libelle: 'Examen de mi-semestre',
+					coursId: '1',
+					examenId: 'e1'
+				}
 			]
 		},
 		{
@@ -42,7 +80,15 @@
 			dateNaissance: '2008-03-22',
 			actif: true,
 			notes: [
-				{ id: 'n2', valeur: 16, coefficient: 4, date: '2026-02-15', libelle: 'Examen de mi-semestre', coursId: '1', examenId: 'e1' }
+				{
+					id: 'n2',
+					valeur: 16,
+					coefficient: 4,
+					date: '2026-02-15',
+					libelle: 'Examen de mi-semestre',
+					coursId: '1',
+					examenId: 'e1'
+				}
 			]
 		},
 		{
@@ -63,11 +109,13 @@
 
 	function sauvegarderNotes() {
 		if (!examenSelectionne || !coursInfo) return;
-		
+
 		Object.entries(notesTemp).forEach(([eleveId, valeur]) => {
 			const eleve = elevesClasse.find((e) => e.id === eleveId);
 			if (eleve && valeur > 0) {
-				const noteExistante = eleve.notes?.find((n) => n.examenId === examenSelectionne.id && n.coursId === coursInfo.id);
+				const noteExistante = eleve.notes?.find(
+					(n) => n.examenId === examenSelectionne.id && n.coursId === coursInfo.id
+				);
 				if (noteExistante) {
 					noteExistante.valeur = valeur;
 				} else {
@@ -90,15 +138,19 @@
 
 	function getNoteExistante(eleveId: string): number | undefined {
 		const eleve = elevesClasse.find((e) => e.id === eleveId);
-		return eleve?.notes?.find((n) => n.examenId === examenSelectionne?.id && n.coursId === coursInfo?.id)?.valeur;
+		return eleve?.notes?.find(
+			(n) => n.examenId === examenSelectionne?.id && n.coursId === coursInfo?.id
+		)?.valeur;
 	}
 
 	const coursInfo = $derived(listeCours.find((c) => c.id === coursId));
 
 	const elevesParticipants = $derived(
-		elevesClasse.filter((e) => e.actif && (!coursInfo?.participants?.length || coursInfo.participants.includes(e.id)))
+		elevesClasse.filter(
+			(e) => e.actif && (!coursInfo?.participants?.length || coursInfo.participants.includes(e.id))
+		)
 	);
-	
+
 	let examenSelectionne = $derived<Examen | null>(
 		(() => {
 			const examenId = $page.url.searchParams.get('examen');
@@ -107,12 +159,17 @@
 	);
 
 	function calculerMoyenne(eleve: EleveCours): number {
-		const notes = eleve.notes?.filter((n) => n.coursId === coursInfo?.id && n.examenId === examenSelectionne?.id) || [];
+		const notes =
+			eleve.notes?.filter(
+				(n) => n.coursId === coursInfo?.id && n.examenId === examenSelectionne?.id
+			) || [];
 		if (notes.length === 0) {
-			const notesTempVals = Object.entries(notesTemp).filter(([id]) => {
-				const e = elevesClasse.find((e) => e.id === id);
-				return e && notesTemp[id] > 0;
-			}).map(([_, v]) => v);
+			const notesTempVals = Object.entries(notesTemp)
+				.filter(([id]) => {
+					const e = elevesClasse.find((e) => e.id === id);
+					return e && notesTemp[id] > 0;
+				})
+				.map(([_, v]) => v);
 			if (notesTempVals.length === 0) return 0;
 			return notesTempVals[0];
 		}
@@ -125,10 +182,11 @@
 		<div>
 			<h1 class="text-2xl font-bold">{coursInfo?.nom || 'Cours'}</h1>
 			<p class="text-sm text-muted-foreground">
-				Professeur : {coursInfo?.professeur || '—'} • Coefficient : {coursInfo?.coefficient} • Participants : {elevesParticipants.length}
+				Professeur : {coursInfo?.professeur || '—'} • Coefficient : {coursInfo?.coefficient} • Participants
+				: {elevesParticipants.length}
 			</p>
 			{#if examenSelectionne}
-				<p class="text-xs text-muted-foreground mt-1">
+				<p class="mt-1 text-xs text-muted-foreground">
 					Examen : {examenSelectionne.nom} • {examenSelectionne.date}
 				</p>
 			{/if}
@@ -144,7 +202,7 @@
 	{#if !examenSelectionne}
 		<div class="rounded-md border p-8 text-center">
 			<FileText class="mx-auto mb-4 size-12 text-muted-foreground" />
-			<p class="text-muted-foreground mb-4">Sélectionnez un examen depuis la page des cours</p>
+			<p class="mb-4 text-muted-foreground">Sélectionnez un examen depuis la page des cours</p>
 			<div class="flex justify-center gap-2">
 				{#each listeExamens as examen (examen.id)}
 					<a href="/classe/{classeId}/cours/{coursId}?examen={examen.id}">
@@ -172,7 +230,9 @@
 									<Table.Cell>
 										<div class="font-medium">{eleve.nom} {eleve.prenom}</div>
 										<div class="text-xs text-muted-foreground">
-											{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
+											{eleve.dateNaissance
+												? new Date(eleve.dateNaissance).toLocaleDateString()
+												: '—'}
 										</div>
 									</Table.Cell>
 									<Table.Cell class="text-center">

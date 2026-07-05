@@ -1,31 +1,18 @@
-import type { PageServerLoad } from "./$types";
+import type { PageServerLoad } from './$types';
+import { getClasses } from '$lib/server/prisma';
 
 export const load: PageServerLoad = async () => {
-
-    let listClasse = [
-        {
-            id: 1,
-            niveau: 1,
-            series: 's',
-            titulaire: 'RAVELOSON Andritiana Michel',
-            eleves: 40
-        },
-        {
-            id: 2,
-            niveau: 2,
-            titulaire: 'RAVELOSON Andritiana Michel',
-            eleves: 45,
-            series: 's',
-        },
-        {
-            id: 3,
-            niveau: 0,
-            titulaire: 'RAVELOSON Andritiana Michel',
-            eleves: 50
-        },
-    ];
-    listClasse = listClasse.sort((a, b) => a.niveau - b.niveau)
-    return {
-        listClasse
-    }
-}
+	const classes = await getClasses();
+	const listClasse = classes.map(
+		(c): { id: string; niveau: number; series: string; titulaire: string; eleves: number } => ({
+			id: c.id,
+			niveau: c.niveau,
+			series: c.serie || '',
+			titulaire: c.titulaire ? `${c.titulaire.personne.name} ${c.titulaire.personne.lastname}` : '',
+			eleves: c.elevesCount
+		})
+	);
+	return {
+		listClasse
+	};
+};

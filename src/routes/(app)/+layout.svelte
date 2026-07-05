@@ -17,22 +17,24 @@
 		Settings,
 		LogOut
 	} from '@lucide/svelte/icons';
-	import { goto } from '$app/navigation';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
-	const path = [
-		{ path: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-		{ path: '/surveillant', label: 'Surveillants', icon: UserSquare2 },
-		{ path: '/enseignant', label: 'Enseignants', icon: UserCog },
-		{ path: '/personne', label: 'Personnels', icon: Users },
-		{ path: '/eleves', label: 'Élèves', icon: GraduationCap },
-		{ path: '/classe', label: 'Classes', icon: ClipboardList },
-		{ path: '/incidents', label: 'Incidents', icon: AlertTriangle },
-		{ path: '/parametre', label: 'Paramètres', icon: Settings },
-		{ path: '/salle', label: 'Salles', icon: Building2 },
-		{ path: '/profil', label: 'Mon profil', icon: UserRoundSearch },
+	const allPaths = [
+		{ path: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{ path: '/surveillant', label: 'Surveillants', icon: UserSquare2, roles: ['ADMINISTRATEUR'] },
+		{ path: '/enseignant', label: 'Enseignants', icon: UserCog, roles: ['ADMINISTRATEUR'] },
+		{ path: '/personne', label: 'Personnels', icon: Users, roles: ['ADMINISTRATEUR'] },
+		{ path: '/eleves', label: 'Élèves', icon: GraduationCap, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{ path: '/classe', label: 'Classes', icon: ClipboardList, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{ path: '/incidents', label: 'Incidents', icon: AlertTriangle, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{ path: '/parametre', label: 'Paramètres', icon: Settings, roles: ['ADMINISTRATEUR'] },
+		{ path: '/salle', label: 'Salles', icon: Building2, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{ path: '/profil', label: 'Mon profil', icon: UserRoundSearch, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] }
 	];
+
+	const userRole = data.user?.role;
+	const path = allPaths.filter(p => userRole ? p.roles.includes(userRole) : false);
 
 	const isActive = (linkPath: string) => $page.url.pathname.startsWith(linkPath);
 </script>
@@ -54,7 +56,10 @@
 			</Sidebar.Header>
 			<Sidebar.Content>
 				<Sidebar.Group>
-					<Sidebar.GroupLabel class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Navigation</Sidebar.GroupLabel>
+					<Sidebar.GroupLabel
+						class="text-xs font-medium tracking-wider text-muted-foreground uppercase"
+						>Navigation</Sidebar.GroupLabel
+					>
 					<Sidebar.Menu>
 						{#each path as p (p.path)}
 							<Sidebar.MenuItem>
@@ -62,8 +67,16 @@
 									{#snippet child({ props })}
 										<a href={p.path} {...props}>
 											<span class="inline-flex items-center gap-3">
-												<p.icon class="size-4 transition-all duration-200 {isActive(p.path) ? 'text-primary' : ''}" />
-												<span class="transition-all duration-200 {isActive(p.path) ? 'font-semibold text-primary' : ''}">{p.label}</span>
+												<p.icon
+													class="size-4 transition-all duration-200 {isActive(p.path)
+														? 'text-primary'
+														: ''}"
+												/>
+												<span
+													class="transition-all duration-200 {isActive(p.path)
+														? 'font-semibold text-primary'
+														: ''}">{p.label}</span
+												>
 											</span>
 										</a>
 									{/snippet}
@@ -73,16 +86,24 @@
 					</Sidebar.Menu>
 				</Sidebar.Group>
 			</Sidebar.Content>
-			<Sidebar.Footer class="border-t border-sidebar-border p-4">
-				<Button variant="outline" class="w-full gap-2 text-muted-foreground hover:text-destructive transition-colors" onclick={() => goto('/')}>
+		<Sidebar.Footer class="border-t border-sidebar-border p-4">
+			<form method="POST" action="/signout?/logout">
+				<Button
+					type="submit"
+					variant="outline"
+					class="w-full gap-2 text-muted-foreground transition-colors hover:text-destructive"
+				>
 					<LogOut class="size-4" />
 					Déconnexion
 				</Button>
-			</Sidebar.Footer>
+			</form>
+		</Sidebar.Footer>
 		</Sidebar.Root>
 
 		<div class="flex flex-1 flex-col bg-background text-foreground">
-			<header class="flex items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 backdrop-blur-sm px-4 h-16 text-sidebar-foreground sticky top-0 z-30 relative">
+			<header
+				class="relative sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm"
+			>
 				<div class="flex items-center space-x-2">
 					<Sidebar.Trigger />
 				</div>
@@ -90,7 +111,7 @@
 					<Profil />
 				</div>
 			</header>
-			<div class="flex-1 flex flex-col">
+			<div class="flex flex-1 flex-col">
 				{@render children()}
 			</div>
 		</div>

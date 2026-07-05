@@ -1,10 +1,10 @@
 export type Salle = {
-	id: number;
+	id: string;
 	num: number;
 	name: string;
 	place: number;
-	used?: boolean;
-	url?: string;
+	occupe?: boolean;
+	imageUrl?: string;
 };
 
 export type Classe = {
@@ -81,7 +81,9 @@ export type SeanceEDT = {
 	heureDebut: string;
 	heureFin: string;
 	coursId: string;
-	salleId?: number;
+	coursNom?: string;
+	salleId?: string;
+	salleNom?: string;
 };
 
 export type EmploiDuTemps = {

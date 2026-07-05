@@ -317,6 +317,7 @@ model Compte {
   personne   Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
 
   profil Profil?
+  activites Activite[]
 
   @@map("comptes")
 }
@@ -356,6 +357,22 @@ model Profil {
   updatedAt DateTime @updatedAt
 
   @@map("profils")
+}
+
+/// Historique des actions utilisateur.
+model Activite {
+  id         String    @id @default(uuid())
+  action     String // ex: "connexion", "creation_incident", "modification_eleve"
+  description String // details de l'action
+  ipAddress  String?
+  userAgent  String?
+
+  compteId String
+  compte   Compte @relation(fields: [compteId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("activites")
 }
 
 // ============================================================

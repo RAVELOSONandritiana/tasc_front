@@ -76,12 +76,7 @@
 
 				<div class="text-center text-sm">
 					Déjà un compte ?
-					<Button
-						type="button"
-						variant="link"
-						class="h-auto p-0 text-sm"
-						onclick={switchToSignin}
-					>
+					<Button type="button" variant="link" class="h-auto p-0 text-sm" onclick={switchToSignin}>
 						Se connecter
 					</Button>
 				</div>

@@ -214,6 +214,19 @@ CREATE TABLE "profils" (
 );
 
 -- CreateTable
+CREATE TABLE "activites" (
+    "id" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "compteId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "activites_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "salles" (
     "id" TEXT NOT NULL,
     "num" INTEGER NOT NULL,
@@ -438,6 +451,9 @@ ALTER TABLE "comptes" ADD CONSTRAINT "comptes_personneId_fkey" FOREIGN KEY ("per
 
 -- AddForeignKey
 ALTER TABLE "profils" ADD CONSTRAINT "profils_compteId_fkey" FOREIGN KEY ("compteId") REFERENCES "comptes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "activites" ADD CONSTRAINT "activites_compteId_fkey" FOREIGN KEY ("compteId") REFERENCES "comptes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "emplois_du_temps" ADD CONSTRAINT "emplois_du_temps_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;

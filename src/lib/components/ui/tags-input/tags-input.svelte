@@ -59,7 +59,9 @@
 		class="flex flex-wrap items-center gap-2 rounded-md border border-input bg-background px-3 py-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10"
 	>
 		{#each values as tag, index}
-			<Badge class="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-sm text-muted-foreground">
+			<Badge
+				class="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-sm text-muted-foreground"
+			>
 				<span>{tag}</span>
 				<button
 					type="button"
@@ -77,21 +79,25 @@
 			placeholder={values.length ? placeholder : placeholder}
 			bind:value={inputValue}
 			on:keydown={handleKeyDown}
-			disabled={disabled}
+			{disabled}
 		/>
 	</div>
 	{#if filteredOptions.length && inputValue}
-		<div class="max-h-40 overflow-auto rounded-b-md border border-t-0 border-input bg-popover p-2 shadow-sm">
+		<div
+			class="max-h-40 overflow-auto rounded-b-md border border-t-0 border-input bg-popover p-2 shadow-sm"
+		>
 			{#each filteredOptions as option}
 				<button
 					type="button"
 					class="w-full rounded-md px-2 py-1 text-left text-sm text-foreground transition hover:bg-muted"
 					on:click={() => addTag(option)}
-			>
+				>
 					{option}
 				</button>
 			{/each}
 		</div>
 	{/if}
-	<p class="text-xs text-muted-foreground">Sélectionnez une matière dans la liste et appuyez sur Entrée.</p>
+	<p class="text-xs text-muted-foreground">
+		Sélectionnez une matière dans la liste et appuyez sur Entrée.
+	</p>
 </div>

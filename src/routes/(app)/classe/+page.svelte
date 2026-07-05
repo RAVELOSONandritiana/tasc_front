@@ -9,7 +9,7 @@
 	import { ClipboardList, Plus } from '@lucide/svelte/icons';
 	import { Button } from '$lib/components/ui/button';
 	import type { Personne } from '$lib/types/Personne.type';
-	
+
 	const { data } = $props();
 
 	const { listClasse } = data;
@@ -19,10 +19,22 @@
 	let serie = $state('');
 	let searchProf = $state('');
 	let selectedProf: Personne | null = $state(null);
-	
+
 	let profs = $state<Personne[]>([
-		{ id: '1', name: 'RANDRIANANTENAINA', lastname: 'Tsitoarimanjakely', email: 'tsito@example.com', phone: '+261 34 000 00 00' },
-		{ id: '2', name: 'ANDRIANTENAINA', lastname: 'Bako', email: 'bako@example.com', phone: '+261 34 000 00 01' }
+		{
+			id: '1',
+			name: 'RANDRIANANTENAINA',
+			lastname: 'Tsitoarimanjakely',
+			email: 'tsito@example.com',
+			phone: '+261 34 000 00 00'
+		},
+		{
+			id: '2',
+			name: 'ANDRIANTENAINA',
+			lastname: 'Bako',
+			email: 'bako@example.com',
+			phone: '+261 34 000 00 01'
+		}
 	]);
 
 	function selectProf(p: Personne) {
@@ -36,17 +48,24 @@
 	}
 </script>
 
-<main class="bg-background text-foreground h-screen flex flex-col">
-	<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
+<main class="flex h-screen flex-col bg-background text-foreground">
+	<div class="sticky top-0 z-10 border-b border-sidebar-border bg-background p-4 md:p-6">
 		<div class="mx-auto max-w-7xl space-y-4">
-			<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div
+				class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+			>
 				<div class="flex items-center gap-3">
 					<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
 						<ClipboardList class="size-5 text-primary" />
 					</div>
 					<div>
 						<h1 class="text-xl font-bold tracking-tight">Classes</h1>
-						<p class="text-xs text-muted-foreground">{listClasse.length} classe{listClasse.length > 1 ? 's' : ''} enregistrée{listClasse.length > 1 ? 's' : ''}</p>
+						<p class="text-xs text-muted-foreground">
+							{listClasse.length} classe{listClasse.length > 1 ? 's' : ''} enregistrée{listClasse.length >
+							1
+								? 's'
+								: ''}
+						</p>
 					</div>
 				</div>
 				<Dialog.Root bind:open={dialogOpen}>
@@ -82,20 +101,30 @@
 							<div class="grid gap-3">
 								<Label for="prof">Prof titulaire</Label>
 								<div class="relative">
-									<SearchInput bind:value={searchProf} placeholder="Rechercher un professeur..." class="w-full" />
+									<SearchInput
+										bind:value={searchProf}
+										placeholder="Rechercher un professeur..."
+										class="w-full"
+									/>
 									{#if selectedProf}
-										<div class="flex items-center gap-2 mt-2 p-2 bg-muted/30 rounded-lg">
-											<div class="bg-primary/10 flex size-8 items-center justify-center rounded-full">
-												<span class="text-sm font-bold text-primary">{selectedProf.name[0]}{selectedProf.lastname[0]}</span>
+										<div class="mt-2 flex items-center gap-2 rounded-lg bg-muted/30 p-2">
+											<div
+												class="flex size-8 items-center justify-center rounded-full bg-primary/10"
+											>
+												<span class="text-sm font-bold text-primary"
+													>{selectedProf.name[0]}{selectedProf.lastname[0]}</span
+												>
 											</div>
-											<span class="text-sm font-medium">{selectedProf.name} {selectedProf.lastname}</span>
+											<span class="text-sm font-medium"
+												>{selectedProf.name} {selectedProf.lastname}</span
+											>
 										</div>
 									{/if}
 								</div>
 							</div>
 						</div>
 						<Dialog.Footer>
-							<Button variant="outline" size="sm" onclick={() => dialogOpen = false}>
+							<Button variant="outline" size="sm" onclick={() => (dialogOpen = false)}>
 								Annuler
 							</Button>
 							<Button variant="default" size="sm" onclick={soumettre}>Confirmer</Button>
@@ -104,7 +133,7 @@
 				</Dialog.Root>
 			</div>
 
-			<Card class="animate-slide-up stagger-1 opacity-0 p-4">
+			<Card class="animate-slide-up stagger-1 p-4 opacity-0">
 				<SearchInput placeholder="Rechercher une classe..." />
 			</Card>
 		</div>
@@ -114,7 +143,10 @@
 		<div class="mx-auto max-w-7xl">
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each listClasse as l, i (l.id)}
-					<div class="animate-slide-up opacity-0" style="animation-delay: {Math.min(i * 50, 400)}ms">
+					<div
+						class="animate-slide-up opacity-0"
+						style="animation-delay: {Math.min(i * 50, 400)}ms"
+					>
 						<Classe classe={l} />
 					</div>
 				{/each}

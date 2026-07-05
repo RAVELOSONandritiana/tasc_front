@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import Calendar from '$lib/components/ui/calendar/calendar.svelte';
@@ -11,9 +12,20 @@
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { provincesVariable } from '$lib/variables/territoire';
+	import type { ActionResult } from '@sveltejs/kit';
+	import { goto } from '$app/navigation';
+
+	function toTitle(value: string): string {
+		return value
+			.split(' ')
+			.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+			.join(' ');
+	}
 
 	let open = $state(false);
 	let value = $state<CalendarDate | undefined>();
+	let submitting = $state(false);
+	let success = $state(false);
 
 	interface PersonnelForm {
 		nom: string;
@@ -59,68 +71,6 @@
 		}
 	});
 
-	function handleSubmit(event: Event) {
-		event.preventDefault();
-
-		const newErrors: Record<string, string> = {};
-
-		if (!form.nom.trim()) {
-			newErrors.nom = 'Le nom est obligatoire';
-		} else if (form.nom.length < 2) {
-			newErrors.nom = 'Le nom doit contenir au moins 2 caractères';
-		}
-
-		if (!form.prenom.trim()) {
-			newErrors.prenom = 'Le prénom est obligatoire';
-		} else if (form.prenom.length < 2) {
-			newErrors.prenom = 'Le prénom doit contenir au moins 2 caractères';
-		}
-
-		if (!form.dateNaissance) {
-			newErrors.dateNaissance = 'La date de naissance est obligatoire';
-		}
-
-		if (!form.lieuNaissance.trim()) {
-			newErrors.lieuNaissance = 'Le lieu de naissance est obligatoire';
-		}
-
-		if (!form.domicile.trim()) {
-			newErrors.domicile = 'Le domicile est obligatoire';
-		}
-
-		if (!form.fokontany.trim()) {
-			newErrors.fokontany = 'Le fokontany est obligatoire';
-		}
-
-		if (!form.communeResidence.trim()) {
-			newErrors.communeResidence = 'La commune de résidence est obligatoire';
-		}
-
-		if (!form.telephone.trim()) {
-			newErrors.telephone = 'Le téléphone est obligatoire';
-		} else if (!/^(\+261|0)[0-9]{9,10}$/.test(form.telephone)) {
-			newErrors.telephone = 'Format de téléphone invalide (ex: +261xxxxxxxx)';
-		}
-
-		if (!form.email.trim()) {
-			newErrors.email = 'L\'email est obligatoire';
-		} else if (!/^[\w.-]+@[\w.-]+\.\w+$/.test(form.email)) {
-			newErrors.email = 'Format d\'email invalide';
-		}
-
-		if (!form.cin.trim()) {
-			newErrors.cin = 'Le CIN est obligatoire';
-		} else if (!/^[0-9]{12}$/.test(form.cin.replace(/\s/g, ''))) {
-			newErrors.cin = 'Le CIN doit contenir 12 chiffres';
-		}
-
-		errors = newErrors;
-
-		if (Object.keys(errors).length === 0) {
-			console.log('Formulaire soumis avec les données:', form);
-		}
-	}
-
 	function resetForm() {
 		form = {
 			nom: '',
@@ -142,45 +92,76 @@
 		errors = {};
 		value = undefined;
 	}
+
+	function handleSubmit() {
+		if (Object.keys(errors).length === 0) {
+			success = true;
+			setTimeout(() => goto('/personne'), 800);
+		}
+	}
 </script>
 
 <main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
 	<div class="mx-auto max-w-4xl">
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouveau personnel</h1>
-			<p class="text-sm text-muted-foreground">
-				Tous les champs sont obligatoires.
-			</p>
+			<p class="text-sm text-muted-foreground">Tous les champs sont obligatoires.</p>
 		</div>
 
-		<form method="POST" onsubmit={handleSubmit} class="space-y-6">
+		{#if success}
+			<div class="rounded-md border border-emerald-500 bg-emerald-500/10 p-4 text-center">
+				<p class="text-sm font-medium text-emerald-500">Personnel créé avec succès !</p>
+			</div>
+		{/if}
+
+		<form
+			method="POST"
+			action="?/create"
+			use:enhance={() => {
+				submitting = true;
+				return async ({ result }: { result: ActionResult }) => {
+					submitting = false;
+					if (result.type === 'success') {
+						success = true;
+						setTimeout(() => goto('/personne'), 800);
+					} else if (result.type === 'failure') {
+						errors = result.data?.errors || {};
+					}
+				};
+			}}
+			class="space-y-6"
+		>
 			<Accordion.Root type="single">
 				<Accordion.Item value="infos-perso">
-					<Accordion.Trigger class="text-lg font-semibold">Informations personnelles</Accordion.Trigger>
+					<Accordion.Trigger class="text-lg font-semibold"
+						>Informations personnelles</Accordion.Trigger
+					>
 					<Accordion.Content>
 						<div class="grid gap-4 rounded-md border p-4 md:grid-cols-3">
 							<div class="grid gap-2">
 								<Label for="nom">Nom *</Label>
-							<Input
-								id="nom"
-								bind:value={form.nom}
-								placeholder="Entrer le nom"
-								class={errors.nom ? 'border-destructive' : ''}
-								oninput={(e) => form.nom = (e.target as HTMLInputElement).value.toUpperCase()}
-							/>
+								<Input
+									id="nom"
+									name="nom"
+									bind:value={form.nom}
+									placeholder="Entrer le nom"
+									class={errors.nom ? 'border-destructive' : ''}
+									
+								/>
 								{#if errors.nom}
 									<span class="text-xs text-destructive">{errors.nom}</span>
 								{/if}
 							</div>
 							<div class="grid gap-2">
 								<Label for="prenom">Prénom *</Label>
-							<Input
-								id="prenom"
-								bind:value={form.prenom}
-								placeholder="Entrer le prénom"
-								class={errors.prenom ? 'border-destructive' : ''}
-								oninput={(e) => form.prenom = (e.target as HTMLInputElement).value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-							/>
+								<Input
+									id="prenom"
+									name="prenom"
+									bind:value={form.prenom}
+									placeholder="Entrer le prénom"
+									class={errors.prenom ? 'border-destructive' : ''}
+									
+								/>
 								{#if errors.prenom}
 									<span class="text-xs text-destructive">{errors.prenom}</span>
 								{/if}
@@ -190,7 +171,11 @@
 								<Popover.Root bind:open>
 									<Popover.Trigger>
 										{#snippet child({ props })}
-											<Button {...props} variant="outline" class="w-full justify-between font-normal">
+											<Button
+												{...props}
+												variant="outline"
+												class="w-full justify-between font-normal"
+											>
 												{value
 													? value.toDate(getLocalTimeZone()).toLocaleDateString()
 													: 'Sélectionner la date'}
@@ -226,9 +211,11 @@
 												<Label for="lieu">Lieu *</Label>
 												<Input
 													id="lieu"
+													name="lieuNaissance"
 													bind:value={form.lieuNaissance}
 													placeholder="Ex: Antananarivo"
 													class={errors.lieuNaissance ? 'border-destructive' : ''}
+													
 												/>
 												{#if errors.lieuNaissance}
 													<span class="text-xs text-destructive">{errors.lieuNaissance}</span>
@@ -236,11 +223,23 @@
 											</div>
 											<div class="grid gap-2">
 												<Label for="commune-naiss">Commune</Label>
-												<Input id="commune-naiss" bind:value={form.communeNaissance} placeholder="Ex: Isoraka" />
+												<Input
+													id="commune-naiss"
+													name="communeNaissance"
+													bind:value={form.communeNaissance}
+													placeholder="Ex: Isoraka"
+													
+												/>
 											</div>
 											<div class="grid gap-2">
 												<Label for="region-naiss">Région</Label>
-												<Input id="region-naiss" bind:value={form.regionNaissance} placeholder="Ex: Analamanga" />
+												<Input
+													id="region-naiss"
+													name="regionNaissance"
+													bind:value={form.regionNaissance}
+													placeholder="Ex: Analamanga"
+													
+												/>
 											</div>
 											<div class="grid gap-2">
 												<Label for="province-naiss">Province</Label>
@@ -269,9 +268,11 @@
 									<Label for="domicile">Domicile *</Label>
 									<Input
 										id="domicile"
+										name="domicile"
 										bind:value={form.domicile}
 										placeholder="Ex: Lot C234 Ambatonakanga"
 										class={errors.domicile ? 'border-destructive' : ''}
+										
 									/>
 									{#if errors.domicile}
 										<span class="text-xs text-destructive">{errors.domicile}</span>
@@ -281,9 +282,11 @@
 									<Label for="fokontany">Fokontany *</Label>
 									<Input
 										id="fokontany"
+										name="fokontany"
 										bind:value={form.fokontany}
 										placeholder="Ex: Ambatonakanga"
 										class={errors.fokontany ? 'border-destructive' : ''}
+										
 									/>
 									{#if errors.fokontany}
 										<span class="text-xs text-destructive">{errors.fokontany}</span>
@@ -293,9 +296,11 @@
 									<Label for="commune_res">Commune *</Label>
 									<Input
 										id="commune_res"
+										name="communeResidence"
 										bind:value={form.communeResidence}
 										placeholder="Ex: Toamasina"
 										class={errors.communeResidence ? 'border-destructive' : ''}
+										
 									/>
 									{#if errors.communeResidence}
 										<span class="text-xs text-destructive">{errors.communeResidence}</span>
@@ -303,7 +308,13 @@
 								</div>
 								<div class="grid gap-2">
 									<Label for="region_res">Région *</Label>
-									<Input id="region_res" bind:value={form.regionResidence} placeholder="Ex: Toamasina" />
+									<Input
+										id="region_res"
+										name="regionResidence"
+										bind:value={form.regionResidence}
+										placeholder="Ex: Toamasina"
+										
+									/>
 								</div>
 							</div>
 
@@ -317,6 +328,7 @@
 													<Label for="telephone_personnel">Téléphone *</Label>
 													<Input
 														id="telephone_personnel"
+														name="telephone"
 														bind:value={form.telephone}
 														type="tel"
 														placeholder="+261xxxxxxxx"
@@ -330,6 +342,7 @@
 													<Label for="email_personnel">Email *</Label>
 													<Input
 														id="email_personnel"
+														name="email"
 														bind:value={form.email}
 														type="email"
 														placeholder="exemple@email.com"
@@ -343,6 +356,7 @@
 													<Label for="cin">CIN *</Label>
 													<Input
 														id="cin"
+														name="cin"
 														bind:value={form.cin}
 														placeholder="Entrer le CIN"
 														maxlength={12}
@@ -363,10 +377,8 @@
 			</Accordion.Root>
 
 			<div class="flex items-center gap-4 pt-4">
-				<Button type="reset" variant="outline" onclick={resetForm}>
-					Effacer
-				</Button>
-				<AlertDialog.Root>
+				<Button type="reset" variant="outline" onclick={resetForm}>Effacer</Button>
+				<AlertDialog.Root open={!success}>
 					<AlertDialog.Trigger class={buttonVariants({ variant: 'default' })}>
 						Créer le personnel
 					</AlertDialog.Trigger>
@@ -379,9 +391,7 @@
 						</AlertDialog.Header>
 						<AlertDialog.Footer>
 							<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-							<AlertDialog.Action type="submit" onclick={handleSubmit}>
-								Confirmer
-							</AlertDialog.Action>
+							<AlertDialog.Action type="submit" disabled={submitting}>Confirmer</AlertDialog.Action>
 						</AlertDialog.Footer>
 					</AlertDialog.Content>
 				</AlertDialog.Root>

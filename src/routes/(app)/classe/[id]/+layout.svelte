@@ -27,7 +27,7 @@
 	}
 </script>
 
-<header class="border-b shadow-sm sticky z-100 top-16 bg-sidebar">
+<header class="sticky top-16 z-100 border-b bg-sidebar shadow-sm">
 	<nav>
 		<ul class="flex items-center justify-start gap-x-3 px-4 py-2">
 			{#each navigation as n (n.label)}

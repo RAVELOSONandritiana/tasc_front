@@ -8,44 +8,12 @@
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import type { EleveCours } from '$lib/types/Materiel.type';
+	import type { PageProps } from './$types';
+
+	const { data }: PageProps = $props();
 
 	let searchEleve = $state('');
-
-	let elevesInscrits = $state<EleveCours[]>([
-		{
-			id: '1',
-			nom: 'RANDRIANANTENAINA',
-			prenom: 'Tsitoarimanjakely',
-			dateNaissance: '2008-05-15',
-			actif: true,
-			notes: [],
-			incidents: [],
-			absences: [],
-			retards: []
-		},
-		{
-			id: '2',
-			nom: 'RAKOTO',
-			prenom: 'Fanomezamasy',
-			dateNaissance: '2008-03-22',
-			actif: true,
-			notes: [],
-			incidents: [],
-			absences: [],
-			retards: []
-		},
-		{
-			id: '3',
-			nom: 'ANDRIANTENAINA',
-			prenom: 'Bako',
-			dateNaissance: '2008-07-10',
-			actif: false,
-			notes: [],
-			incidents: [],
-			absences: [],
-			retards: []
-		}
-	]);
+	let elevesInscrits = $state<EleveCours[]>([...data.elevesInscrits]);
 
 	let nouvelEleve = $state({
 		nom: '',
@@ -55,11 +23,8 @@
 	let nouvelEleveDialogOpen = $state(false);
 
 	const elevesFiltres = $derived(
-		elevesInscrits.filter(
-			(e) =>
-				`${e.nom}${e.prenom}`
-					.toLowerCase()
-					.includes(searchEleve.toLowerCase())
+		elevesInscrits.filter((e) =>
+			`${e.nom}${e.prenom}`.toLowerCase().includes(searchEleve.toLowerCase())
 		)
 	);
 
@@ -82,8 +47,10 @@
 	}
 </script>
 
-<div class="h-screen flex flex-col bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex justify-between bg-sidebar p-4 border-b border-sidebar-border">
+<div class="flex h-screen flex-col bg-sidebar text-sidebar-foreground">
+	<div
+		class="sticky top-16 z-50 flex justify-between border-b border-sidebar-border bg-sidebar p-4"
+	>
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
 		<Dialog.Root bind:open={nouvelEleveDialogOpen}>
@@ -94,16 +61,28 @@
 				<Dialog.Content class="sm:max-w-[425px]">
 					<Dialog.Header>
 						<Dialog.Title>Ajouter un élève</Dialog.Title>
-						<Dialog.Description>L'élève sera automatiquement inscrit à tous les cours</Dialog.Description>
+						<Dialog.Description
+							>L'élève sera automatiquement inscrit à tous les cours</Dialog.Description
+						>
 					</Dialog.Header>
 					<div class="grid gap-4 py-4">
 						<div class="grid gap-2">
 							<Label for="nom_eleve">Nom *</Label>
-							<Input id="nom_eleve" bind:value={nouvelEleve.nom} placeholder="Nom de l'élève" required />
+							<Input
+								id="nom_eleve"
+								bind:value={nouvelEleve.nom}
+								placeholder="Nom de l'élève"
+								required
+							/>
 						</div>
 						<div class="grid gap-2">
 							<Label for="prenom_eleve">Prénom *</Label>
-							<Input id="prenom_eleve" bind:value={nouvelEleve.prenom} placeholder="Prénom de l'élève" required />
+							<Input
+								id="prenom_eleve"
+								bind:value={nouvelEleve.prenom}
+								placeholder="Prénom de l'élève"
+								required
+							/>
 						</div>
 						<div class="grid gap-2">
 							<Label for="date_naiss">Date de naissance *</Label>
@@ -111,12 +90,17 @@
 						</div>
 					</div>
 					<Dialog.Footer>
-						<Button variant="outline" size="sm" onclick={() => { nouvelEleve = { nom: '', prenom: '', dateNaissance: '' }; nouvelEleveDialogOpen = false; }}>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => {
+								nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
+								nouvelEleveDialogOpen = false;
+							}}
+						>
 							Annuler
 						</Button>
-						<Button variant="default" size="sm" onclick={ajouterEleve}>
-							Ajouter
-						</Button>
+						<Button variant="default" size="sm" onclick={ajouterEleve}>Ajouter</Button>
 					</Dialog.Footer>
 				</Dialog.Content>
 			</form>
@@ -154,8 +138,10 @@
 								{eleve.notes?.length || 0}
 							</Table.Cell>
 							<Table.Cell class="text-center">
-								{eleve.notes && eleve.notes.length > 0 
-									? (eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length).toFixed(1)
+								{eleve.notes && eleve.notes.length > 0
+									? (
+											eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length
+										).toFixed(1)
 									: '—'}
 							</Table.Cell>
 							<Table.Cell class="text-center">

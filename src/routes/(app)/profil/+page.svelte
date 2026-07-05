@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -7,7 +8,25 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Avatar } from '$lib/components/ui/avatar';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { User, Mail, Phone, Shield, Calendar, Camera, Save, X, MapPin, Building, Clock, CheckCircle2, BookOpen, CalendarDays, Users, TrendingUp, TrendingDown } from '@lucide/svelte/icons';
+	import {
+		User,
+		Mail,
+		Phone,
+		Shield,
+		Calendar,
+		Camera,
+		Save,
+		X,
+		MapPin,
+		Building,
+		Clock,
+		CheckCircle2,
+		BookOpen,
+		CalendarDays,
+		Users,
+		TrendingUp,
+		TrendingDown
+	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -45,15 +64,17 @@
 			saving = false;
 			isEditing = false;
 			saved = true;
-			setTimeout(() => { saved = false; }, 3000);
+			setTimeout(() => {
+				saved = false;
+			}, 3000);
 		}, 800);
 	}
 
 	const roleColors: Record<string, string> = {
-		'Administrateur': 'bg-red-500/10 text-red-500 border-red-500/20',
-		'Enseignant': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-		'Surveillant': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-		'Personnel': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+		Administrateur: 'bg-red-500/10 text-red-500 border-red-500/20',
+		Enseignant: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+		Surveillant: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+		Personnel: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
 	};
 
 	const stats = $derived([
@@ -62,32 +83,78 @@
 		{ label: 'Statut', value: 'Actif', icon: CheckCircle2 }
 	]);
 
-	const isEmployee = $derived(data.profil.role === 'Enseignant' || data.profil.role === 'Surveillant');
+	const isEmployee = $derived(
+		data.profil.role === 'Enseignant' || data.profil.role === 'Surveillant'
+	);
 	const employeeStats = $derived(data.profil.stats);
 
 	const statCards = $derived.by(() => {
 		if (!isEmployee || !employeeStats) return [];
 		return [
-			{ label: 'Heures de cours', value: `${employeeStats.heuresCours}h`, icon: CalendarDays, color: 'text-blue-500' },
-			{ label: 'Retards', value: employeeStats.retards.toString(), icon: TrendingUp, color: employeeStats.retards > 2 ? 'text-red-500' : 'text-amber-500' },
-			{ label: 'Absences', value: employeeStats.absences.toString(), icon: Users, color: employeeStats.absences > 1 ? 'text-red-500' : 'text-amber-500' },
-			{ label: 'Incidents', value: employeeStats.incidents.toString(), icon: Shield, color: employeeStats.incidents > 2 ? 'text-red-500' : employeeStats.incidents > 0 ? 'text-amber-500' : 'text-emerald-500' },
-			{ label: 'Notes positives', value: employeeStats.notesPositives.toString(), icon: CheckCircle2, color: 'text-emerald-500' },
-			{ label: 'Notes négatives', value: employeeStats.notesNegatives.toString(), icon: X, color: employeeStats.notesNegatives > 2 ? 'text-red-500' : employeeStats.notesNegatives > 0 ? 'text-amber-500' : 'text-emerald-500' }
+			{
+				label: 'Heures de cours',
+				value: `${employeeStats.heuresCours}h`,
+				icon: CalendarDays,
+				color: 'text-blue-500'
+			},
+			{
+				label: 'Retards',
+				value: employeeStats.retards.toString(),
+				icon: TrendingUp,
+				color: employeeStats.retards > 2 ? 'text-red-500' : 'text-amber-500'
+			},
+			{
+				label: 'Absences',
+				value: employeeStats.absences.toString(),
+				icon: Users,
+				color: employeeStats.absences > 1 ? 'text-red-500' : 'text-amber-500'
+			},
+			{
+				label: 'Incidents',
+				value: employeeStats.incidents.toString(),
+				icon: Shield,
+				color:
+					employeeStats.incidents > 2
+						? 'text-red-500'
+						: employeeStats.incidents > 0
+							? 'text-amber-500'
+							: 'text-emerald-500'
+			},
+			{
+				label: 'Notes positives',
+				value: employeeStats.notesPositives.toString(),
+				icon: CheckCircle2,
+				color: 'text-emerald-500'
+			},
+			{
+				label: 'Notes négatives',
+				value: employeeStats.notesNegatives.toString(),
+				icon: X,
+				color:
+					employeeStats.notesNegatives > 2
+						? 'text-red-500'
+						: employeeStats.notesNegatives > 0
+							? 'text-amber-500'
+							: 'text-emerald-500'
+			}
 		];
 	});
 </script>
 
-<main class="flex-1 overflow-y-auto bg-background p-4 md:p-6 text-foreground">
+<main class="flex-1 overflow-y-auto bg-background p-4 text-foreground md:p-6">
 	<div class="mx-auto max-w-4xl space-y-6">
 		<!-- Header -->
-		<div class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+		<div
+			class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+		>
 			<div>
 				<h1 class="text-2xl font-bold tracking-tight">Mon profil</h1>
 				<p class="text-sm text-muted-foreground">Gérez vos informations personnelles</p>
 			</div>
 			{#if saved}
-				<div class="animate-fade-in flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-500">
+				<div
+					class="animate-fade-in flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-500"
+				>
 					<CheckCircle2 class="size-4" />
 					Profil mis à jour
 				</div>
@@ -95,27 +162,42 @@
 		</div>
 
 		<!-- Profile Header Card -->
-		<Card class="animate-slide-up stagger-1 opacity-0 overflow-hidden transition-all duration-200 hover:shadow-md">
+		<Card
+			class="animate-slide-up stagger-1 overflow-hidden opacity-0 transition-all duration-200 hover:shadow-md"
+		>
 			<div class="h-28 bg-gradient-to-r from-primary/20 via-primary/10 to-secondary/20"></div>
 			<div class="px-6 pb-6">
-				<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between -mt-10">
+				<div class="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 					<div class="flex items-end gap-4">
 						<div class="relative">
 							<Avatar.Root class="size-20 ring-4 ring-background">
 								<Avatar.Image src="https://github.com/vanessa.png" alt="Avatar" />
-								<Avatar.Fallback class="text-lg font-bold">{data.profil.prenom[0]}{data.profil.nom[0]}</Avatar.Fallback>
+								<Avatar.Fallback class="text-lg font-bold"
+									>{data.profil.prenom[0]}{data.profil.nom[0]}</Avatar.Fallback
+								>
 							</Avatar.Root>
-							<button class="absolute bottom-1 left-1/2 -translate-x-1/2 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110">
+							<button
+								class="absolute bottom-1 left-1/2 flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110"
+							>
 								<Camera class="size-3.5" />
 							</button>
 						</div>
 						<div class="pb-1">
 							<h2 class="text-xl font-bold">{data.profil.prenom} {data.profil.nom}</h2>
 							<div class="mt-1 flex items-center gap-2">
-								<Badge variant="outline" class="text-xs {roleColors[data.profil.role] || 'bg-muted text-muted-foreground'}">
+								<Badge
+									variant="outline"
+									class="text-xs {roleColors[data.profil.role] || 'bg-muted text-muted-foreground'}"
+								>
 									{data.profil.role}
 								</Badge>
-								<span class="text-xs text-muted-foreground">Inscrit le {new Date(data.profil.dateInscription).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+								<span class="text-xs text-muted-foreground"
+									>Inscrit le {new Date(data.profil.dateInscription).toLocaleDateString('fr-FR', {
+										day: 'numeric',
+										month: 'long',
+										year: 'numeric'
+									})}</span
+								>
 							</div>
 						</div>
 					</div>
@@ -132,7 +214,9 @@
 							</Button>
 							<Button onclick={saveProfile} disabled={saving} class="gap-2">
 								{#if saving}
-									<div class="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground"></div>
+									<div
+										class="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground"
+									></div>
 								{:else}
 									<Save class="size-4" />
 								{/if}
@@ -147,7 +231,10 @@
 		<!-- Stats -->
 		<div class="grid grid-cols-3 gap-3">
 			{#each stats as stat, i}
-				<Card class="animate-slide-up stagger-{i + 2} opacity-0 p-4 text-center transition-all duration-200 hover:shadow-sm">
+				<Card
+					class="animate-slide-up stagger-{i +
+						2} p-4 text-center opacity-0 transition-all duration-200 hover:shadow-sm"
+				>
 					<stat.icon class="mx-auto size-5 text-muted-foreground" />
 					<p class="mt-2 text-sm font-semibold">{stat.value}</p>
 					<p class="text-xs text-muted-foreground">{stat.label}</p>
@@ -161,7 +248,10 @@
 				<h3 class="text-lg font-semibold">Statistiques de travail</h3>
 				<div class="grid grid-cols-2 gap-3 md:grid-cols-3">
 					{#each statCards as stat, i}
-						<Card class="animate-slide-up stagger-{i + 2} opacity-0 p-4 transition-all duration-200 hover:shadow-sm">
+						<Card
+							class="animate-slide-up stagger-{i +
+								2} p-4 opacity-0 transition-all duration-200 hover:shadow-sm"
+						>
 							<div class="flex items-center gap-2">
 								<stat.icon class="size-4 {stat.color}" />
 								<div>
@@ -177,22 +267,24 @@
 
 		<!-- Info Cards -->
 		<div class="grid gap-4 md:grid-cols-2">
-			<Card class="animate-slide-up stagger-5 opacity-0 p-5 transition-all duration-200 hover:shadow-sm">
-				<h3 class="mb-4 font-semibold flex items-center gap-2">
+			<Card
+				class="animate-slide-up stagger-5 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
+			>
+				<h3 class="mb-4 flex items-center gap-2 font-semibold">
 					<User class="size-4 text-primary" />
 					Informations personnelles
 				</h3>
 				{#if !isEditing}
 					<div class="space-y-4">
 						<div class="flex items-start gap-3">
-							<Mail class="size-4 text-muted-foreground mt-0.5" />
+							<Mail class="mt-0.5 size-4 text-muted-foreground" />
 							<div>
 								<Label class="text-xs text-muted-foreground">Email</Label>
 								<p class="text-sm font-medium">{data.profil.email}</p>
 							</div>
 						</div>
 						<div class="flex items-start gap-3">
-							<Phone class="size-4 text-muted-foreground mt-0.5" />
+							<Phone class="mt-0.5 size-4 text-muted-foreground" />
 							<div>
 								<Label class="text-xs text-muted-foreground">Téléphone</Label>
 								<p class="text-sm font-medium">{data.profil.phone}</p>
@@ -200,7 +292,7 @@
 						</div>
 						{#if data.profil.adresse}
 							<div class="flex items-start gap-3">
-								<MapPin class="size-4 text-muted-foreground mt-0.5" />
+								<MapPin class="mt-0.5 size-4 text-muted-foreground" />
 								<div>
 									<Label class="text-xs text-muted-foreground">Adresse</Label>
 									<p class="text-sm font-medium">{data.profil.adresse}</p>
@@ -234,28 +326,36 @@
 				{/if}
 			</Card>
 
-			<Card class="animate-slide-up stagger-6 opacity-0 p-5 transition-all duration-200 hover:shadow-sm">
-				<h3 class="mb-4 font-semibold flex items-center gap-2">
+			<Card
+				class="animate-slide-up stagger-6 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
+			>
+				<h3 class="mb-4 flex items-center gap-2 font-semibold">
 					<Shield class="size-4 text-primary" />
 					Informations du compte
 				</h3>
 				<div class="space-y-4">
 					<div class="flex items-start gap-3">
-						<Shield class="size-4 text-muted-foreground mt-0.5" />
+						<Shield class="mt-0.5 size-4 text-muted-foreground" />
 						<div>
 							<Label class="text-xs text-muted-foreground">Rôle</Label>
 							<p class="text-sm font-medium">{data.profil.role}</p>
 						</div>
 					</div>
 					<div class="flex items-start gap-3">
-						<Calendar class="size-4 text-muted-foreground mt-0.5" />
+						<Calendar class="mt-0.5 size-4 text-muted-foreground" />
 						<div>
 							<Label class="text-xs text-muted-foreground">Date d'inscription</Label>
-							<p class="text-sm font-medium">{new Date(data.profil.dateInscription).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+							<p class="text-sm font-medium">
+								{new Date(data.profil.dateInscription).toLocaleDateString('fr-FR', {
+									day: 'numeric',
+									month: 'long',
+									year: 'numeric'
+								})}
+							</p>
 						</div>
 					</div>
 					<div class="flex items-start gap-3">
-						<Building class="size-4 text-muted-foreground mt-0.5" />
+						<Building class="mt-0.5 size-4 text-muted-foreground" />
 						<div>
 							<Label class="text-xs text-muted-foreground">Établissement</Label>
 							<p class="text-sm font-medium">TASC</p>
@@ -266,15 +366,50 @@
 		</div>
 
 		<!-- Bio Section -->
-		<Card class="animate-slide-up stagger-7 opacity-0 p-5 transition-all duration-200 hover:shadow-sm">
+		<Card
+			class="animate-slide-up stagger-7 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
+		>
 			<h3 class="mb-4 font-semibold">À propos</h3>
 			{#if !isEditing}
-				<p class="text-sm text-muted-foreground leading-relaxed">
-					{data.profil.bio || 'Aucune bio renseignée. Cliquez sur "Modifier le profil" pour en ajouter une.'}
+				<p class="text-sm leading-relaxed text-muted-foreground">
+					{data.profil.bio ||
+						'Aucune bio renseignée. Cliquez sur "Modifier le profil" pour en ajouter une.'}
 				</p>
 			{:else}
-				<Textarea bind:value={editBio} placeholder="Décrivez-vous en quelques mots..." rows={3} class="text-sm" />
+				<Textarea
+					bind:value={editBio}
+					placeholder="Décrivez-vous en quelques mots..."
+					rows={3}
+					class="text-sm"
+				/>
 			{/if}
+		</Card>
+
+		<!-- Password Change -->
+		<Card class="animate-slide-up stagger-8 p-5 opacity-0">
+			<h3 class="mb-4 flex items-center gap-2 font-semibold">
+				<Shield class="size-4 text-primary" />
+				Mot de passe
+			</h3>
+			<form method="POST" action="?/changePassword" use:enhance>
+				<div class="grid gap-4 md:grid-cols-3">
+					<div class="grid gap-2">
+						<Label for="currentPassword">Mot de passe actuel</Label>
+						<Input id="currentPassword" name="currentPassword" type="password" required />
+					</div>
+					<div class="grid gap-2">
+						<Label for="newPassword">Nouveau mot de passe</Label>
+						<Input id="newPassword" name="newPassword" type="password" required />
+					</div>
+					<div class="grid gap-2">
+						<Label for="confirmPassword">Confirmer</Label>
+						<Input id="confirmPassword" name="confirmPassword" type="password" required />
+					</div>
+				</div>
+				<div class="mt-4">
+					<Button type="submit" variant="default">Changer le mot de passe</Button>
+				</div>
+			</form>
 		</Card>
 	</div>
 </main>

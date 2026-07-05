@@ -126,7 +126,7 @@
 		}
 
 		if (form.emailEleve.trim() && !/^[\w.-]+@[\w.-]+\.\w+$/.test(form.emailEleve)) {
-			newErrors.emailEleve = 'Format d\'email invalide';
+			newErrors.emailEleve = "Format d'email invalide";
 		}
 
 		if (!form.cin.trim()) {
@@ -196,29 +196,32 @@
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouvel élève</h1>
 			<p class="text-sm text-muted-foreground">
-				Tous les champs sont obligatoires sauf les téléphones des parents, les informations du tuteur et le contact de l'élève.
+				Tous les champs sont obligatoires sauf les téléphones des parents, les informations du
+				tuteur et le contact de l'élève.
 			</p>
 		</div>
 
 		<form method="POST" onsubmit={handleSubmit} class="space-y-6">
 			<Accordion.Root type="single">
 				<Accordion.Item value="infos-perso">
-					<Accordion.Trigger class="text-lg font-semibold">Informations personnelles</Accordion.Trigger>
+					<Accordion.Trigger class="text-lg font-semibold"
+						>Informations personnelles</Accordion.Trigger
+					>
 					<Accordion.Content>
 						<div class="grid gap-4 rounded-md border p-4 md:grid-cols-3">
-						<div class="grid gap-2">
-							<Label for="nom">Nom *</Label>
-							<Input
-								id="nom"
-								bind:value={form.nom}
-								placeholder="Entrer le nom"
-								class={errors.nom ? 'border-destructive' : ''}
-								oninput={(e) => form.nom = (e.target as HTMLInputElement).value.toUpperCase()}
-							/>
-							{#if errors.nom}
-								<span class="text-xs text-destructive">{errors.nom}</span>
-							{/if}
-						</div>
+							<div class="grid gap-2">
+								<Label for="nom">Nom *</Label>
+								<Input
+									id="nom"
+									bind:value={form.nom}
+									placeholder="Entrer le nom"
+									class={errors.nom ? 'border-destructive' : ''}
+									oninput={(e) => (form.nom = (e.target as HTMLInputElement).value.toUpperCase())}
+								/>
+								{#if errors.nom}
+									<span class="text-xs text-destructive">{errors.nom}</span>
+								{/if}
+							</div>
 							<div class="grid gap-2">
 								<Label for="prenom">Prénom *</Label>
 								<Input
@@ -226,7 +229,10 @@
 									bind:value={form.prenom}
 									placeholder="Entrer le prénom"
 									class={errors.prenom ? 'border-destructive' : ''}
-									oninput={(e) => form.prenom = (e.target as HTMLInputElement).value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+									oninput={(e) =>
+										(form.prenom = (e.target as HTMLInputElement).value
+											.toLowerCase()
+											.replace(/\b\w/g, (c) => c.toUpperCase()))}
 								/>
 								{#if errors.prenom}
 									<span class="text-xs text-destructive">{errors.prenom}</span>
@@ -237,7 +243,11 @@
 								<Popover.Root bind:open>
 									<Popover.Trigger>
 										{#snippet child({ props })}
-											<Button {...props} variant="outline" class="w-full justify-between font-normal">
+											<Button
+												{...props}
+												variant="outline"
+												class="w-full justify-between font-normal"
+											>
 												{value
 													? value.toDate(getLocalTimeZone()).toLocaleDateString()
 													: 'Sélectionner la date'}
@@ -424,32 +434,38 @@
 
 			<Accordion.Root type="single">
 				<Accordion.Item value="responsable">
-					<Accordion.Trigger class="text-lg font-semibold">Informations Responsable *</Accordion.Trigger>
+					<Accordion.Trigger class="text-lg font-semibold"
+						>Informations Responsable *</Accordion.Trigger
+					>
 					<Accordion.Content>
 						<div class="space-y-4 rounded-md border p-4">
 							<div class="grid grid-cols-1 gap-4 rounded-md border p-4 md:grid-cols-2">
 								<div class="grid gap-2">
 									<Label for="name_father">Nom du père *</Label>
-								<Input
-									id="name_father"
-									bind:value={form.nomPere}
-									placeholder="Entrer le nom"
-									class={errors.nomPere ? 'border-destructive' : ''}
-									oninput={(e) => form.nomPere = (e.target as HTMLInputElement).value.toUpperCase()}
-								/>
+									<Input
+										id="name_father"
+										bind:value={form.nomPere}
+										placeholder="Entrer le nom"
+										class={errors.nomPere ? 'border-destructive' : ''}
+										oninput={(e) =>
+											(form.nomPere = (e.target as HTMLInputElement).value.toUpperCase())}
+									/>
 									{#if errors.nomPere}
 										<span class="text-xs text-destructive">{errors.nomPere}</span>
 									{/if}
 								</div>
 								<div class="grid gap-2">
 									<Label for="lastname_father">Prénom du père *</Label>
-								<Input
-									id="lastname_father"
-									bind:value={form.prenomPere}
-									placeholder="Entrer le prénom"
-									class={errors.prenomPere ? 'border-destructive' : ''}
-									oninput={(e) => form.prenomPere = (e.target as HTMLInputElement).value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-								/>
+									<Input
+										id="lastname_father"
+										bind:value={form.prenomPere}
+										placeholder="Entrer le prénom"
+										class={errors.prenomPere ? 'border-destructive' : ''}
+										oninput={(e) =>
+											(form.prenomPere = (e.target as HTMLInputElement).value
+												.toLowerCase()
+												.replace(/\b\w/g, (c) => c.toUpperCase()))}
+									/>
 									{#if errors.prenomPere}
 										<span class="text-xs text-destructive">{errors.prenomPere}</span>
 									{/if}
@@ -468,26 +484,30 @@
 							<div class="grid grid-cols-1 gap-4 rounded-md border p-4 md:grid-cols-2">
 								<div class="grid gap-2">
 									<Label for="name_mother">Nom de la mère *</Label>
-								<Input
-									id="name_mother"
-									bind:value={form.nomMere}
-									placeholder="Entrer le nom"
-									class={errors.nomMere ? 'border-destructive' : ''}
-									oninput={(e) => form.nomMere = (e.target as HTMLInputElement).value.toUpperCase()}
-								/>
+									<Input
+										id="name_mother"
+										bind:value={form.nomMere}
+										placeholder="Entrer le nom"
+										class={errors.nomMere ? 'border-destructive' : ''}
+										oninput={(e) =>
+											(form.nomMere = (e.target as HTMLInputElement).value.toUpperCase())}
+									/>
 									{#if errors.nomMere}
 										<span class="text-xs text-destructive">{errors.nomMere}</span>
 									{/if}
 								</div>
 								<div class="grid gap-2">
 									<Label for="lastname_mother">Prénom de la mère *</Label>
-								<Input
-									id="lastname_mother"
-									bind:value={form.prenomMere}
-									placeholder="Entrer le prénom"
-									class={errors.prenomMere ? 'border-destructive' : ''}
-									oninput={(e) => form.prenomMere = (e.target as HTMLInputElement).value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-								/>
+									<Input
+										id="lastname_mother"
+										bind:value={form.prenomMere}
+										placeholder="Entrer le prénom"
+										class={errors.prenomMere ? 'border-destructive' : ''}
+										oninput={(e) =>
+											(form.prenomMere = (e.target as HTMLInputElement).value
+												.toLowerCase()
+												.replace(/\b\w/g, (c) => c.toUpperCase()))}
+									/>
 									{#if errors.prenomMere}
 										<span class="text-xs text-destructive">{errors.prenomMere}</span>
 									{/if}
@@ -521,20 +541,34 @@
 											<div class="grid grid-cols-1 gap-4 rounded-md border p-4 md:grid-cols-2">
 												<div class="grid gap-2">
 													<Label for="name_tuteur">Nom du tuteur(trice)</Label>
-									<Input
-									id="name_tuteur"
-									bind:value={form.nomTuteur}
-									placeholder="Entrer le nom"
-									oninput={(e) => form.nomTuteur = (e.target as HTMLInputElement).value.toUpperCase()}
-								/>
+													<Input
+														id="name_tuteur"
+														bind:value={form.nomTuteur}
+														placeholder="Entrer le nom"
+														oninput={(e) =>
+															(form.nomTuteur = (e.target as HTMLInputElement).value.toUpperCase())}
+													/>
 												</div>
 												<div class="grid gap-2">
 													<Label for="lastname_tuteur">Prénom du tuteur(trice)</Label>
-									<Input id="lastname_tuteur" bind:value={form.prenomTuteur} placeholder="Entrer le prénom" oninput={(e) => form.prenomTuteur = (e.target as HTMLInputElement).value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())} />
+													<Input
+														id="lastname_tuteur"
+														bind:value={form.prenomTuteur}
+														placeholder="Entrer le prénom"
+														oninput={(e) =>
+															(form.prenomTuteur = (e.target as HTMLInputElement).value
+																.toLowerCase()
+																.replace(/\b\w/g, (c) => c.toUpperCase()))}
+													/>
 												</div>
 												<div class="grid gap-2">
 													<Label for="contact_tuteur">Téléphone du tuteur(trice)</Label>
-													<Input id="contact_tuteur" bind:value={form.telephoneTuteur} type="tel" placeholder="+261...." />
+													<Input
+														id="contact_tuteur"
+														bind:value={form.telephoneTuteur}
+														type="tel"
+														placeholder="+261...."
+													/>
 												</div>
 											</div>
 										</Accordion.Content>
@@ -547,9 +581,7 @@
 			</Accordion.Root>
 
 			<div class="flex items-center gap-4 pt-4">
-				<Button type="reset" variant="outline" onclick={resetForm}>
-					Effacer
-				</Button>
+				<Button type="reset" variant="outline" onclick={resetForm}>Effacer</Button>
 				<AlertDialog.Root>
 					<AlertDialog.Trigger class={buttonVariants({ variant: 'default' })}>
 						Créer l'élève

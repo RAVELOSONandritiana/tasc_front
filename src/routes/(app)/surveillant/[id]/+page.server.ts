@@ -1,24 +1,30 @@
-import type { Surveillant } from '$lib/types/Personne.type';
 import type { PageServerLoad } from './$types';
+import { getSurveillantById } from '$lib/server/prisma';
+import type { Surveillant } from '$lib/types/Personne.type';
 
 export const load: PageServerLoad = async ({ params }) => {
-    const surveillant: Surveillant = {
-        name: 'RANDRIANANTENAINA',
-        lastname: 'Tsitoarimanjakely',
-        domicile: 'Lot I125 Ambohimiandra',
-        fokontany: 'Ambohimiandra',
-        commune: 'Antananarivo',
-        phone: '034 00 000 00',
-        email: 'tsitoarimanjakely@gmail.com',
-        poste: 'Surveillant General',
-        stats: {
-            retards: 2,
-            absences: 0,
-            heuresCours: 50,
-            incidents: 1,
-            notesPositives: 8,
-            notesNegatives: 0
-        }
-    };
-    return { surveillant };
+	const prismaSurv = await getSurveillantById(params.id);
+	if (!prismaSurv) {
+		throw new Error('Surveillant non trouvé');
+	}
+	const surveillant: Surveillant = {
+		id: prismaSurv.id,
+		name: prismaSurv.personne.name,
+		lastname: prismaSurv.personne.lastname,
+		domicile: prismaSurv.personne.domicile || '',
+		fokontany: prismaSurv.personne.fokontany || '',
+		commune: prismaSurv.personne.commune || '',
+		phone: prismaSurv.personne.phone,
+		email: prismaSurv.personne.email,
+		poste: prismaSurv.poste,
+		stats: {
+			retards: prismaSurv.retards,
+			absences: prismaSurv.absences,
+			heuresCours: prismaSurv.heuresCours,
+			incidents: prismaSurv.incidents,
+			notesPositives: prismaSurv.notesPositives,
+			notesNegatives: prismaSurv.notesNegatives
+		}
+	};
+	return { surveillant };
 };

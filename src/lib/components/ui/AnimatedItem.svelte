@@ -1,5 +1,9 @@
 <script lang="ts">
-	let { index = 0, base = 'animate-slide-up', animate = true }: { index?: number; base?: string; animate?: boolean } = $props();
+	let {
+		index = 0,
+		base = 'animate-slide-up',
+		animate = true
+	}: { index?: number; base?: string; animate?: boolean } = $props();
 
 	const staggerMap: Record<number, string> = {
 		0: 'stagger-1',

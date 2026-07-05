@@ -3,7 +3,20 @@
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Avatar } from '$lib/components/ui/avatar';
-	import { User, Mail, Phone, Shield, Calendar, MapPin, Building, Clock, CheckCircle2, CalendarDays, Users, X } from '@lucide/svelte/icons';
+	import {
+		User,
+		Mail,
+		Phone,
+		Shield,
+		Calendar,
+		MapPin,
+		Building,
+		Clock,
+		CheckCircle2,
+		CalendarDays,
+		Users,
+		X
+	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 
@@ -25,7 +38,7 @@
 		<Card class="p-6">
 			<div class="flex items-center gap-4">
 				<Avatar class="h-20 w-20">
-					<Avatar.Fallback class="text-xl font-bold text-primary bg-primary/10">
+					<Avatar.Fallback class="bg-primary/10 text-xl font-bold text-primary">
 						{initial}
 					</Avatar.Fallback>
 				</Avatar>
@@ -37,7 +50,7 @@
 		</Card>
 
 		<div class="grid gap-4 md:grid-cols-2">
-			<Card class="p-4 space-y-3">
+			<Card class="space-y-3 p-4">
 				<h3 class="font-semibold">Informations</h3>
 				<div class="flex items-center gap-3">
 					<Mail class="size-4 text-muted-foreground" />
@@ -62,7 +75,7 @@
 				</div>
 			</Card>
 
-			<Card class="p-4 space-y-3">
+			<Card class="space-y-3 p-4">
 				<h3 class="font-semibold">Statut professionnel</h3>
 				<div class="flex items-center gap-3">
 					<Shield class="size-4 text-muted-foreground" />
@@ -82,38 +95,58 @@
 		</div>
 
 		{#if stats}
-			<Card class="p-5 space-y-4">
+			<Card class="space-y-4 p-5">
 				<h3 class="font-semibold">Statistiques de travail</h3>
-				<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<CalendarDays class="size-5 text-blue-500 mx-auto mb-1" />
+				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
+					<div class="rounded-lg bg-muted/30 p-3 text-center">
+						<CalendarDays class="mx-auto mb-1 size-5 text-blue-500" />
 						<p class="text-xs text-muted-foreground">Heures de cours</p>
 						<p class="text-2xl font-bold text-blue-500">{stats.heuresCours}h</p>
 					</div>
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<Clock class="size-5 text-amber-500 mx-auto mb-1" />
+					<div class="rounded-lg bg-muted/30 p-3 text-center">
+						<Clock class="mx-auto mb-1 size-5 text-amber-500" />
 						<p class="text-xs text-muted-foreground">Retards</p>
-						<p class="text-2xl font-bold {stats.retards > 2 ? 'text-red-500' : 'text-amber-500'}">{stats.retards}</p>
+						<p class="text-2xl font-bold {stats.retards > 2 ? 'text-red-500' : 'text-amber-500'}">
+							{stats.retards}
+						</p>
 					</div>
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<Users class="size-5 text-red-500 mx-auto mb-1" />
+					<div class="rounded-lg bg-muted/30 p-3 text-center">
+						<Users class="mx-auto mb-1 size-5 text-red-500" />
 						<p class="text-xs text-muted-foreground">Absences</p>
-						<p class="text-2xl font-bold {stats.absences > 1 ? 'text-red-500' : 'text-amber-500'}">{stats.absences}</p>
+						<p class="text-2xl font-bold {stats.absences > 1 ? 'text-red-500' : 'text-amber-500'}">
+							{stats.absences}
+						</p>
 					</div>
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<Shield class="size-5 text-red-500 mx-auto mb-1" />
+					<div class="rounded-lg bg-muted/30 p-3 text-center">
+						<Shield class="mx-auto mb-1 size-5 text-red-500" />
 						<p class="text-xs text-muted-foreground">Incidents</p>
-						<p class="text-2xl font-bold {stats.incidents > 2 ? 'text-red-500' : stats.incidents > 0 ? 'text-amber-500' : 'text-emerald-500'}">{stats.incidents}</p>
+						<p
+							class="text-2xl font-bold {stats.incidents > 2
+								? 'text-red-500'
+								: stats.incidents > 0
+									? 'text-amber-500'
+									: 'text-emerald-500'}"
+						>
+							{stats.incidents}
+						</p>
 					</div>
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<CheckCircle2 class="size-5 text-emerald-500 mx-auto mb-1" />
+					<div class="rounded-lg bg-muted/30 p-3 text-center">
+						<CheckCircle2 class="mx-auto mb-1 size-5 text-emerald-500" />
 						<p class="text-xs text-muted-foreground">Notes positives</p>
 						<p class="text-2xl font-bold text-emerald-500">{stats.notesPositives}</p>
 					</div>
-					<div class="text-center p-3 bg-muted/30 rounded-lg">
-						<X class="size-5 text-red-500 mx-auto mb-1" />
+					<div class="rounded-lg bg-muted/30 p-3 text-center">
+						<X class="mx-auto mb-1 size-5 text-red-500" />
 						<p class="text-xs text-muted-foreground">Notes négatives</p>
-						<p class="text-2xl font-bold {stats.notesNegatives > 2 ? 'text-red-500' : stats.notesNegatives > 0 ? 'text-amber-500' : 'text-emerald-500'}">{stats.notesNegatives}</p>
+						<p
+							class="text-2xl font-bold {stats.notesNegatives > 2
+								? 'text-red-500'
+								: stats.notesNegatives > 0
+									? 'text-amber-500'
+									: 'text-emerald-500'}"
+						>
+							{stats.notesNegatives}
+						</p>
 					</div>
 				</div>
 			</Card>

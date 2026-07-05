@@ -1,41 +1,67 @@
-import type { Salle } from "$lib/types/Materiel.type";
-import type { PageServerLoad } from "./$types";
+import type { PageServerLoad, Actions } from './$types';
+import { prisma } from '$lib/server/prisma';
+import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
-    let list_salle: Salle[] = [
-        {
-            id: 1,
-            num: 5,
-				name: "Salle 5",
-            place: 50
-        },
-        {
-            id: 2,
-            num: 6,
-				name: "Salle 6",
-            place: 50,
-            used: true,
-        },
-        {
-            id: 3,
-            num: 7,
-				name: "Salle 7",
-            place: 50
-        },
-        {
-            id: 4,
-            num: 8,
-				name: "Salle 8",
-            place: 50
-        }, {
-            id: 5,
-            num: 9,
-				name: "Salle 9",
-            place: 50
-        }
-    ];
-    list_salle = list_salle.sort((a, b) => a.num - b.num);
-    return {
-        list_salle
-    }
-}
+	const salles = await prisma.salle.findMany({
+		orderBy: { num: 'asc' }
+	});
+
+	return {
+		list_salle: salles.map((s) => ({
+			id: s.id,
+			num: s.num,
+			name: s.nom,
+			place: s.capacite,
+			occupe: s.occupe,
+			imageUrl: s.imageUrl
+		}))
+	};
+};
+
+export const actions: Actions = {
+	create: async ({ request }) => {
+		const formData = await request.formData();
+		const num = parseInt(formData.get('num') as string);
+		const nom = formData.get('nom') as string;
+		const capacite = parseInt(formData.get('capacite') as string);
+
+		await prisma.salle.create({
+			data: {
+				num,
+				nom,
+				capacite
+			}
+		});
+
+		throw redirect(303, '/salle');
+	},
+
+	update: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const nom = formData.get('nom') as string;
+		const capacite = parseInt(formData.get('capacite') as string);
+
+		await prisma.salle.update({
+			where: { id },
+			data: {
+				nom,
+				capacite
+			}
+		});
+
+		throw redirect(303, '/salle');
+	},
+
+	delete: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		await prisma.salle.delete({
+			where: { id }
+		});
+
+		throw redirect(303, '/salle');
+	}
+};

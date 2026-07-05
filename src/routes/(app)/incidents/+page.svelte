@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -9,17 +8,14 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Send, AlertCircle, Shield } from '@lucide/svelte/icons';
-	import type { Incident, IncidentType } from '$lib/types/Incident.type';
+	import type { IncidentType } from '$lib/types/Incident.type';
 	import type { PageProps } from './$types';
 	import IncidentPost from '$lib/components/user/incidents/IncidentPost.svelte';
 
 	const { data }: PageProps = $props();
 
-	let incidents = $state<Incident[]>(data.incidents);
-	let newMessage = $state('');
-	let selectedEleveId = $state('');
-	let selectedType = $state<IncidentType>('note');
-	let dialogOpen = $state(false);
+	const incidents = $derived(data.incidents);
+	const eleves = $derived(data.eleves);
 
 	const typeLabels: Record<IncidentType, string> = {
 		info: 'Information',
@@ -28,37 +24,16 @@
 		absent: 'Absence'
 	};
 
-	const mockEleves = [
-		{ id: '1', nom: 'RANDRIANANTENAINA', prenom: 'Tsitoarimanjakely' },
-		{ id: '2', nom: 'RAKOTO', prenom: 'Fanomezamasy' },
-		{ id: '3', nom: 'ANDRIANTENAINA', prenom: 'Bako' }
-	];
+	let newMessage = $state('');
+	let selectedEleveId = $state('');
+	let selectedType = $state<IncidentType>('note');
+	let dialogOpen = $state(false);
 
 	function openNewIncident() {
 		selectedEleveId = '';
 		selectedType = 'note';
 		newMessage = '';
 		dialogOpen = true;
-	}
-
-	function submitIncident() {
-		if (!selectedEleveId || !newMessage.trim()) return;
-		const eleve = mockEleves.find((e) => e.id === selectedEleveId);
-		if (!eleve) return;
-		const incident: Incident = {
-			id: Date.now().toString(),
-			eleveId: eleve.id,
-			eleveNom: eleve.nom,
-			elevePrenom: eleve.prenom,
-			type: selectedType,
-			message: newMessage.trim(),
-			auteur: 'Moi',
-			date: new Date().toISOString(),
-			reactions: [],
-			comments: []
-		};
-		incidents = [incident, ...incidents];
-		dialogOpen = false;
 	}
 </script>
 
@@ -92,7 +67,7 @@
 				</div>
 			{:else}
 				{#each incidents as incident (incident.id)}
-					<IncidentPost {incident} eleves={mockEleves} />
+					<IncidentPost {incident} {eleves} />
 				{/each}
 			{/if}
 		</div>
@@ -104,43 +79,45 @@
 				<Dialog.Title>Nouvelle note</Dialog.Title>
 				<Dialog.Description>Signaler un événement concernant un élève.</Dialog.Description>
 			</Dialog.Header>
-			<div class="grid gap-4 py-4">
-				<div class="grid gap-2">
-					<Label>Type</Label>
-					<Select.Root type="single" bind:value={selectedType}>
-						<Select.Trigger class="w-full">
-							{typeLabels[selectedType]}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Item value="info">Information</Select.Item>
-							<Select.Item value="erreur">Erreur</Select.Item>
-							<Select.Item value="note">Note positive</Select.Item>
-							<Select.Item value="absent">Absence</Select.Item>
-						</Select.Content>
-					</Select.Root>
+			<form method="POST" action="?/create" class="contents">
+				<div class="grid gap-4 py-4">
+					<div class="grid gap-2">
+						<Label>Type</Label>
+						<Select.Root type="single" name="type" bind:value={selectedType}>
+							<Select.Trigger class="w-full">
+								{typeLabels[selectedType]}
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Item value="info">Information</Select.Item>
+								<Select.Item value="erreur">Erreur</Select.Item>
+								<Select.Item value="note">Note positive</Select.Item>
+								<Select.Item value="absent">Absence</Select.Item>
+							</Select.Content>
+						</Select.Root>
+					</div>
+					<div class="grid gap-2">
+						<Label>Élève</Label>
+						<Select.Root type="single" name="eleveId" bind:value={selectedEleveId}>
+							<Select.Trigger class="w-full">
+								{selectedEleveId ? eleves.find((e) => e.id === selectedEleveId)?.prenom + ' ' + eleves.find((e) => e.id === selectedEleveId)?.nom : 'Sélectionner un élève'}
+							</Select.Trigger>
+							<Select.Content>
+								{#each eleves as eleve}
+									<Select.Item value={eleve.id}>{eleve.prenom} {eleve.nom}</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+					</div>
+					<div class="grid gap-2">
+						<Label>Message</Label>
+						<Textarea name="message" bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
+					</div>
 				</div>
-				<div class="grid gap-2">
-					<Label>Élève</Label>
-					<Select.Root type="single" bind:value={selectedEleveId}>
-						<Select.Trigger class="w-full">
-							{selectedEleveId ? mockEleves.find((e) => e.id === selectedEleveId)?.prenom + ' ' + mockEleves.find((e) => e.id === selectedEleveId)?.nom : 'Sélectionner un élève'}
-						</Select.Trigger>
-						<Select.Content>
-							{#each mockEleves as eleve}
-								<Select.Item value={eleve.id}>{eleve.prenom} {eleve.nom}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				</div>
-				<div class="grid gap-2">
-					<Label>Message</Label>
-					<Textarea bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
-				</div>
-			</div>
-			<Dialog.Footer>
-				<Button variant="outline" onclick={() => (dialogOpen = false)}>Annuler</Button>
-				<Button onclick={submitIncident} disabled={!selectedEleveId || !newMessage.trim()}>Publier</Button>
-			</Dialog.Footer>
+				<Dialog.Footer>
+					<Button variant="outline" onclick={() => (dialogOpen = false)}>Annuler</Button>
+					<Button type="submit" disabled={!selectedEleveId || !newMessage.trim()}>Publier</Button>
+				</Dialog.Footer>
+			</form>
 		</Dialog.Content>
 	</Dialog.Root>
 </main>

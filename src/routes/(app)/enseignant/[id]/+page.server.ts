@@ -1,24 +1,30 @@
-import type { Professeur } from '$lib/types/Personne.type';
 import type { PageServerLoad } from './$types';
+import { getProfesseurById } from '$lib/server/prisma';
+import type { Professeur } from '$lib/types/Personne.type';
 
 export const load: PageServerLoad = async ({ params }) => {
-    const professeur: Professeur = {
-        name: 'RANDRIANANTENAINA',
-        lastname: 'Tsitoarimanjakely',
-        domicile: 'Lot I125 Ambohimiandra',
-        fokontany: 'Ambohimiandra',
-        commune: 'Antananarivo',
-        phone: '034 00 000 00',
-        email: 'tsitoarimanjakely@gmail.com',
-        matiere: ['Mathématiques', 'Physique'],
-        stats: {
-            retards: 3,
-            absences: 1,
-            heuresCours: 42,
-            incidents: 2,
-            notesPositives: 15,
-            notesNegatives: 2
-        }
-    };
-    return { professeur };
+	const prismaProf = await getProfesseurById(params.id);
+	if (!prismaProf) {
+		throw new Error('Professeur non trouvé');
+	}
+	const professeur: Professeur = {
+		id: prismaProf.id,
+		name: prismaProf.personne.name,
+		lastname: prismaProf.personne.lastname,
+		domicile: prismaProf.personne.domicile || '',
+		fokontany: prismaProf.personne.fokontany || '',
+		commune: prismaProf.personne.commune || '',
+		phone: prismaProf.personne.phone,
+		email: prismaProf.personne.email,
+		matiere: prismaProf.matiere,
+		stats: {
+			retards: prismaProf.retards,
+			absences: prismaProf.absences,
+			heuresCours: prismaProf.heuresCours,
+			incidents: prismaProf.incidents,
+			notesPositives: prismaProf.notesPositives,
+			notesNegatives: prismaProf.notesNegatives
+		}
+	};
+	return { professeur };
 };
