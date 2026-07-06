@@ -8,11 +8,15 @@ export type ActivityAction =
 	| 'modification_eleve'
 	| 'creation_cours'
 	| 'creation_classe'
+	| 'suppression_classe'
 	| 'validation_compte'
 	| 'creation_personnel'
+	| 'suppression_personnel'
 	| 'creation_surveillant'
 	| 'creation_enseignant'
+	| 'suppression_enseignant'
 	| 'creation_eleve'
+	| 'suppression_eleve'
 	| 'changement_mot_de_passe';
 
 export async function logActivity(

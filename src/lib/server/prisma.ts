@@ -667,6 +667,16 @@ export async function deleteEleve(id: string) {
 	});
 }
 
+export async function deleteClasse(id: string) {
+	return prisma.$transaction(async (tx) => {
+		const classe = await tx.classe.findUnique({ where: { id } });
+		if (!classe) throw new Error('Classe introuvable');
+		await tx.classe.update({ where: { id }, data: { titulaireId: null } });
+		await tx.classe.delete({ where: { id } });
+		return { success: true };
+	});
+}
+
 export async function deleteProfesseur(id: string) {
 	return prisma.$transaction(async (tx) => {
 		const prof = await tx.professeur.findUnique({ where: { id }, include: { personne: true } });

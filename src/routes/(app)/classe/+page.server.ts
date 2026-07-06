@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasses, getProfesseurs, createClasse, updateClasseImage, prisma } from '$lib/server/prisma';
+import { getClasses, getProfesseurs, createClasse, updateClasseImage, deleteClasse, prisma } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
@@ -85,6 +85,22 @@ export const actions: Actions = {
 			return { success: true, oldImageUrl: oldClasse?.imageUrl || null };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || "Erreur lors de la mise à jour de l'image" });
+		}
+	},
+	delete: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		if (!id) return fail(400, { error: 'ID requis' });
+		try {
+			await deleteClasse(id);
+			logActivity(
+				locals.user,
+				'suppression_classe',
+				'Suppression de la classe'
+			).catch(() => {});
+			return { success: true };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
 		}
 	}
 };

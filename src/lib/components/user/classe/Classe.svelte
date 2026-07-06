@@ -5,9 +5,18 @@
 	import { Button } from '$lib/components/ui/button';
 	import UploadFile from '../form/UploadFile.svelte';
 	import pb, { auth } from '$lib/pocketbase/pocketbase';
-	const { classe: cl } = $props();
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
+	import { Spinner } from '$lib/components/ui/spinner';
+	const {
+		classe: cl,
+		id: classeId,
+		deleteAction = ''
+	} = $props();
 
 	let c = $state(cl);
+
+	let submittingDelete = $state(false);
 
 	async function ensureAuth() {
 		try {
@@ -76,7 +85,40 @@
 	let imageError = $state(false);
 </script>
 
-<CardUI>
+<CardUI class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
+	{#if deleteAction}
+		<form method="POST" action={deleteAction} use:enhance={() => {
+			submittingDelete = true;
+			return async ({ result }: { result: ActionResult }) => {
+				submittingDelete = false;
+				if (result.type === 'success') {
+					window.location.reload();
+				} else if (result.type === 'failure') {
+					console.error('[Delete] Failure:', result.data);
+					alert(result.data?.error || 'Suppression impossible');
+				} else {
+					console.error('[Delete] Error:', result);
+					alert('Erreur lors de la suppression');
+				}
+			};
+		}}>
+			<input type="hidden" name="id" value={classeId} />
+			<Button
+				size="icon"
+				variant="destructive"
+				class="absolute right-4 top-4 z-10 size-8 rounded-full shadow-sm"
+				type="submit"
+				title="Supprimer"
+				disabled={submittingDelete}
+			>
+				{#if submittingDelete}
+					<Spinner class="size-4" />
+				{:else}
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+				{/if}
+			</Button>
+		</form>
+	{/if}
 	<div class="h-50 w-full overflow-hidden">
 		{#if c.url && !imageError}
 			<!-- svelte-ignore a11y_img_redundant_alt -->
