@@ -13,16 +13,30 @@
 		Shield,
 		Users,
 		CheckCircle2,
-		X
+		X,
+		Info,
+		AlertCircle,
+		ChevronDown,
+		ChevronUp
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
+	import type { EleveIncident } from '$lib/types/Incident.type';
 
 	const { data }: PageProps = $props();
 	const eleve = data.eleve;
+	const incidents: EleveIncident[] = data.incidents || [];
 
 	const initial = eleve.prenom.charAt(0) + eleve.nom.charAt(0);
 	const stats = eleve.stats;
+
+	let positivesOpen = $state(false);
+	let negativesOpen = $state(false);
+	let autresOpen = $state(false);
+
+	const notesPositives = incidents.filter(i => i.type === 'note');
+	const notesNegatives = incidents.filter(i => i.type === 'erreur');
+	const autresIncidents = incidents.filter(i => i.type !== 'note' && i.type !== 'erreur');
 </script>
 
 <main class="min-h-full bg-sidebar p-6 text-sidebar-foreground">
@@ -152,6 +166,128 @@
 					</div>
 				</div>
 			</Card>
+		{/if}
+
+		{#if incidents.length > 0}
+			<div class="space-y-3">
+				{#if notesPositives.length > 0}
+					<button
+						onclick={() => (positivesOpen = !positivesOpen)}
+						class="flex w-full items-center justify-between rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 text-left transition-all hover:bg-emerald-50/50 dark:border-emerald-700/70 dark:bg-emerald-950/10 dark:hover:bg-emerald-950/20"
+					>
+						<div class="flex items-center gap-3">
+							<div class="flex size-10 items-center justify-center rounded-full bg-emerald-100/90 dark:bg-emerald-900/40">
+								<CheckCircle2 class="size-5 text-emerald-600 dark:text-emerald-400" />
+							</div>
+							<div>
+								<p class="font-semibold text-emerald-800 dark:text-emerald-300">Notes positives</p>
+								<p class="text-xs text-emerald-600/80 dark:text-emerald-400/70">
+									{notesPositives.length} {(notesPositives.length > 1) ? 'incidents' : 'incident'}
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<span class="flex size-6 items-center justify-center rounded-full bg-emerald-100/90 text-xs font-bold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+								{notesPositives.length}
+							</span>
+							{#if positivesOpen}
+								<ChevronUp class="size-4 text-emerald-600 dark:text-emerald-400" />
+							{:else}
+								<ChevronDown class="size-4 text-emerald-600 dark:text-emerald-400" />
+							{/if}
+						</div>
+					</button>
+					{#if positivesOpen}
+						<div class="ml-4 space-y-2 border-l-2 border-emerald-300/70 pl-4 dark:border-emerald-700/70">
+							{#each notesPositives as incident}
+								<div class="rounded-lg border border-emerald-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-emerald-800/70 dark:bg-slate-900/80">
+									<p class="text-sm text-slate-800 dark:text-slate-100">{incident.message}</p>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
+
+				{#if notesNegatives.length > 0}
+					<button
+						onclick={() => (negativesOpen = !negativesOpen)}
+						class="flex w-full items-center justify-between rounded-xl border border-red-200/80 bg-red-50/30 p-4 text-left transition-all hover:bg-red-50/50 dark:border-red-700/70 dark:bg-red-950/10 dark:hover:bg-red-950/20"
+					>
+						<div class="flex items-center gap-3">
+							<div class="flex size-10 items-center justify-center rounded-full bg-red-100/90 dark:bg-red-900/40">
+								<X class="size-5 text-red-600 dark:text-red-400" />
+							</div>
+							<div>
+								<p class="font-semibold text-red-800 dark:text-red-300">Notes négatives</p>
+								<p class="text-xs text-red-600/80 dark:text-red-400/70">
+									{notesNegatives.length} {(notesNegatives.length > 1) ? 'incidents' : 'incident'}
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<span class="flex size-6 items-center justify-center rounded-full bg-red-100/90 text-xs font-bold text-red-700 dark:bg-red-900/50 dark:text-red-300">
+								{notesNegatives.length}
+							</span>
+							{#if negativesOpen}
+								<ChevronUp class="size-4 text-red-600 dark:text-red-400" />
+							{:else}
+								<ChevronDown class="size-4 text-red-600 dark:text-red-400" />
+							{/if}
+						</div>
+					</button>
+					{#if negativesOpen}
+						<div class="ml-4 space-y-2 border-l-2 border-red-300/70 pl-4 dark:border-red-700/70">
+							{#each notesNegatives as incident}
+								<div class="rounded-lg border border-red-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-red-800/70 dark:bg-slate-900/80">
+									<p class="text-sm text-slate-800 dark:text-slate-100">{incident.message}</p>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
+
+				{#if autresIncidents.length > 0}
+					<button
+						onclick={() => (autresOpen = !autresOpen)}
+						class="flex w-full items-center justify-between rounded-xl border border-blue-200/80 bg-blue-50/30 p-4 text-left transition-all hover:bg-blue-50/50 dark:border-blue-700/70 dark:bg-blue-950/10 dark:hover:bg-blue-950/20"
+					>
+						<div class="flex items-center gap-3">
+							<div class="flex size-10 items-center justify-center rounded-full bg-blue-100/90 dark:bg-blue-900/40">
+								<Info class="size-5 text-blue-600 dark:text-blue-400" />
+							</div>
+							<div>
+								<p class="font-semibold text-blue-800 dark:text-blue-300">Autres incidents</p>
+								<p class="text-xs text-blue-600/80 dark:text-blue-400/70">
+									{autresIncidents.length} {(autresIncidents.length > 1) ? 'incidents' : 'incident'}
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<span class="flex size-6 items-center justify-center rounded-full bg-blue-100/90 text-xs font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+								{autresIncidents.length}
+							</span>
+							{#if autresOpen}
+								<ChevronUp class="size-4 text-blue-600 dark:text-blue-400" />
+							{:else}
+								<ChevronDown class="size-4 text-blue-600 dark:text-blue-400" />
+							{/if}
+						</div>
+					</button>
+					{#if autresOpen}
+						<div class="ml-4 space-y-2 border-l-2 border-blue-300/70 pl-4 dark:border-blue-700/70">
+							{#each autresIncidents as incident}
+								<div class="rounded-lg border border-blue-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-blue-800/70 dark:bg-slate-900/80">
+									<Badge variant="outline" class="mb-1 text-xs border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300">{incident.type}</Badge>
+									<p class="text-sm text-slate-800 dark:text-slate-100">{incident.message}</p>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
+			</div>
 		{/if}
 	</div>
 </main>

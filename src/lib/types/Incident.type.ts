@@ -25,3 +25,12 @@ export type Incident = {
 	reactions: Reaction[];
 	comments: Comment[];
 };
+
+export type EleveIncident = {
+	id: string;
+	type: IncidentType;
+	message: string;
+	auteur: string;
+	auteurId?: string;
+	date: string;
+};

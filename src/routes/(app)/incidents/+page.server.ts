@@ -70,14 +70,31 @@ export const actions: Actions = {
 		}
 
 		try {
-			await prisma.incident.create({
-				data: {
-					eleveId,
-					type: type as typeof validTypes[number],
-					message: message.trim(),
-					auteur: author,
-					compteId: compteId || null
+			await prisma.$transaction(async (tx) => {
+				await tx.incident.create({
+					data: {
+						eleveId,
+						type: type as typeof validTypes[number],
+						message: message.trim(),
+						auteur: author,
+						compteId: compteId || null
+					}
+				});
+
+				const updateData: { incidentsCount?: number; notesPositives?: number; notesNegatives?: number } = {
+					incidentsCount: { increment: 1 }
+				};
+
+				if (type === 'NOTE') {
+					updateData.notesPositives = { increment: 1 };
+				} else if (type === 'ERREUR') {
+					updateData.notesNegatives = { increment: 1 };
 				}
+
+				await tx.eleve.update({
+					where: { id: eleveId },
+					data: updateData
+				});
 			});
 		} catch (e: unknown) {
 			console.error('Create incident error:', e);
@@ -110,8 +127,23 @@ export const actions: Actions = {
 				return fail(403, { error: 'Seul l\'auteur peut supprimer cet incident' });
 			}
 
-			await prisma.incident.delete({
-				where: { id: incidentId }
+			await prisma.$transaction(async (tx) => {
+				await tx.incident.delete({ where: { id: incidentId } });
+
+				const updateData: { incidentsCount?: number; notesPositives?: number; notesNegatives?: number } = {
+					incidentsCount: { decrement: 1 }
+				};
+
+				if (incident.type === 'NOTE') {
+					updateData.notesPositives = { decrement: 1 };
+				} else if (incident.type === 'ERREUR') {
+					updateData.notesNegatives = { decrement: 1 };
+				}
+
+				await tx.eleve.update({
+					where: { id: incident.eleveId },
+					data: updateData
+				});
 			});
 
 			logActivity(locals.user, 'suppression_incident', `Suppression d'un incident: ${incident.message.substring(0, 50)}...`).catch(() => {});

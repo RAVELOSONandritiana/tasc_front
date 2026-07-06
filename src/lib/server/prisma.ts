@@ -51,7 +51,8 @@ export async function getEleveById(id: string) {
 				include: {
 					classe: true
 				}
-			}
+			},
+			incidents: true
 		}
 	});
 }
