@@ -53,6 +53,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
 		const data = await request.formData();
+		console.log('Form Data:', Object.fromEntries(data.entries()));
 		const eleveId = data.get('eleveId') as string;
 		const type = (data.get('type') as string)?.toUpperCase();
 		const message = data.get('message') as string;
@@ -78,7 +79,8 @@ export const actions: Actions = {
 					compteId: compteId || null
 				}
 			});
-		} catch {
+		} catch (e: unknown) {
+			console.error('Create incident error:', e);
 			return fail(500, { error: 'Erreur lors de la création' });
 		}
 
@@ -113,7 +115,8 @@ export const actions: Actions = {
 			});
 
 			logActivity(locals.user, 'suppression_incident', `Suppression d'un incident: ${incident.message.substring(0, 50)}...`).catch(() => {});
-		} catch {
+		} catch (e: unknown) {
+			console.error('Delete incident error:', e);
 			return fail(500, { error: 'Erreur lors de la suppression' });
 		}
 
@@ -138,7 +141,8 @@ export const actions: Actions = {
 					text: text.trim()
 				}
 			});
-		} catch {
+		} catch (e: unknown) {
+			console.error('Comment error:', e);
 			return fail(500, { error: 'Erreur lors de l\'ajout du commentaire' });
 		}
 
@@ -165,7 +169,8 @@ export const actions: Actions = {
 					user
 				}
 			});
-		} catch {
+		} catch (e: unknown) {
+			console.error('Reaction error:', e);
 			return fail(500, { error: 'Erreur lors de l\'ajout de la réaction' });
 		}
 

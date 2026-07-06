@@ -3,7 +3,6 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import * as NativeSelect from '$lib/components/ui/native-select';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { AlertCircle, Shield, X } from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
@@ -16,7 +15,7 @@
 	const currentUserId = $derived(data.currentUserId);
 
 	let newMessage = $state('');
-	let selectedEleveId = $state<string | null>(null);
+	let selectedEleveId = $state<string>('');
 	let selectedType = $state<'info' | 'erreur' | 'note' | 'absent'>('note');
 	let dialogOpen = $state(false);
 	let searchQuery = $state('');
@@ -30,7 +29,7 @@
 	);
 
 	function openNewIncident() {
-		selectedEleveId = null;
+		selectedEleveId = '';
 		selectedType = 'note';
 		newMessage = '';
 		searchQuery = '';
@@ -43,7 +42,7 @@
 	}
 
 	function resetSelection() {
-		selectedEleveId = null;
+		selectedEleveId = '';
 		searchQuery = '';
 	}
 </script>
@@ -90,16 +89,16 @@
 				<Dialog.Title>Nouvelle note</Dialog.Title>
 				<Dialog.Description>Signaler un événement concernant un élève.</Dialog.Description>
 			</Dialog.Header>
-			<form method="POST" action="?/create" class="contents">
+			<form method="POST" action="?/create">
 				<div class="grid gap-4 py-4">
 					<div class="grid gap-2">
-						<Label>Type</Label>
-						<NativeSelect.Root name="type" bind:value={selectedType} class="w-full">
-							<NativeSelect.Option value="info">Information</NativeSelect.Option>
-							<NativeSelect.Option value="erreur">Erreur</NativeSelect.Option>
-							<NativeSelect.Option value="note">Note positive</NativeSelect.Option>
-							<NativeSelect.Option value="absent">Absence</NativeSelect.Option>
-						</NativeSelect.Root>
+						<Label for="type">Type</Label>
+						<select id="type" name="type" bind:value={selectedType} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+							<option value="info">Information</option>
+							<option value="erreur">Erreur</option>
+							<option value="note">Note positive</option>
+							<option value="absent">Absence</option>
+						</select>
 					</div>
 					<div class="grid gap-2">
 						<Label>Élève</Label>
@@ -138,10 +137,10 @@
 						{/if}
 					</div>
 					<div class="grid gap-2">
-						<Label>Message</Label>
-						<Textarea name="message" bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
+						<Label for="message">Message</Label>
+						<Textarea id="message" name="message" bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
 					</div>
-					<input type="hidden" name="eleveId" value={selectedEleveId || ''} />
+					<input type="hidden" name="eleveId" value={selectedEleveId} />
 				</div>
 				<Dialog.Footer>
 					<Button variant="outline" onclick={() => (dialogOpen = false)}>Annuler</Button>
