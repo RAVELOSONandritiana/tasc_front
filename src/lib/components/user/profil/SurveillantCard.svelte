@@ -11,30 +11,40 @@
 		Clock,
 		Users,
 		CheckCircle2,
-		X
+		X,
+		Trash
 	} from '@lucide/svelte/icons';
 	import Avatar from '$lib/components/ui/avatar/avatar.svelte';
 	import AvatarFallback from '$lib/components/ui/avatar/avatar-fallback.svelte';
 	import AvatarImage from '$lib/components/ui/avatar/avatar-image.svelte';
 	import { env } from '$env/dynamic/public';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	type SurveillantWithStats = Surveillant & { stats?: Surveillant['stats'] };
 
 	let {
 		personne,
 		tags,
-		hrefProfil = '/surveillant'
+		hrefProfil = '/surveillant',
+		id: personId,
+		deleteAction = ''
 	}: {
 		personne: SurveillantWithStats;
 		tags?: string[];
 		hrefProfil?: string;
+		id?: string;
+		deleteAction?: string;
+		[key: string]: any;
 	} = $props();
 
 	const initial = $derived((personne.name?.charAt(0) || '') + (personne.lastname?.charAt(0) || ''));
 
 	const roleLabel = $derived((tags && tags[0]) || 'Surveillant');
 	const stats = personne.stats;
+	let submittingDelete = $state(false);
 </script>
 
 <CardUI
@@ -45,6 +55,37 @@
 			class="absolute inset-0 bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"
 		></div>
 		<div class="absolute inset-0 bg-linear-to-b from-transparent to-sidebar/80"></div>
+	{#if deleteAction}
+		<form method="POST" action={deleteAction} use:enhance={() => {
+			submittingDelete = true;
+			return async ({ result }: { result: ActionResult }) => {
+				submittingDelete = false;
+				if (result.type === 'success') {
+					window.location.reload();
+				} else if (result.type === 'failure') {
+					alert(result.data?.error || 'Suppression impossible');
+				} else {
+					alert('Erreur lors de la suppression');
+				}
+			};
+		}}>
+			<input type="hidden" name="id" value={personId} />
+			<Button
+				size="icon"
+				variant="destructive"
+				class="absolute right-4 top-4 size-8 rounded-full shadow-sm"
+				type="submit"
+				title="Supprimer"
+				disabled={submittingDelete}
+			>
+				{#if submittingDelete}
+					<Spinner class="size-4" />
+				{:else}
+					<Trash class="size-4" />
+				{/if}
+			</Button>
+		</form>
+	{/if}
 	</div>
 	<div class="flex-1 px-8 pt-0 pb-5">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">

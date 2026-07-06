@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { prisma } from '$lib/server/prisma';
+import { prisma, getUserActivities } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
 import { updateUserPassword } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
@@ -59,6 +59,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		return null;
 	};
 
+	const activities = await getUserActivities(compte.id, 20);
+
 	return {
 		profil: {
 			id: compte.id,
@@ -71,7 +73,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			adresse: compte.profil?.adresse || compte.personne.domicile || '',
 			bio: compte.profil?.bio || '',
 			stats: getStats()
-		}
+		},
+		activities
 	};
 };
 

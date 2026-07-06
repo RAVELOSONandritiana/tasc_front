@@ -687,6 +687,48 @@ export async function deleteProfesseur(id: string) {
 	});
 }
 
+export async function getUserActivities(compteId: string, limit = 20) {
+	const activities = await prisma.activite.findMany({
+		where: { compteId },
+		include: {
+			compte: {
+				include: {
+					personne: true
+				}
+			}
+		},
+		orderBy: { createdAt: 'desc' },
+		take: limit
+	});
+	return activities.map((a) => ({
+		id: a.id,
+		action: a.action,
+		description: a.description,
+		ipAddress: a.ipAddress,
+		userAgent: a.userAgent,
+		compteId: a.compteId,
+		createdAt: a.createdAt.toISOString(),
+		compte: {
+			matricule: a.compte.matricule,
+			role: a.compte.role,
+			personne: {
+				name: a.compte.personne.name,
+				lastname: a.compte.personne.lastname
+			}
+		}
+	}));
+}
+
+export async function deleteSurveillant(personneId: string) {
+	return prisma.$transaction(async (tx) => {
+		const surv = await tx.surveillant.findUnique({ where: { personneId } });
+		if (!surv) throw new Error('Surveillant introuvable');
+		await tx.surveillant.delete({ where: { personneId } });
+		await tx.personne.delete({ where: { id: personneId } });
+		return { success: true };
+	});
+}
+
 export async function deletePersonnel(personneId: string) {
 	await prisma.personne.delete({ where: { id: personneId } });
 	return { success: true };

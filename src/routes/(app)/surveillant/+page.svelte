@@ -102,7 +102,7 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<SurveillantCard personne={p} tags={[p.poste]} hrefProfil={`/profil/${p.compte?.id || p.personneId}`} />
+						<SurveillantCard personne={p} tags={[p.poste]} hrefProfil={`/profil/${p.compte?.id || p.personneId}`} id={p.personneId} deleteAction="?/delete" />
 					</div>
 				{/each}
 			</div>

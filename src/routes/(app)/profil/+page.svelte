@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -25,7 +26,8 @@
 		CalendarDays,
 		Users,
 		TrendingUp,
-		TrendingDown
+		TrendingDown,
+		History
 	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 
@@ -382,6 +384,50 @@
 					rows={3}
 					class="text-sm"
 				/>
+			{/if}
+		</Card>
+
+		<!-- Activity History -->
+		<Card
+			class="animate-slide-up stagger-7 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
+		>
+			<div class="mb-4 flex items-center justify-between">
+				<h3 class="flex items-center gap-2 font-semibold">
+					<History class="size-4 text-primary" />
+					Historique des activités
+				</h3>
+				<Button variant="ghost" size="sm" class="gap-1 text-xs" onclick={() => goto(`/profil/${data.profil.id}/history`)}>
+					Voir tout
+					<History class="size-3.5" />
+				</Button>
+			</div>
+			{#if data.activities && data.activities.length > 0}
+				<div class="space-y-2">
+					{#each data.activities.slice(0, 5) as act (act.id)}
+						<div class="flex items-start gap-3 rounded-md border border-sidebar-border p-3">
+							<div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+								<Clock class="size-4 text-primary" />
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium">{act.description}</p>
+								<p class="text-xs text-muted-foreground">
+									{new Date(act.createdAt).toLocaleString('fr-FR', {
+										day: 'numeric',
+										month: 'short',
+										year: 'numeric',
+										hour: '2-digit',
+										minute: '2-digit'
+									})}
+								</p>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<div class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+					<Clock class="mb-2 size-8" />
+					<p class="text-sm">Aucune activité enregistrée</p>
+				</div>
 			{/if}
 		</Card>
 

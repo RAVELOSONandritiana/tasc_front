@@ -1,6 +1,6 @@
 import type { Personne, Surveillant } from '$lib/types/Personne.type';
 import type { Actions, PageServerLoad } from './$types';
-import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPersonne } from '$lib/server/prisma';
+import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPersonne, deleteSurveillant } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
@@ -66,6 +66,22 @@ export const actions: Actions = {
 			return { success: true, result };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la création' });
+		}
+	},
+	delete: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		if (!id) return fail(400, { error: 'ID requis' });
+		try {
+			await deleteSurveillant(id);
+			logActivity(
+				locals.user,
+				'suppression_surveillant',
+				'Suppression du surveillant'
+			).catch(() => {});
+			return { success: true };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
 		}
 	}
 };

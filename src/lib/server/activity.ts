@@ -13,6 +13,7 @@ export type ActivityAction =
 	| 'creation_personnel'
 	| 'suppression_personnel'
 	| 'creation_surveillant'
+	| 'suppression_surveillant'
 	| 'creation_enseignant'
 	| 'suppression_enseignant'
 	| 'creation_eleve'
