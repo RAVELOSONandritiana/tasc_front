@@ -11,14 +11,19 @@
 		MessageCircle,
 		Heart,
 		Share2,
-		Send
+		Send,
+		Trash2
 	} from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 
-	const { incident, eleves } = $props<{
+	const { incident, eleves, currentUserId } = $props<{
 		incident: Incident;
 		eleves: { id: string; nom: string; prenom: string }[];
+		currentUserId?: string;
 	}>();
+
+	const isAuthor = $derived(incident.auteurId === currentUserId);
+	const validType = $derived(incident.type as IncidentType);
 
 	let showComments = $state(false);
 	let commentText = $state('');
@@ -30,6 +35,8 @@
 		note: { icon: Star, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
 		absent: { icon: UserX, color: 'text-amber-500', bg: 'bg-amber-500/10' }
 	};
+
+	const typeInfo = $derived(typeConfig[validType] || typeConfig.info);
 
 	function timeAgo(dateStr: string) {
 		const now = new Date();
@@ -46,12 +53,12 @@
 	}
 
 	function getEleveName(id: string) {
-		const e = eleves.find((el) => el.id === id);
+		const e = eleves.find((el: { id: string; nom: string; prenom: string }) => el.id === id);
 		return e ? `${e.prenom} ${e.nom}` : 'Inconnu';
 	}
 
 	function getEleveInitials(id: string) {
-		const e = eleves.find((el) => el.id === id);
+		const e = eleves.find((el: { id: string; nom: string; prenom: string }) => el.id === id);
 		return e ? `${e.prenom[0]}${e.nom[0]}` : '??';
 	}
 
@@ -96,9 +103,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-2xl">
-	<div
-		class="rounded-xl border border-sidebar-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md"
-	>
+	<div class="rounded-xl border border-sidebar-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md">
 		<div class="p-4">
 			<div class="flex items-start justify-between">
 				<div class="flex items-center gap-3">
@@ -109,10 +114,7 @@
 					</Avatar.Root>
 					<div>
 						<div class="flex items-center gap-2">
-							<button
-								class="text-sm font-semibold transition-colors hover:text-primary hover:underline"
-								onclick={() => handleEleveClick(incident.eleveId)}
-							>
+							<button class="text-sm font-semibold transition-colors hover:text-primary hover:underline" onclick={() => handleEleveClick(incident.eleveId)}>
 								{getEleveName(incident.eleveId)}
 							</button>
 							<span class="text-xs text-muted-foreground">·</span>
@@ -123,40 +125,25 @@
 						</div>
 					</div>
 				</div>
-			<Badge
-				variant="outline"
-				class="gap-1.5 text-xs {(typeConfig[incident.type] || typeConfig['info']).bg} {(typeConfig[incident.type] || typeConfig['info']).color} border-0"
-			>
-					{#if incident.type === 'note'}
+				<Badge variant="outline" class="gap-1.5 text-xs {typeInfo.bg} {typeInfo.color} border-0">
+					{#if validType === 'note'}
 						<Star class="size-3" />
-					{:else if incident.type === 'erreur'}
+					{:else if validType === 'erreur'}
 						<AlertCircle class="size-3" />
-					{:else if incident.type === 'info'}
+					{:else if validType === 'info'}
 						<Info class="size-3" />
 					{:else}
 						<UserX class="size-3" />
 					{/if}
-					{incident.type === 'note'
-						? 'Note'
-						: incident.type === 'erreur'
-							? 'Erreur'
-							: incident.type === 'info'
-								? 'Info'
-								: 'Absence'}
+					{validType === 'note' ? 'Note' : validType === 'erreur' ? 'Erreur' : validType === 'info' ? 'Info' : 'Absence'}
 				</Badge>
 			</div>
 
 			<p class="mt-3 text-sm leading-relaxed">{incident.message}</p>
 
 			<div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-				<span class="flex items-center gap-1 {(typeConfig[incident.type] || typeConfig['info']).color}">
-					{incident.type === 'note'
-						? 'Positive'
-						: incident.type === 'erreur'
-							? 'Problème'
-							: incident.type === 'info'
-								? 'Info'
-								: 'Absent'}
+				<span class="flex items-center gap-1 {typeInfo.color}">
+					{validType === 'note' ? 'Positive' : validType === 'erreur' ? 'Problème' : validType === 'info' ? 'Info' : 'Absent'}
 				</span>
 			</div>
 
@@ -164,17 +151,10 @@
 				<div class="flex items-center justify-between pt-3">
 					<div class="flex items-center gap-1">
 						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleReact}>
-							<Heart
-								class="size-3.5 {reactions.has(incident.id) ? 'fill-red-500 text-red-500' : ''}"
-							/>
+							<Heart class="size-3.5 {reactions.has(incident.id) ? 'fill-red-500 text-red-500' : ''}" />
 							<span>{reactions.has(incident.id) ? 1 : 0}</span>
 						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							class="gap-1.5 text-xs"
-							onclick={handleToggleComments}
-						>
+						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleToggleComments}>
 							<MessageCircle class="size-3.5" />
 							<span>{incident.comments?.length || 0}</span>
 						</Button>
@@ -182,6 +162,14 @@
 							<Share2 class="size-3.5" />
 						</Button>
 					</div>
+					{#if isAuthor}
+						<form method="POST" action="?/delete" class="inline">
+							<input type="hidden" name="incidentId" value={incident.id} />
+							<Button type="submit" variant="ghost" size="sm" class="gap-1.5 text-xs text-red-500 hover:text-red-600">
+								<Trash2 class="size-3.5" />
+							</Button>
+						</form>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -189,12 +177,7 @@
 		{#if showComments}
 			<div class="border-t border-sidebar-border bg-muted/20 p-4">
 				<div class="mb-3 flex items-center gap-2">
-					<input
-						type="text"
-						bind:value={commentText}
-						placeholder="Ajouter un commentaire..."
-						class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none"
-					/>
+					<input type="text" bind:value={commentText} placeholder="Ajouter un commentaire..." class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none" />
 					<Button size="sm" onclick={handleAddComment} disabled={!commentText.trim()}>
 						<Send class="size-3.5" />
 					</Button>

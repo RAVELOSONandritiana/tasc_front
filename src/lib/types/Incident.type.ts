@@ -20,6 +20,7 @@ export type Incident = {
 	type: IncidentType;
 	message: string;
 	auteur: string;
+	auteurId?: string;
 	date: string;
 	reactions: Reaction[];
 	comments: Comment[];

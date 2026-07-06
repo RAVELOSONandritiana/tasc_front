@@ -1,11 +1,14 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getIncidents, getEleves, prisma } from '$lib/server/prisma';
 import type { Incident, IncidentType } from '$lib/types/Incident.type';
+import type { Prisma } from '@prisma/client';
 import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
 
-function mapIncident(prismaIncident: any): Incident {
+function mapIncident(prismaIncident: Prisma.IncidentGetPayload<{
+	include: { eleve: { include: { personne: true } }; reactions: true; comments: true }
+}>): Incident {
 	return {
 		id: prismaIncident.id,
 		eleveId: prismaIncident.eleveId,
@@ -14,9 +17,10 @@ function mapIncident(prismaIncident: any): Incident {
 		type: prismaIncident.type.toLowerCase() as IncidentType,
 		message: prismaIncident.message,
 		auteur: prismaIncident.auteur,
+		auteurId: prismaIncident.compteId || undefined,
 		date: prismaIncident.date.toISOString(),
-		reactions: prismaIncident.reactions.map((r: any) => ({ emoji: r.emoji, user: r.user })),
-		comments: prismaIncident.comments.map((c: any) => ({
+		reactions: prismaIncident.reactions.map((r) => ({ emoji: r.emoji, user: r.user })),
+		comments: prismaIncident.comments.map((c) => ({
 			id: c.id,
 			author: c.author,
 			text: c.text,
@@ -25,31 +29,42 @@ function mapIncident(prismaIncident: any): Incident {
 	};
 }
 
-export const load: PageServerLoad = async () => {
+type EleveInfo = {
+	id: string;
+	nom: string;
+	prenom: string;
+	classe: string;
+	dateNaissance: string;
+};
+
+export const load: PageServerLoad = async ({ locals }) => {
 	const incidents = await getIncidents();
 	const elevesRaw = await getEleves();
-	const eleves = elevesRaw.map(e => ({
+	const eleves: EleveInfo[] = elevesRaw.map(e => ({
 		id: e.id,
 		nom: e.personne.lastname,
-		prenom: e.personne.name
+		prenom: e.personne.name,
+		classe: e.inscriptions?.find(i => i.actif)?.classe?.nom || '',
+		dateNaissance: e.dateNaissance?.toISOString().split('T')[0] || ''
 	}));
-	return { incidents: incidents.map(mapIncident), eleves };
+	return { incidents: incidents.map(mapIncident), eleves, currentUserId: locals.user?.userId };
 };
 
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
 		const data = await request.formData();
 		const eleveId = data.get('eleveId') as string;
-		const type = data.get('type') as string;
+		const type = (data.get('type') as string)?.toUpperCase();
 		const message = data.get('message') as string;
 		const author = locals.user?.prenom || 'Admin';
+		const compteId = locals.user?.userId;
 
 		if (!eleveId || !type || !message?.trim()) {
 			return fail(400, { error: 'Champs requis manquants' });
 		}
 
-		const validTypes = ['INFO', 'ERREUR', 'NOTE', 'ABSENT'];
-		if (!validTypes.includes(type)) {
+		const validTypes = ['INFO', 'ERREUR', 'NOTE', 'ABSENT'] as const;
+		if (!validTypes.includes(type as typeof validTypes[number])) {
 			return fail(400, { error: 'Type invalide' });
 		}
 
@@ -57,16 +72,50 @@ export const actions: Actions = {
 			await prisma.incident.create({
 				data: {
 					eleveId,
-					type: type as any,
+					type: type as typeof validTypes[number],
 					message: message.trim(),
-					auteur: author
+					auteur: author,
+					compteId: compteId || null
 				}
 			});
-		} catch (error) {
+		} catch {
 			return fail(500, { error: 'Erreur lors de la création' });
 		}
 
 		logActivity(locals.user, 'creation_incident', `Création d'un incident de type ${type}`).catch(() => {});
+
+		throw redirect(303, '/incidents');
+	},
+
+	delete: async ({ request, locals }) => {
+		const data = await request.formData();
+		const incidentId = data.get('incidentId') as string;
+
+		if (!incidentId) {
+			return fail(400, { error: 'ID de l\'incident requis' });
+		}
+
+		try {
+			const incident = await prisma.incident.findUnique({
+				where: { id: incidentId }
+			});
+
+			if (!incident) {
+				return fail(404, { error: 'Incident introuvable' });
+			}
+
+			if (incident.compteId && incident.compteId !== locals.user?.userId) {
+				return fail(403, { error: 'Seul l\'auteur peut supprimer cet incident' });
+			}
+
+			await prisma.incident.delete({
+				where: { id: incidentId }
+			});
+
+			logActivity(locals.user, 'suppression_incident', `Suppression d'un incident: ${incident.message.substring(0, 50)}...`).catch(() => {});
+		} catch {
+			return fail(500, { error: 'Erreur lors de la suppression' });
+		}
 
 		throw redirect(303, '/incidents');
 	},
@@ -89,7 +138,7 @@ export const actions: Actions = {
 					text: text.trim()
 				}
 			});
-		} catch (error) {
+		} catch {
 			return fail(500, { error: 'Erreur lors de l\'ajout du commentaire' });
 		}
 
@@ -116,7 +165,7 @@ export const actions: Actions = {
 					user
 				}
 			});
-		} catch (error) {
+		} catch {
 			return fail(500, { error: 'Erreur lors de l\'ajout de la réaction' });
 		}
 

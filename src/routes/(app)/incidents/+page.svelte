@@ -2,13 +2,10 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import * as Select from '$lib/components/ui/select';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import { Card } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
+	import * as NativeSelect from '$lib/components/ui/native-select';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Send, AlertCircle, Shield } from '@lucide/svelte/icons';
-	import type { IncidentType } from '$lib/types/Incident.type';
+	import { AlertCircle, Shield, X } from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 	import IncidentPost from '$lib/components/user/incidents/IncidentPost.svelte';
 
@@ -16,24 +13,38 @@
 
 	const incidents = $derived(data.incidents);
 	const eleves = $derived(data.eleves);
-
-	const typeLabels: Record<IncidentType, string> = {
-		info: 'Information',
-		erreur: 'Erreur',
-		note: 'Note positive',
-		absent: 'Absence'
-	};
+	const currentUserId = $derived(data.currentUserId);
 
 	let newMessage = $state('');
-	let selectedEleveId = $state('');
-	let selectedType = $state<IncidentType>('note');
+	let selectedEleveId = $state<string | null>(null);
+	let selectedType = $state<'info' | 'erreur' | 'note' | 'absent'>('note');
 	let dialogOpen = $state(false);
+	let searchQuery = $state('');
+
+	const searchResults = $derived(
+		searchQuery.trim().length > 0 && !selectedEleveId
+			? eleves.filter((e) =>
+					`${e.prenom}${e.nom}${e.classe}${e.dateNaissance}`.toLowerCase().includes(searchQuery.toLowerCase())
+				)
+			: []
+	);
 
 	function openNewIncident() {
-		selectedEleveId = '';
+		selectedEleveId = null;
 		selectedType = 'note';
 		newMessage = '';
+		searchQuery = '';
 		dialogOpen = true;
+	}
+
+	function selectEleve(e: typeof eleves[0]) {
+		selectedEleveId = e.id;
+		searchQuery = `${e.prenom} ${e.nom}`;
+	}
+
+	function resetSelection() {
+		selectedEleveId = null;
+		searchQuery = '';
 	}
 </script>
 
@@ -67,14 +78,14 @@
 				</div>
 			{:else}
 				{#each incidents as incident (incident.id)}
-					<IncidentPost {incident} {eleves} />
+					<IncidentPost {incident} {eleves} {currentUserId} />
 				{/each}
 			{/if}
 		</div>
 	</div>
 
 	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Content class="sm:max-w-[500px]">
+		<Dialog.Content class="sm:max-w-125">
 			<Dialog.Header>
 				<Dialog.Title>Nouvelle note</Dialog.Title>
 				<Dialog.Description>Signaler un événement concernant un élève.</Dialog.Description>
@@ -83,35 +94,54 @@
 				<div class="grid gap-4 py-4">
 					<div class="grid gap-2">
 						<Label>Type</Label>
-						<Select.Root type="single" name="type" bind:value={selectedType}>
-							<Select.Trigger class="w-full">
-								{typeLabels[selectedType]}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Item value="info">Information</Select.Item>
-								<Select.Item value="erreur">Erreur</Select.Item>
-								<Select.Item value="note">Note positive</Select.Item>
-								<Select.Item value="absent">Absence</Select.Item>
-							</Select.Content>
-						</Select.Root>
+						<NativeSelect.Root name="type" bind:value={selectedType} class="w-full">
+							<NativeSelect.Option value="info">Information</NativeSelect.Option>
+							<NativeSelect.Option value="erreur">Erreur</NativeSelect.Option>
+							<NativeSelect.Option value="note">Note positive</NativeSelect.Option>
+							<NativeSelect.Option value="absent">Absence</NativeSelect.Option>
+						</NativeSelect.Root>
 					</div>
 					<div class="grid gap-2">
 						<Label>Élève</Label>
-						<Select.Root type="single" name="eleveId" bind:value={selectedEleveId}>
-							<Select.Trigger class="w-full">
-								{selectedEleveId ? eleves.find((e) => e.id === selectedEleveId)?.prenom + ' ' + eleves.find((e) => e.id === selectedEleveId)?.nom : 'Sélectionner un élève'}
-							</Select.Trigger>
-							<Select.Content>
-								{#each eleves as eleve}
-									<Select.Item value={eleve.id}>{eleve.prenom} {eleve.nom}</Select.Item>
+						<Input placeholder="Rechercher un élève..." bind:value={searchQuery} />
+						{#if searchResults.length > 0 && !selectedEleveId}
+							<div class="mt-2 max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+								{#each searchResults as e (e.id)}
+									<button
+										type="button"
+										class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+										onclick={() => selectEleve(e)}
+									>
+										<p class="text-sm font-medium">{e.prenom} {e.nom}</p>
+										<p class="text-xs text-muted-foreground">{e.classe || ''}</p>
+										<p class="text-xs text-muted-foreground">{e.dateNaissance || ''}</p>
+									</button>
 								{/each}
-							</Select.Content>
-						</Select.Root>
+							</div>
+						{/if}
+						{#if selectedEleveId}
+							{@const selectedEleve = eleves.find((e) => e.id === selectedEleveId)}
+							<div class="flex items-center justify-between gap-2 rounded-md border p-3 mt-2">
+								<div>
+									<p class="text-sm font-medium">{selectedEleve?.prenom} {selectedEleve?.nom}</p>
+									<p class="text-xs text-muted-foreground">{selectedEleve?.classe || ''}</p>
+									<p class="text-xs text-muted-foreground">{selectedEleve?.dateNaissance || ''}</p>
+								</div>
+								<button
+									type="button"
+									class="rounded-full p-1 hover:bg-muted"
+									onclick={resetSelection}
+								>
+									<X class="size-4 text-muted-foreground" />
+								</button>
+							</div>
+						{/if}
 					</div>
 					<div class="grid gap-2">
 						<Label>Message</Label>
 						<Textarea name="message" bind:value={newMessage} placeholder="Décrire l'incident..." rows={4} />
 					</div>
+					<input type="hidden" name="eleveId" value={selectedEleveId || ''} />
 				</div>
 				<Dialog.Footer>
 					<Button variant="outline" onclick={() => (dialogOpen = false)}>Annuler</Button>
