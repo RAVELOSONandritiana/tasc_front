@@ -4,6 +4,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import Profil from '$lib/components/user/Profil.svelte';
 	import LoadingBar from '$lib/components/ui/loading-bar/loading-bar.svelte';
+	import { enhance } from '$app/forms';
 	import {
 		LayoutDashboard,
 		UserSquare2,

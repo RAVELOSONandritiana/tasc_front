@@ -9,15 +9,44 @@
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
 	import Checkbox from '$lib/components/ui/checkbox/checkbox.svelte';
+	import { onMount } from 'svelte';
 
 	let { form } = $props();
 	let matricule = $state('');
 	let password = $state('');
+	let remember = $state(false);
 	let error = $derived(form?.error || '');
+	let formRef = $state<HTMLFormElement | null>(null);
+
+	onMount(() => {
+		const stored = localStorage.getItem('rememberedAccount');
+		if (stored) {
+			try {
+				const account = JSON.parse(stored);
+				matricule = account.matricule || '';
+				password = account.password || '';
+				remember = true;
+				if (formRef) {
+					formRef.requestSubmit();
+				}
+			} catch {
+				localStorage.removeItem('rememberedAccount');
+			}
+		}
+	});
+
+	$effect(() => {
+		if (form?.success && remember) {
+			localStorage.setItem('rememberedAccount', JSON.stringify({ matricule, password }));
+		}
+		if (!remember) {
+			localStorage.removeItem('rememberedAccount');
+		}
+	});
 </script>
 
 <div class="flex min-h-screen items-center justify-center px-4">
-	<form class="w-full max-w-sm md:max-w-lg" method="POST" action="?/login">
+	<form class="w-full max-w-sm md:max-w-lg" method="POST" action="?/login" bind:this={formRef}>
 		<Card class="w-full">
 			<CardHeader>
 				<CardTitle class="mx-auto my-3 text-center text-2xl font-bold">Connexion à Tasc</CardTitle>
@@ -36,8 +65,6 @@
 						inputmode="numeric"
 						placeholder="059875"
 						required
-						minlength={6}
-						maxlength={6}
 						autocomplete="username"
 						name="matricule"
 					/>
@@ -60,11 +87,11 @@
 					/>
 				</div>
 
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<Checkbox id="remember" />
-						<Label for="remember" class="text-sm">Se souvenir de moi</Label>
-					</div>
+		<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<Checkbox id="remember" bind:checked={remember} />
+					<Label for="remember" class="text-sm">Se souvenir de moi</Label>
+				</div>
 					<Button type="button" variant="link" class="h-auto p-0 text-sm">
 						Mot de passe oublié ?
 					</Button>
