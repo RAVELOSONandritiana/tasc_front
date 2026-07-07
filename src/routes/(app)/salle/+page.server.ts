@@ -65,15 +65,33 @@ export const actions: Actions = {
 		throw redirect(303, '/salle');
 	},
 
-	delete: async ({ request }) => {
+	delete: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 
-		await prisma.salle.delete({
-			where: { id }
-		});
+		if (!id) {
+			return fail(400, { error: 'ID de la salle requis' });
+		}
 
-		throw redirect(303, '/salle');
+		try {
+			const salle = await prisma.salle.findUnique({
+				where: { id },
+				select: { id: true, nom: true }
+			});
+
+			if (!salle) {
+				return fail(404, { error: `Salle introuvable` });
+			}
+
+			await prisma.salle.delete({
+				where: { id }
+			});
+		} catch (e: unknown) {
+			console.error('Delete salle error:', e);
+			return fail(500, { error: 'Erreur lors de la suppression' });
+		}
+
+		return { success: true };
 	},
 
 	updateImage: async ({ request }) => {

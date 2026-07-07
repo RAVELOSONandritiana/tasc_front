@@ -3,7 +3,7 @@
 	import type { Salle } from '$lib/types/Materiel.type';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { DoorOpen, Users, Trash2 } from '@lucide/svelte/icons';
+	import { DoorOpen, Users } from '@lucide/svelte/icons';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
@@ -15,12 +15,11 @@
 	const { salle, deleteAction = '' }: { salle: Salle; deleteAction?: string } = $props();
 
 	let editOpen = $state(false);
-	let deleteOpen = $state(false);
 	let editName = $state('');
 	let editPlace = $state('');
 	let imageOpen = $state(false);
 	let files = $state<FileList | null>(null);
-	let submitting = $state(false);
+	let submittingDelete = $state(false);
 	let imageError = $state(false);
 
 	const statutLabel = $derived(salle.occupe !== false ? 'Occupée' : 'Libre');
@@ -76,9 +75,9 @@
 <CardUI class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
 	{#if deleteAction}
 		<form method="POST" action={deleteAction} use:enhance={() => {
-			submitting = true;
+			submittingDelete = true;
 			return async ({ result }: { result: ActionResult }) => {
-				submitting = false;
+				submittingDelete = false;
 				if (result.type === 'success') {
 					window.location.reload();
 				} else if (result.type === 'failure') {
@@ -97,12 +96,12 @@
 				class="absolute right-4 top-4 z-10 size-8 rounded-full shadow-sm"
 				title="Supprimer"
 				type="submit"
-				disabled={submitting}
+				disabled={submittingDelete}
 			>
-				{#if submitting}
+				{#if submittingDelete}
 					<Spinner class="size-4" />
 				{:else}
-					<Trash2 class="size-4" />
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
 				{/if}
 			</Button>
 		</form>
@@ -193,3 +192,4 @@
 		</form>
 	</Dialog.Content>
 </Dialog.Root>
+
