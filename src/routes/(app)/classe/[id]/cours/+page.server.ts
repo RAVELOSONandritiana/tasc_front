@@ -1,36 +1,60 @@
-import type { PageServerLoad } from './$types';
-import { getClasseById, prisma } from '$lib/server/prisma';
-import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
+import type { PageServerLoad, Actions } from './$types';
+import { getClasseById, getMatieres, getProfesseurs, getCours, createCours, updateCours, deleteCours, createExamen, createNote, getNotesByCoursId, createMatiere, prisma } from '$lib/server/prisma';
+import { fail } from '@sveltejs/kit';
+import { logActivity } from '$lib/server/activity';
+import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const classe = await getClasseById(params.id);
+	if (!classe) {
+		throw fail(404, { error: 'Classe introuvable' });
+	}
 
-	const coursList = await prisma.cours.findMany({
-		where: { classeId: params.id },
-		include: {
-			matiere: true,
-			professeur: {
-				include: {
-					personne: true
+	const [allMatieres, profs, coursList, examens, inscriptions] = await Promise.all([
+		getMatieres(),
+		getProfesseurs(),
+		getCours(),
+		prisma.examen.findMany({
+			where: { classeId: params.id },
+			orderBy: { date: 'asc' }
+		}),
+		prisma.inscription.findMany({
+			where: { classeId: params.id, actif: true },
+			include: {
+				eleve: {
+					include: {
+						personne: true
+					}
 				}
 			}
-		}
-	});
+		})
+	]);
 
-	const listeCours: Cours[] = coursList.map((c) => ({
-		id: c.id,
-		nom: c.matiere.nom,
-		coefficient: c.coefficient,
-		professeur: c.professeur
-			? `${c.professeur.personne.name} ${c.professeur.personne.lastname}`
-			: '',
-		participants: c.participants || []
+	const matieres = allMatieres.map((m) => ({
+		id: m.id,
+		nom: m.nom,
+		couleur: m.couleur || undefined
 	}));
 
-	const examens = await prisma.examen.findMany({
-		where: { classeId: params.id },
-		orderBy: { date: 'asc' }
-	});
+	const enseignants = profs.map((p) => ({
+		id: p.id,
+		name: p.personne.name,
+		lastname: p.personne.lastname,
+		email: p.personne.email,
+		phone: p.personne.phone
+	}));
+
+	const listeCours: Cours[] = coursList
+		.filter((c) => c.classeId === params.id)
+		.map((c) => ({
+			id: c.id,
+			nom: c.matiere?.nom || 'Matière inconnue',
+			coefficient: c.coefficient,
+			professeur: c.professeur
+				? `${c.professeur.personne.name} ${c.professeur.personne.lastname}`
+				: '',
+			participants: c.participants || []
+		}));
 
 	const listeExamens: Examen[] = examens.map((e) => ({
 		id: e.id,
@@ -40,7 +64,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		periode: e.periode || undefined
 	}));
 
-	const elevesClasse: EleveCours[] = (classe?.inscriptions || []).map((i) => ({
+	const elevesClasse: EleveCours[] = inscriptions.map((i) => ({
 		id: i.eleve.id,
 		nom: i.eleve.personne.name,
 		prenom: i.eleve.personne.lastname,
@@ -51,8 +75,199 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		classe,
+		matieres,
+		enseignants,
 		listeCours,
 		listeExamens,
 		elevesClasse
 	};
+};
+
+export const actions: Actions = {
+	createMatiere: async ({ request, locals }) => {
+		const data = await request.formData();
+		const nom = (data.get('nom') as string | null)?.trim() || '';
+		const couleur = (data.get('couleur') as string | null)?.trim() || null;
+
+		if (!nom) {
+			return fail(400, { error: 'Nom de matière requis' });
+		}
+
+		try {
+			const matiere = await createMatiere({ nom, couleur });
+			logActivity(locals.user, 'creation_matiere', `Création de la matière ${matiere.nom}`).catch(() => {});
+			return { success: true, matiere };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la création de la matière" });
+		}
+	},
+
+	createCours: async ({ request, locals, params }) => {
+		const data = await request.formData();
+		const matiereId = data.get('matiereId') as string;
+		const professeurId = data.get('professeurId') as string;
+		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
+		const participants = data.getAll('participants') as string[];
+
+		if (!matiereId || !professeurId) {
+			return fail(400, { error: 'Matière et professeur requis' });
+		}
+
+		try {
+			const cours = await createCours({
+				classeId: params.id,
+				matiereId,
+				professeurId,
+				coefficient: Number.isFinite(coefficient) && coefficient > 0 ? coefficient : 1,
+				participants
+			});
+
+			logActivity(
+				locals.user,
+				'creation_cours',
+				`Création du cours ${cours.matiere?.nom || ''}`
+			).catch(() => {});
+
+			return { success: true, cours };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la création du cours" });
+		}
+	},
+
+	updateCoefficient: async ({ request, params }) => {
+		const data = await request.formData();
+		const coursId = data.get('coursId') as string;
+		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
+
+		if (!coursId) {
+			return fail(400, { error: 'coursId requis' });
+		}
+
+		try {
+			const cours = await updateCours(coursId, { coefficient: Number.isFinite(coefficient) ? coefficient : 1 });
+			return { success: true, cours };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la mise à jour" });
+		}
+	},
+
+	updateParticipants: async ({ request }) => {
+		const data = await request.formData();
+		const coursId = data.get('coursId') as string;
+		const participants = data.getAll('participants') as string[];
+
+		if (!coursId) {
+			return fail(400, { error: 'coursId requis' });
+		}
+
+		try {
+			const cours = await updateCours(coursId, { participants });
+			return { success: true, cours };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la mise à jour" });
+		}
+	},
+
+	deleteCours: async ({ request, locals }) => {
+		const data = await request.formData();
+		const coursId = data.get('coursId') as string;
+
+		if (!coursId) {
+			return fail(400, { error: 'coursId requis' });
+		}
+
+		try {
+			await deleteCours(coursId);
+			logActivity(locals.user, 'suppression_cours', 'Suppression d\'un cours').catch(() => {});
+			return { success: true };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
+		}
+	},
+
+	createExamen: async ({ request, locals, params }) => {
+		const data = await request.formData();
+		const nom = (data.get('nom') as string | null)?.trim() || '';
+		const date = data.get('date') as string;
+		const periode = (data.get('periode') as string | null)?.trim() || '';
+
+		if (!nom || !date) {
+			return fail(400, { error: 'Nom et date requis' });
+		}
+
+		try {
+			const examen = await createExamen({
+				classeId: params.id,
+				nom,
+				date,
+				periode
+			});
+
+			logActivity(
+				locals.user,
+				'creation_examen',
+				`Examen créé : ${examen.nom}`
+			).catch(() => {});
+
+			return { success: true, examen };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la création de l'examen" });
+		}
+	},
+
+	createNote: async ({ request, locals, params }) => {
+		const data = await request.formData();
+		const valeur = parseFloat((data.get('valeur') as string) || '0');
+		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
+		const libelle = (data.get('libelle') as string | null)?.trim() || '';
+		const eleveId = data.get('eleveId') as string;
+		const coursId = data.get('coursId') as string;
+		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+
+		if (isNaN(valeur) || !eleveId || !coursId) {
+			return fail(400, { error: 'Valeur, élève et cours requis' });
+		}
+
+		try {
+			const note = await createNote({
+				valeur,
+				coefficient: Number.isFinite(coefficient) && coefficient > 0 ? coefficient : 1,
+				libelle: libelle || undefined,
+				eleveId,
+				coursId,
+				examenId
+			});
+
+			logActivity(
+				locals.user,
+				'creation_note',
+				`Note créée : ${valeur}/20`
+			).catch(() => {});
+
+			return { success: true, note };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la création de la note" });
+		}
+	},
+
+	getNotes: async ({ params }) => {
+		try {
+			const coursId = params.id;
+			const notes = await getNotesByCoursId(coursId);
+			return {
+				success: true,
+				notes: notes.map((n) => ({
+					id: n.id,
+					valeur: n.valeur,
+					coefficient: n.coefficient,
+					libelle: n.libelle || '',
+					eleveId: n.eleveId,
+					eleveNom: `${n.eleve.personne.name} ${n.eleve.personne.lastname}`,
+					coursId: n.coursId
+				}))
+			};
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la récupération des notes" });
+		}
+	}
 };

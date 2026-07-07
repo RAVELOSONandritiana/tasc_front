@@ -46,6 +46,7 @@ export type Note = {
 	libelle: string;
 	coursId: string;
 	examenId?: string;
+	eleveNom?: string;
 };
 
 export type Incident = {

@@ -376,6 +376,16 @@ export async function getMatieres() {
 	});
 }
 
+export async function createMatiere(data: { nom: string; couleur?: string | null; icone?: string | null }) {
+	return prisma.matiere.create({
+		data: {
+			nom: data.nom,
+			couleur: data.couleur || null,
+			icone: data.icone || null
+		}
+	});
+}
+
 export async function getCours() {
 	return prisma.cours.findMany({
 		include: {
@@ -740,5 +750,108 @@ export async function updateUserPassword(userId: string, newPassword: string) {
 	return prisma.compte.update({
 		where: { id: userId },
 		data: { password: hashed }
+	});
+}
+
+export async function createCours(data: {
+	classeId: string;
+	matiereId: string;
+	professeurId: string;
+	coefficient?: number;
+	participants?: string[];
+	anneeId?: string;
+}) {
+	const classe = await prisma.classe.findUnique({ where: { id: data.classeId } });
+	if (!classe) throw new Error('Classe introuvable');
+
+	const annee = data.anneeId || (await getActiveAnneeScolaire())?.id;
+	if (!annee) throw new Error('Année scolaire active introuvable');
+
+	return prisma.cours.create({
+		data: {
+			classeId: data.classeId,
+			matiereId: data.matiereId,
+			professeurId: data.professeurId,
+			anneeId: annee,
+			coefficient: data.coefficient ?? 1,
+			participants: data.participants ?? []
+		},
+		include: {
+			matiere: true,
+			professeur: { include: { personne: true } },
+			classe: true
+		}
+	});
+}
+
+export async function updateCours(id: string, data: {
+	coefficient?: number;
+	participants?: string[];
+	professeurId?: string;
+}) {
+	return prisma.cours.update({
+		where: { id },
+		data,
+		include: {
+			matiere: true,
+			professeur: { include: { personne: true } }
+		}
+	});
+}
+
+export async function deleteCours(id: string) {
+	return prisma.cours.delete({ where: { id } });
+}
+
+export async function createExamen(data: {
+	classeId: string;
+	nom: string;
+	date: Date | string;
+	periode?: string;
+	anneeId?: string;
+}) {
+	const annee = data.anneeId || (await getActiveAnneeScolaire())?.id;
+	if (!annee) throw new Error('Année scolaire active introuvable');
+
+	return prisma.examen.create({
+		data: {
+			classeId: data.classeId,
+			nom: data.nom,
+			date: typeof data.date === 'string' ? new Date(data.date) : data.date,
+			periode: data.periode || null,
+			anneeId: annee
+		}
+	});
+}
+
+export async function createNote(data: {
+	valeur: number;
+	coefficient?: number;
+	libelle?: string;
+	eleveId: string;
+	coursId: string;
+	examenId?: string;
+	inscriptionId?: string;
+}) {
+	return prisma.note.create({
+		data: {
+			valeur: data.valeur,
+			coefficient: data.coefficient ?? 1,
+			libelle: data.libelle || null,
+			eleveId: data.eleveId,
+			coursId: data.coursId,
+			examenId: data.examenId || null,
+			inscriptionId: data.inscriptionId || null
+		}
+	});
+}
+
+export async function getNotesByCoursId(coursId: string) {
+	return prisma.note.findMany({
+		where: { coursId },
+		include: {
+			eleve: { include: { personne: true } },
+			cours: { include: { matiere: true } }
+		}
 	});
 }

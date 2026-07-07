@@ -90,6 +90,9 @@ importers:
       bits-ui:
         specifier: ^2.18.1
         version: 2.18.1(@internationalized/date@3.12.1)(@sveltejs/kit@2.60.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.7(@typescript-eslint/types@8.59.3))(vite@8.0.13(@types/node@24.12.4)(jiti@2.7.0)))(svelte@5.55.7(@typescript-eslint/types@8.59.3))(typescript@6.0.3)(vite@8.0.13(@types/node@24.12.4)(jiti@2.7.0)))(svelte@5.55.7(@typescript-eslint/types@8.59.3))
+      chart.js:
+        specifier: ^4.5.1
+        version: 4.5.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -144,6 +147,9 @@ importers:
       svelte:
         specifier: ^5.55.2
         version: 5.55.7(@typescript-eslint/types@8.59.3)
+      svelte-chartjs:
+        specifier: ^4.0.1
+        version: 4.0.1(chart.js@4.5.1)(svelte@5.55.7(@typescript-eslint/types@8.59.3))
       svelte-check:
         specifier: ^4.4.6
         version: 4.4.8(picomatch@4.0.4)(svelte@5.55.7(@typescript-eslint/types@8.59.3))(typescript@6.0.3)
@@ -2386,6 +2392,12 @@ packages:
   superstruct@2.0.2:
     resolution: {integrity: sha512-uV+TFRZdXsqXTL2pRvujROjdZQ4RAlBUS5BTh9IGm+jTqQntYThciG/qu57Gs69yjnVUSqdxF9YLmSnpupBW9A==}
     engines: {node: '>=14.0.0'}
+
+  svelte-chartjs@4.0.1:
+    resolution: {integrity: sha512-4z+0J+w/6ADH2Cy+/AnVek2HxRrznQ7dJfWTybc9BHm9//DCb1BmLrSE3NGDRDLj+kwJbKw2o1tPLBE3CmdHmw==}
+    peerDependencies:
+      chart.js: ^3.5.0 || ^4.0.0
+      svelte: ^5.0.0
 
   svelte-check@4.4.8:
     resolution: {integrity: sha512-67adfgBox5eNSNIvIIwgFizKGdcRrGpiMoNO2obHcYuLz7iTa8Xgm/NGU3ntMFnNm8K1grFOIG6HhMLX/vcN8w==}
@@ -5036,6 +5048,11 @@ snapshots:
 
   superstruct@2.0.2:
     optional: true
+
+  svelte-chartjs@4.0.1(chart.js@4.5.1)(svelte@5.55.7(@typescript-eslint/types@8.59.3)):
+    dependencies:
+      chart.js: 4.5.1
+      svelte: 5.55.7(@typescript-eslint/types@8.59.3)
 
   svelte-check@4.4.8(picomatch@4.0.4)(svelte@5.55.7(@typescript-eslint/types@8.59.3))(typescript@6.0.3):
     dependencies:
