@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { Plus, Play } from '@lucide/svelte/icons';
 	import type { SeanceEDT } from '$lib/types/Materiel.type';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -31,11 +31,9 @@
 
 <div class="rounded-xl bg-card/50 p-4">
 	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Trigger>
-			<Button variant="outline" size="sm" class="mb-3 w-full gap-2">
-				<Plus class="size-3.5" />
-				Ajouter une séance
-			</Button>
+		<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'mb-3 w-full gap-2' })}>
+			<Plus class="size-3.5" />
+			Ajouter une séance
 		</Dialog.Trigger>
 		<form method="POST" action="?/createSeance">
 			<Dialog.Content class="sm:max-w-100">

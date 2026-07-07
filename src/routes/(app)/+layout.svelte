@@ -87,8 +87,8 @@
 					</Sidebar.Menu>
 				</Sidebar.Group>
 			</Sidebar.Content>
-		<Sidebar.Footer class="border-t border-sidebar-border p-4">
-			<form method="POST" action="/signout?/logout">
+	<Sidebar.Footer class="border-t border-sidebar-border p-4">
+		<form method="POST" action="/signout?/logout">
 				<Button
 					type="submit"
 					variant="outline"

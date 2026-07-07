@@ -4,13 +4,34 @@
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
 	import * as Select from '$lib/components/ui/select';
-	import { ArrowLeft, Search, Filter, User, Clock, Globe } from '@lucide/svelte/icons';
-	import { goto } from '$app/navigation';
+	import * as Table from '$lib/components/ui/table';
+	import * as Pagination from '$lib/components/ui/pagination';
+	import { ArrowLeft, Search, Clock, Globe } from '@lucide/svelte/icons';
+	import { goto, afterNavigate } from '$app/navigation';
 	import type { PageProps } from './$types';
+	import { onMount } from 'svelte';
 
 	const { data }: PageProps = $props();
-	let searchQuery = $state('');
-	let actionFilter = $state<string>('all');
+	let searchQuery = $state(data.searchQuery || '');
+	let actionFilter = $state(data.actionFilter || 'all');
+	let page = $state(data.page || 1);
+	let mounted = $state(false);
+	let initialLoad = $state(true);
+
+	onMount(() => {
+		mounted = true;
+		setTimeout(() => {
+			initialLoad = false;
+		}, 0);
+	});
+
+	afterNavigate(() => {
+		const params = new URLSearchParams(window.location.search);
+		const newPage = Math.max(1, Number(params.get('page') || '1'));
+		if (newPage !== page) {
+			page = newPage;
+		}
+	});
 
 	const actions = [
 		{ value: 'all', label: 'Toutes les actions' },
@@ -24,17 +45,6 @@
 		{ value: 'validation_compte', label: 'Validation compte' }
 	];
 
-	const filteredActivities = $derived(
-		data.activities.filter((act) => {
-			const matchesSearch = !searchQuery
-				|| act.description.toLowerCase().includes(searchQuery.toLowerCase())
-				|| act.compte.personne.lastname.toLowerCase().includes(searchQuery.toLowerCase())
-				|| act.compte.personne.name.toLowerCase().includes(searchQuery.toLowerCase());
-			const matchesAction = actionFilter === 'all' || act.action === actionFilter;
-			return matchesSearch && matchesAction;
-		})
-	);
-
 	const actionLabels: Record<string, string> = {
 		connexion: 'Connexion',
 		deconnexion: 'Déconnexion',
@@ -46,6 +56,45 @@
 		validation_compte: 'Validation compte'
 	};
 
+	const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+
+	function getUrlParam(key: string, fallback: string) {
+		return new URLSearchParams(window.location.search).get(key) || fallback;
+	}
+
+	function navigateToPage(p: number) {
+		const urlParams = new URLSearchParams(window.location.search);
+		urlParams.set('page', String(p));
+		goto(`?${urlParams.toString()}`, { invalidateAll: true, noScroll: true });
+	}
+
+	function applyFilters() {
+		const urlParams = new URLSearchParams();
+		if (searchQuery) urlParams.set('search', searchQuery);
+		if (actionFilter !== 'all') urlParams.set('action', actionFilter);
+		urlParams.set('page', '1');
+		goto(`?${urlParams.toString()}`, { invalidateAll: true, noScroll: true });
+	}
+
+	$effect(() => {
+		if (!mounted || initialLoad) return;
+		const currentAction = getUrlParam('action', 'all');
+		if (currentAction !== actionFilter) {
+			applyFilters();
+		}
+	});
+
+	$effect(() => {
+		if (!mounted || initialLoad) return;
+		const timer = setTimeout(() => {
+			const currentSearch = getUrlParam('search', '');
+			if (currentSearch !== searchQuery) {
+				applyFilters();
+			}
+		}, 300);
+		return () => clearTimeout(timer);
+	});
+
 	function formatDate(dateStr: string) {
 		const date = new Date(dateStr);
 		return date.toLocaleString('fr-FR', {
@@ -56,18 +105,23 @@
 			minute: '2-digit'
 		});
 	}
+
+	const profileId = data.activities[0]?.compteId || '';
 </script>
 
 <main class="flex h-screen flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
-		<div class="mx-auto max-w-4xl p-4 md:p-6">
+		<div class="mx-auto max-w-6xl p-4 md:p-6">
 			<div class="mb-4 flex items-center justify-between">
 				<div class="flex items-center gap-3">
-					<Button variant="ghost" class="gap-2" onclick={() => goto(`/profil/${data.activities[0]?.compteId || ''}`)}>
+					<Button variant="ghost" class="gap-2" onclick={() => goto(`/profil/${profileId}`)}>
 						<ArrowLeft class="size-4" />
 						Profil
 					</Button>
-					<h1 class="text-xl font-bold">Historique des activités</h1>
+					<div>
+						<h1 class="text-xl font-bold">Historique des activités</h1>
+						<p class="text-xs text-muted-foreground">{data.total} activité{data.total > 1 ? 's' : ''} au total</p>
+					</div>
 				</div>
 			</div>
 
@@ -83,6 +137,7 @@
 								placeholder="Rechercher dans l'historique..."
 								bind:value={searchQuery}
 								class="pl-9"
+								onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyFilters(); } }}
 							/>
 						</div>
 					</div>
@@ -102,46 +157,91 @@
 				</div>
 			</Card>
 
-			<div class="space-y-2">
-				{#if filteredActivities.length === 0}
-					<Card class="p-8 text-center text-muted-foreground">
-						<Clock class="mx-auto mb-2 size-8" />
-						<p>Aucune activité enregistrée</p>
-					</Card>
-				{:else}
-					{#each filteredActivities as act (act.id)}
-						<Card class="p-4">
-							<div class="flex items-start justify-between">
-								<div class="flex items-center gap-3">
-									<div class="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-										<Filter class="size-4 text-primary" />
-									</div>
-									<div>
-										<p class="text-sm font-medium">{actionLabels[act.action] || act.action}</p>
-										<p class="text-xs text-muted-foreground">{act.description}</p>
-										<div class="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-											<span class="flex items-center gap-1">
-												<User class="size-3" />
-												{act.compte.personne.name} {act.compte.personne.lastname}
+			<Card>
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head>Action</Table.Head>
+							<Table.Head>Description</Table.Head>
+							<Table.Head>Utilisateur</Table.Head>
+							<Table.Head>Date</Table.Head>
+							<Table.Head class="text-right">IP</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#if data.activities.length === 0}
+							<Table.Row>
+								<Table.Cell colspan={5} class="h-24 text-center text-muted-foreground">
+									Aucune activité enregistrée
+								</Table.Cell>
+							</Table.Row>
+						{:else}
+							{#each data.activities as act (act.id)}
+								<Table.Row class="transition-colors hover:bg-muted/50">
+									<Table.Cell>
+										<span class="text-sm font-medium">{actionLabels[act.action] || act.action}</span>
+									</Table.Cell>
+									<Table.Cell>
+										<span class="text-sm text-muted-foreground">{act.description}</span>
+									</Table.Cell>
+									<Table.Cell>
+										<span class="text-sm">{act.compte.personne.name} {act.compte.personne.lastname}</span>
+									</Table.Cell>
+									<Table.Cell>
+										<span class="text-sm text-muted-foreground">{formatDate(act.createdAt)}</span>
+									</Table.Cell>
+									<Table.Cell class="text-right">
+										{#if act.ipAddress}
+											<span class="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+												<Globe class="size-3" />
+												{act.ipAddress}
 											</span>
-											<span class="flex items-center gap-1">
-												<Clock class="size-3" />
-												{formatDate(act.createdAt)}
-											</span>
-										</div>
-									</div>
-								</div>
-								{#if act.ipAddress}
-									<span class="flex items-center gap-1 text-xs text-muted-foreground">
-										<Globe class="size-3" />
-										{act.ipAddress}
-									</span>
-								{/if}
-							</div>
-						</Card>
-					{/each}
+										{:else}
+											<span class="text-xs text-muted-foreground">—</span>
+										{/if}
+									</Table.Cell>
+								</Table.Row>
+							{/each}
+						{/if}
+					</Table.Body>
+				</Table.Root>
+
+				{#if data.total > data.pageSize}
+					<div class="flex items-center justify-between border-t px-4 py-3">
+						<p class="text-sm text-muted-foreground">
+							Page {data.page} sur {totalPages}
+						</p>
+						<Pagination.Root count={data.total} perPage={data.pageSize} bind:page={page}>
+							<Pagination.Content>
+								<Pagination.Item>
+									<Pagination.Previous
+										onclick={() => navigateToPage(Math.max(1, page - 1))}
+										aria-disabled={page <= 1}
+									/>
+								</Pagination.Item>
+								{#each Array.from({ length: totalPages }, (_, i) => i + 1) as p}
+									<Pagination.Item>
+										<Button
+											variant={p === page ? 'outline' : 'ghost'}
+											size="icon"
+											class="size-9"
+											onclick={() => navigateToPage(p)}
+										>
+											{p}
+										</Button>
+									</Pagination.Item>
+								{/each}
+								<Pagination.Item>
+									<Pagination.Next
+										onclick={() => navigateToPage(Math.min(totalPages, page + 1))}
+										aria-disabled={page >= totalPages}
+									/>
+								</Pagination.Item>
+							</Pagination.Content>
+						</Pagination.Root>
+					</div>
 				{/if}
-			</div>
+			</Card>
 		</div>
 	</div>
 </main>

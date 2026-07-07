@@ -6,7 +6,7 @@
 	import { Card } from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { ClipboardList, Plus, UserRound } from '@lucide/svelte/icons';
-	import { Button } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import type { Personne } from '$lib/types/Personne.type';
@@ -74,11 +74,9 @@
 					</div>
 					<div class="ml-auto">
 						<Dialog.Root bind:open={openDialog}>
-							<Dialog.Trigger type="button">
-								<Button variant="default" size="sm" class="gap-2">
-									<Plus class="size-4" />
-									Nouvelle classe
-								</Button>
+							<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', size: 'sm', class: 'gap-2' })}>
+								<Plus class="size-4" />
+								Nouvelle classe
 							</Dialog.Trigger>
 							<Dialog.Content class="max-h-[90vh] overflow-y-auto sm:max-w-sm">
 								<Dialog.Header>

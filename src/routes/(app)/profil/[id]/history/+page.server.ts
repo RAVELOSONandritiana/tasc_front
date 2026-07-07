@@ -23,24 +23,55 @@ type Activity = {
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const userId = params.id;
 
-	const where = locals.user?.role === 'ADMINISTRATEUR'
+	const baseWhere: Record<string, unknown> = locals.user?.role === 'ADMINISTRATEUR'
 		? { compteId: userId }
 		: { compteId: locals.user?.userId };
 
-	const activities = await prisma.activite.findMany({
-		where,
-		include: {
-			compte: {
-				include: {
-					personne: true
+	const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
+	const pageSize = 10;
+	const actionFilter = url.searchParams.get('action') || 'all';
+	const searchQuery = url.searchParams.get('search') || '';
+
+	const whereClause: Record<string, unknown> = { ...baseWhere };
+
+	if (actionFilter !== 'all') {
+		whereClause.action = actionFilter;
+	}
+
+	if (searchQuery) {
+		whereClause.OR = [
+			{ description: { contains: searchQuery, mode: 'insensitive' as const } },
+			{
+				compte: {
+					personne: {
+						OR: [
+							{ name: { contains: searchQuery, mode: 'insensitive' as const } },
+							{ lastname: { contains: searchQuery, mode: 'insensitive' as const } }
+						]
+					}
 				}
 			}
-		},
-		orderBy: {
-			createdAt: 'desc'
-		},
-		take: 50
-	});
+		];
+	}
+
+	const [activities, total] = await Promise.all([
+		prisma.activite.findMany({
+			where: whereClause as never,
+			include: {
+				compte: {
+					include: {
+						personne: true
+					}
+				}
+			},
+			orderBy: {
+				createdAt: 'desc'
+			},
+			skip: (page - 1) * pageSize,
+			take: pageSize
+		}),
+		prisma.activite.count({ where: whereClause as never })
+	]);
 
 	const mapped = activities.map((a) => ({
 		id: a.id,
@@ -60,5 +91,5 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		}
 	}));
 
-	return { activities: mapped };
+	return { activities: mapped, page, pageSize, total, actionFilter, searchQuery };
 };

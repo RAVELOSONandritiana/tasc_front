@@ -144,7 +144,7 @@
 </script>
 
 <main class="flex-1 overflow-y-auto bg-background p-4 text-foreground md:p-6">
-	<div class="mx-auto max-w-4xl space-y-6">
+	<div class="mx-auto max-w-5xl space-y-6">
 		<!-- Header -->
 		<div
 			class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"

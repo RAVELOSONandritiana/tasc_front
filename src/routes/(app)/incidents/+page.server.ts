@@ -160,19 +160,21 @@ export const actions: Actions = {
 		const incidentId = data.get('incidentId') as string;
 		const text = data.get('text') as string;
 		const author = locals.user?.prenom || 'Admin';
+		console.log('Comment action called with:', { incidentId, text, author });
 
 		if (!incidentId || !text?.trim()) {
 			return fail(400, { error: 'Champs requis manquants' });
 		}
 
 		try {
-			await prisma.comment.create({
+			const comment = await prisma.comment.create({
 				data: {
 					incidentId,
 					author,
 					text: text.trim()
 				}
 			});
+			console.log('Comment created:', comment);
 		} catch (e: unknown) {
 			console.error('Comment error:', e);
 			return fail(500, { error: 'Erreur lors de l\'ajout du commentaire' });

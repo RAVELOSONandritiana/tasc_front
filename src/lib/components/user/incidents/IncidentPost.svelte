@@ -27,7 +27,6 @@
 
 	let showComments = $state(false);
 	let commentText = $state('');
-	let reactions = $state(new Set<string>());
 
 	const typeConfig: Record<IncidentType, { icon: typeof Info; color: string; bg: string }> = {
 		info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -70,32 +69,12 @@
 		showComments = !showComments;
 	}
 
-	function handleAddComment() {
-		if (commentText.trim()) {
-			incident.comments = [
-				...(incident.comments || []),
-				{
-					id: Date.now().toString(),
-					author: 'Moi',
-					text: commentText.trim(),
-					date: new Date().toISOString()
-				}
-			];
-			commentText = '';
-		}
-	}
-
-	function handleReact() {
-		if (reactions.has(incident.id)) {
-			reactions.delete(incident.id);
-		} else {
-			reactions.add(incident.id);
-		}
-		reactions = new Set(reactions);
-	}
+	const reactionCount = $derived(incident.reactions?.length || 0);
+	const commentCount = $derived(incident.comments?.length || 0);
+	const userReacted = $derived(incident.reactions?.some((r: { emoji: string; user: string }) => r.user === currentUserId) || false);
 
 	function handleShare() {
-		const url = window.location.origin + `/incidents`;
+		const url = window.location.origin + '/incidents';
 		navigator.clipboard.writeText(url).then(() => {
 			alert('Lien copié dans le presse-papiers');
 		});
@@ -135,7 +114,7 @@
 					{:else}
 						<UserX class="size-3" />
 					{/if}
-					{validType === 'note' ? 'Note' : validType === 'erreur' ? 'Erreur' : validType === 'info' ? 'Info' : 'Absence'}
+					{validType === 'note' ? 'Note' : validType === 'erreur' ? 'Erreur' : validType === 'info' ? 'Info' : 'Absent'}
 				</Badge>
 			</div>
 
@@ -150,13 +129,17 @@
 			<div class="mt-3 border-t border-sidebar-border">
 				<div class="flex items-center justify-between pt-3">
 					<div class="flex items-center gap-1">
-						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleReact}>
-							<Heart class="size-3.5 {reactions.has(incident.id) ? 'fill-red-500 text-red-500' : ''}" />
-							<span>{reactions.has(incident.id) ? 1 : 0}</span>
-						</Button>
+						<form method="POST" action="?/reaction" class="inline">
+							<input type="hidden" name="incidentId" value={incident.id} />
+							<input type="hidden" name="emoji" value="❤️" />
+							<Button type="submit" variant="ghost" size="sm" class="gap-1.5 text-xs">
+								<Heart class="size-3.5 {userReacted ? 'fill-red-500 text-red-500' : ''}" />
+								<span>{reactionCount}</span>
+							</Button>
+						</form>
 						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleToggleComments}>
 							<MessageCircle class="size-3.5" />
-							<span>{incident.comments?.length || 0}</span>
+							<span>{commentCount}</span>
 						</Button>
 						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleShare}>
 							<Share2 class="size-3.5" />
@@ -176,12 +159,13 @@
 
 		{#if showComments}
 			<div class="border-t border-sidebar-border bg-muted/20 p-4">
-				<div class="mb-3 flex items-center gap-2">
-					<input type="text" bind:value={commentText} placeholder="Ajouter un commentaire..." class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none" />
-					<Button size="sm" onclick={handleAddComment} disabled={!commentText.trim()}>
+				<form method="POST" action="?/comment" class="mb-3 flex items-center gap-2">
+					<input type="hidden" name="incidentId" value={incident.id} />
+					<input type="text" name="text" bind:value={commentText} placeholder="Ajouter un commentaire..." class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none" />
+					<Button type="submit" size="sm" disabled={!commentText.trim()}>
 						<Send class="size-3.5" />
 					</Button>
-				</div>
+				</form>
 				{#if incident.comments && incident.comments.length > 0}
 					<div class="max-h-60 space-y-2 overflow-y-auto">
 						{#each incident.comments as comment (comment.id)}
