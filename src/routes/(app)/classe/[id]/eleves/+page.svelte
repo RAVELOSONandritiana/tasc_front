@@ -29,24 +29,6 @@
 		)
 	);
 
-	function ajouterEleve() {
-		if (!nouvelEleve.nom || !nouvelEleve.prenom || !nouvelEleve.dateNaissance) return;
-		const nouveau: EleveCours = {
-			id: Date.now().toString(),
-			nom: nouvelEleve.nom,
-			prenom: nouvelEleve.prenom,
-			dateNaissance: nouvelEleve.dateNaissance,
-			actif: true,
-			notes: [],
-			incidents: [],
-			absences: [],
-			retards: []
-		};
-		elevesInscrits = [...elevesInscrits, nouveau];
-		nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
-		nouvelEleveDialogOpen = false;
-	}
-
 	function removeEleve(id: string) {
 		elevesInscrits = elevesInscrits.filter((e) => e.id !== id);
 	}
@@ -59,11 +41,36 @@
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
 		<Dialog.Root bind:open={nouvelEleveDialogOpen}>
-			<form>
-				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
-					Nouvel élève
-				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-[425px]">
+			<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
+				Nouvel élève
+			</Dialog.Trigger>
+			<Dialog.Content class="sm:max-w-[425px]">
+				<form
+					method="POST"
+					action="?/create"
+					use:enhance={() => {
+						return async ({ result }) => {
+							if (result.type === 'success' && result.data) {
+								const newEleve = (result.data as any).eleve;
+								elevesInscrits = [...elevesInscrits, {
+									id: newEleve.id,
+									nom: newEleve.nom,
+									prenom: newEleve.prenom,
+									dateNaissance: newEleve.dateNaissance,
+									actif: newEleve.actif,
+									notes: [],
+									incidents: [],
+									absences: [],
+									retards: []
+								}];
+								nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
+								nouvelEleveDialogOpen = false;
+							} else if (result.type === 'failure') {
+								alert(result.data?.error || "Erreur lors de l'ajout");
+							}
+						};
+					}}
+				>
 					<Dialog.Header>
 						<Dialog.Title>Ajouter un élève</Dialog.Title>
 						<Dialog.Description
@@ -75,6 +82,7 @@
 							<Label for="nom_eleve">Nom *</Label>
 							<Input
 								id="nom_eleve"
+								name="nom"
 								bind:value={nouvelEleve.nom}
 								placeholder="Nom de l'élève"
 								required
@@ -84,6 +92,7 @@
 							<Label for="prenom_eleve">Prénom *</Label>
 							<Input
 								id="prenom_eleve"
+								name="prenom"
 								bind:value={nouvelEleve.prenom}
 								placeholder="Prénom de l'élève"
 								required
@@ -91,13 +100,20 @@
 						</div>
 						<div class="grid gap-2">
 							<Label for="date_naiss">Date de naissance *</Label>
-							<Input id="date_naiss" type="date" bind:value={nouvelEleve.dateNaissance} required />
+							<Input 
+								id="date_naiss" 
+								name="dateNaissance" 
+								type="date" 
+								bind:value={nouvelEleve.dateNaissance} 
+								required 
+							/>
 						</div>
 					</div>
 					<Dialog.Footer>
 						<Button
 							variant="outline"
 							size="sm"
+							type="button"
 							onclick={() => {
 								nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
 								nouvelEleveDialogOpen = false;
@@ -105,10 +121,10 @@
 						>
 							Annuler
 						</Button>
-						<Button variant="default" size="sm" onclick={ajouterEleve}>Ajouter</Button>
+						<Button variant="default" size="sm" type="submit">Ajouter</Button>
 					</Dialog.Footer>
-				</Dialog.Content>
-			</form>
+				</form>
+			</Dialog.Content>
 		</Dialog.Root>
 	</div>
 

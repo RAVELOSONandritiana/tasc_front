@@ -161,7 +161,7 @@ export async function getPersonnes() {
 	});
 }
 
-export async function getAllPersonnesForSurveillant(): Promise<any[]> {
+export async function getAllPersonnesForSurveillant() {
 	return prisma.personne.findMany({
 		where: {
 			surveillant: null
@@ -185,7 +185,7 @@ export async function createSurveillantFromPersonne(personneId: string, matricul
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
 			where: { id: personneId },
-			include: { compte: true }
+			include: { compte: true, surveillant: true }
 		});
 
 		if (personne.surveillant) {
@@ -221,7 +221,7 @@ export async function createSurveillantFromPersonne(personneId: string, matricul
 	});
 }
 
-export async function getAllPersonnes(): Promise<any[]> {
+export async function getAllPersonnes() {
 	return prisma.personne.findMany({
 		where: {
 			eleve: null,
@@ -671,8 +671,21 @@ export async function updateClasseImage(id: string, imageUrl: string | null) {
 
 export async function deleteEleve(id: string) {
 	return prisma.$transaction(async (tx) => {
-		const eleve = await tx.eleve.findUnique({ where: { id } });
+		const eleve = await tx.eleve.findUnique({
+			where: { id },
+			include: { inscriptions: true }
+		});
 		if (!eleve) throw new Error('Élève introuvable');
+		for (const ins of eleve.inscriptions) {
+			await tx.classe.update({
+				where: { id: ins.classeId },
+				data: {
+					elevesCount: {
+						decrement: 1
+					}
+				}
+			});
+		}
 		await tx.eleve.delete({ where: { id } });
 		return { success: true };
 	});

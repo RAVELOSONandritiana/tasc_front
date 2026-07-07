@@ -1,5 +1,17 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasseById, getMatieres, getProfesseurs, getCours, createCours, updateCours, deleteCours, createExamen, createNote, getNotesByCoursId, createMatiere, prisma } from '$lib/server/prisma';
+import {
+	getClasseById,
+	getMatieres,
+	getProfesseurs,
+	getCours,
+	createCours,
+	updateCours,
+	deleteCours,
+	createExamen,
+	createNote,
+	getNotesByCoursId,
+	prisma
+} from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
@@ -84,39 +96,55 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
-	createMatiere: async ({ request, locals }) => {
-		const data = await request.formData();
-		const nom = (data.get('nom') as string | null)?.trim() || '';
-		const couleur = (data.get('couleur') as string | null)?.trim() || null;
-
-		if (!nom) {
-			return fail(400, { error: 'Nom de matière requis' });
-		}
-
-		try {
-			const matiere = await createMatiere({ nom, couleur });
-			logActivity(locals.user, 'creation_matiere', `Création de la matière ${matiere.nom}`).catch(() => {});
-			return { success: true, matiere };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la création de la matière" });
-		}
-	},
-
 	createCours: async ({ request, locals, params }) => {
 		const data = await request.formData();
-		const matiereId = data.get('matiereId') as string;
+		const matiereId = (data.get('matiereId') as string | null)?.trim() || '';
+		const matiereNom = (data.get('matiereNom') as string | null)?.trim() || '';
 		const professeurId = data.get('professeurId') as string;
 		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
 		const participants = data.getAll('participants') as string[];
 
-		if (!matiereId || !professeurId) {
-			return fail(400, { error: 'Matière et professeur requis' });
+		if (!professeurId) {
+			return fail(400, { error: 'Professeur requis' });
+		}
+
+		if (!matiereId && !matiereNom) {
+			return fail(400, { error: 'Matière requise' });
 		}
 
 		try {
+			let finalMatiereId = matiereId;
+
+			if (matiereNom) {
+				let matiere = await prisma.matiere.findUnique({
+					where: { nom: matiereNom }
+				});
+
+				if (!matiere) {
+					const colors = [
+						'#3b82f6',
+						'#10b981',
+						'#f59e0b',
+						'#ef4444',
+						'#8b5cf6',
+						'#ec4899',
+						'#06b6d4'
+					];
+					const randomColor = colors[Math.floor(Math.random() * colors.length)];
+					matiere = await prisma.matiere.create({
+						data: {
+							nom: matiereNom,
+							couleur: randomColor
+						}
+					});
+				}
+
+				finalMatiereId = matiere.id;
+			}
+
 			const cours = await createCours({
 				classeId: params.id,
-				matiereId,
+				matiereId: finalMatiereId,
 				professeurId,
 				coefficient: Number.isFinite(coefficient) && coefficient > 0 ? coefficient : 1,
 				participants
@@ -124,13 +152,13 @@ export const actions: Actions = {
 
 			logActivity(
 				locals.user,
-				'creation_cours',
+				'creation_cours' as any,
 				`Création du cours ${cours.matiere?.nom || ''}`
 			).catch(() => {});
 
 			return { success: true, cours };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la création du cours" });
+			return fail(500, { error: e?.message || 'Erreur lors de la création du cours' });
 		}
 	},
 
@@ -144,10 +172,12 @@ export const actions: Actions = {
 		}
 
 		try {
-			const cours = await updateCours(coursId, { coefficient: Number.isFinite(coefficient) ? coefficient : 1 });
+			const cours = await updateCours(coursId, {
+				coefficient: Number.isFinite(coefficient) ? coefficient : 1
+			});
 			return { success: true, cours };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la mise à jour" });
+			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
 		}
 	},
 
@@ -164,7 +194,7 @@ export const actions: Actions = {
 			const cours = await updateCours(coursId, { participants });
 			return { success: true, cours };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la mise à jour" });
+			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
 		}
 	},
 
@@ -178,7 +208,9 @@ export const actions: Actions = {
 
 		try {
 			await deleteCours(coursId);
-			logActivity(locals.user, 'suppression_cours', 'Suppression d\'un cours').catch(() => {});
+			logActivity(locals.user, 'suppression_cours' as any, "Suppression d'un cours").catch(
+				() => {}
+			);
 			return { success: true };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
@@ -203,11 +235,9 @@ export const actions: Actions = {
 				periode
 			});
 
-			logActivity(
-				locals.user,
-				'creation_examen',
-				`Examen créé : ${examen.nom}`
-			).catch(() => {});
+			logActivity(locals.user, 'creation_examen' as any, `Examen créé : ${examen.nom}`).catch(
+				() => {}
+			);
 
 			return { success: true, examen };
 		} catch (e: any) {
@@ -238,15 +268,11 @@ export const actions: Actions = {
 				examenId
 			});
 
-			logActivity(
-				locals.user,
-				'creation_note',
-				`Note créée : ${valeur}/20`
-			).catch(() => {});
+			logActivity(locals.user, 'creation_note' as any, `Note créée : ${valeur}/20`).catch(() => {});
 
 			return { success: true, note };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la création de la note" });
+			return fail(500, { error: e?.message || 'Erreur lors de la création de la note' });
 		}
 	},
 
@@ -267,7 +293,7 @@ export const actions: Actions = {
 				}))
 			};
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la récupération des notes" });
+			return fail(500, { error: e?.message || 'Erreur lors de la récupération des notes' });
 		}
 	}
 };

@@ -9,131 +9,59 @@
 	import { Plus, Calendar, Save, FileText, Lock } from '@lucide/svelte/icons';
 	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 	import { page } from '$app/stores';
+	import type { PageProps } from './$types';
+	import { invalidateAll } from '$app/navigation';
 
-	const classeId = $page.params.id || '1';
-	const coursId = $page.params.coursId || '1';
+	const { data }: PageProps = $props();
 
-	let listeCours = $state<Cours[]>([
-		{
-			id: '1',
-			nom: 'Mathématiques',
-			coefficient: 6,
-			professeur: 'RANDRIANANTENAINA Tsitoarimanjakely',
-			participants: ['1', '2', '3']
-		},
-		{
-			id: '2',
-			nom: 'Physique',
-			coefficient: 4,
-			professeur: 'ANDRIANTENAINA Bako',
-			participants: ['1', '3']
-		},
-		{
-			id: '3',
-			nom: 'Français',
-			coefficient: 5,
-			professeur: 'RAKOTO Fanomezamasy',
-			participants: ['2', '3']
-		}
-	]);
+	const classeId = $page.params.id;
+	const coursId = $page.params.coursId;
 
-	let listeExamens = $state<Examen[]>([
-		{
-			id: 'e1',
-			nom: 'Examen de mi-semestre',
-			date: '2026-02-15',
-			classeId: classeId,
-			periode: 'Semestre 1'
-		},
-		{
-			id: 'e2',
-			nom: 'Examen de fin de semestre',
-			date: '2026-03-20',
-			classeId: classeId,
-			periode: 'Semestre 1'
-		}
-	]);
-
-	let elevesClasse = $state<EleveCours[]>([
-		{
-			id: '1',
-			nom: 'RANDRIANANTENAINA',
-			prenom: 'Tsitoarimanjakely',
-			dateNaissance: '2008-05-15',
-			actif: true,
-			notes: [
-				{
-					id: 'n1',
-					valeur: 15,
-					coefficient: 4,
-					date: '2026-02-15',
-					libelle: 'Examen de mi-semestre',
-					coursId: '1',
-					examenId: 'e1'
-				}
-			]
-		},
-		{
-			id: '2',
-			nom: 'RAKOTO',
-			prenom: 'Fanomezamasy',
-			dateNaissance: '2008-03-22',
-			actif: true,
-			notes: [
-				{
-					id: 'n2',
-					valeur: 16,
-					coefficient: 4,
-					date: '2026-02-15',
-					libelle: 'Examen de mi-semestre',
-					coursId: '1',
-					examenId: 'e1'
-				}
-			]
-		},
-		{
-			id: '3',
-			nom: 'ANDRIANTENAINA',
-			prenom: 'Bako',
-			dateNaissance: '2008-07-10',
-			actif: true,
-			notes: []
-		}
-	]);
+	let listeCours = $state<Cours[]>([...data.listeCours]);
+	let listeExamens = $state<Examen[]>([...data.listeExamens]);
+	let elevesClasse = $state<EleveCours[]>([...data.elevesClasse]);
 
 	let notesTemp = $state<Record<string, number>>({});
+	let saving = $state(false);
+
+	$effect(() => {
+		listeCours = [...data.listeCours];
+		listeExamens = [...data.listeExamens];
+		elevesClasse = [...data.elevesClasse];
+	});
 
 	function setNote(eleveId: string, valeur: number) {
 		notesTemp[eleveId] = valeur;
 	}
 
-	function sauvegarderNotes() {
+	async function sauvegarderNotes() {
 		if (!examenSelectionne || !coursInfo) return;
+		saving = true;
 
-		Object.entries(notesTemp).forEach(([eleveId, valeur]) => {
-			const eleve = elevesClasse.find((e) => e.id === eleveId);
-			if (eleve && valeur > 0) {
-				const noteExistante = eleve.notes?.find(
-					(n) => n.examenId === examenSelectionne.id && n.coursId === coursInfo.id
-				);
-				if (noteExistante) {
-					noteExistante.valeur = valeur;
-				} else {
-					const nouvelleNote: Note = {
-						id: Date.now().toString() + '_' + eleveId,
-						valeur,
-						coefficient: coursInfo.coefficient,
-						date: examenSelectionne.date,
-						libelle: examenSelectionne.nom,
-						coursId: coursInfo.id,
-						examenId: examenSelectionne.id
-					};
-					eleve.notes = eleve.notes || [];
-					eleve.notes = [...eleve.notes, nouvelleNote];
-				}
+		const formData = new FormData();
+		formData.append('examenId', examenSelectionne.id);
+		formData.append('notes', JSON.stringify(notesTemp));
+
+		try {
+			const res = await fetch(`?/sauvegarderNotes`, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			});
+			const result = await res.json();
+			const isSuccess = result.success || result.type === 'success' || (result.status === 200 && !result.error);
+			if (isSuccess) {
+				notesTemp = {};
+				await invalidateAll();
+			} else {
+				alert(result.error || result._form || 'Erreur lors de la sauvegarde');
 			}
-		});
-		notesTemp = {};
+		} catch (e) {
+			console.error(e);
+			alert('Erreur réseau lors de la sauvegarde');
+		} finally {
+			saving = false;
+		}
 	}
 
 	function getNoteExistante(eleveId: string): number | undefined {
@@ -192,9 +120,9 @@
 			{/if}
 		</div>
 		{#if examenSelectionne}
-			<Button variant="default" class="gap-2" onclick={sauvegarderNotes}>
+			<Button variant="default" class="gap-2" onclick={sauvegarderNotes} disabled={saving}>
 				<Save class="size-4" />
-				Sauvegarder
+				{saving ? 'Sauvegarde...' : 'Sauvegarder'}
 			</Button>
 		{/if}
 	</div>

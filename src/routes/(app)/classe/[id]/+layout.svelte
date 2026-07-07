@@ -18,12 +18,16 @@
 		{ path: `/classe/${id}/bulletin`, label: 'Bulletins', number: 3 }
 	];
 
-	let activePath = $state(0);
+	const activePathIndex = $derived(
+		(() => {
+			const idx = navigation.findIndex((n) => $page.url.pathname.startsWith(n.path));
+			return idx !== -1 ? idx : 0;
+		})()
+	);
 
 	function setCurrentTab(pageNumber: number) {
-		activePath = pageNumber;
-		const newpath = navigation.filter((e) => e.number == activePath)[0].path;
-		goto(newpath);
+		const newpath = navigation.find((e) => e.number == pageNumber)?.path;
+		if (newpath) goto(newpath);
 	}
 </script>
 
@@ -34,7 +38,7 @@
 				<Button
 					class="px-3"
 					onclick={() => setCurrentTab(n.number)}
-					variant={activePath == n.number ? 'default' : 'secondary'}>{n.label}</Button
+					variant={activePathIndex == n.number ? 'default' : 'secondary'}>{n.label}</Button
 				>
 			{/each}
 		</ul>

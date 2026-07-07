@@ -4,7 +4,15 @@
 	import * as Table from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Search, Plus, Users, Calendar, Pencil, BookOpen, GraduationCap } from '@lucide/svelte/icons';
+	import {
+		Search,
+		Plus,
+		Users,
+		Calendar,
+		Pencil,
+		BookOpen,
+		GraduationCap
+	} from '@lucide/svelte/icons';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -26,8 +34,20 @@
 	let listeCours = $state<Cours[]>([...(data.listeCours || [])]);
 	let listeExamens = $state<Examen[]>([...(data.listeExamens || [])]);
 	let elevesClasse = $state<EleveCours[]>([...(data.elevesClasse || [])]);
-	let matieres = $state<{ id: string; nom: string }[]>([...(data.matieres || [])]);
-	let enseignants = $state<{ id: string; name: string; lastname: string }[]>([...(data.enseignants || [])]);
+	let matieres = $state<{ id: string; nom: string; couleur?: string }[]>([
+		...(data.matieres || [])
+	]);
+	let enseignants = $state<{ id: string; name: string; lastname: string }[]>([
+		...(data.enseignants || [])
+	]);
+
+	$effect(() => {
+		listeCours = [...(data.listeCours || [])];
+		listeExamens = [...(data.listeExamens || [])];
+		elevesClasse = [...(data.elevesClasse || [])];
+		matieres = [...(data.matieres || [])];
+		enseignants = [...(data.enseignants || [])];
+	});
 
 	let submitting = $state(false);
 	let success = $state(false);
@@ -38,7 +58,6 @@
 	let openParticipantsDialog = $state(false);
 	let openExamenDialog = $state(false);
 	let openNoteDialog = $state(false);
-	let openMatiereDialog = $state(false);
 
 	let selectedCours: Cours | null = $state(null);
 
@@ -48,6 +67,9 @@
 		coefficient: 1,
 		participants: [] as string[]
 	});
+
+	let nouvelleMatiereNom = $state('');
+	let matiereSelection = $state('');
 
 	let nouveauCoeff = $state(1);
 	let participantsSelectionnes = $state<string[]>([]);
@@ -73,6 +95,8 @@
 	$effect(() => {
 		if (openCoursDialog) {
 			nouveauCours = { matiereId: '', professeurId: '', coefficient: 1, participants: [] };
+			nouvelleMatiereNom = '';
+			matiereSelection = '';
 			errors = {};
 			success = false;
 		}
@@ -86,7 +110,14 @@
 
 	$effect(() => {
 		if (openNoteDialog) {
-			nouvelleNote = { valeur: 0, coefficient: 1, libelle: '', eleveId: '', coursId: '', examenId: '' };
+			nouvelleNote = {
+				valeur: 0,
+				coefficient: 1,
+				libelle: '',
+				eleveId: '',
+				coursId: '',
+				examenId: ''
+			};
 		}
 	});
 
@@ -101,7 +132,9 @@
 	async function loadNotes(coursId: string) {
 		notesLoading = true;
 		try {
-			const res = await fetch(`/classe/${$page.params.id}/cours/${coursId}?/getNotes&coursId=${coursId}`);
+			const res = await fetch(
+				`/classe/${$page.params.id}/cours/${coursId}?/getNotes&coursId=${coursId}`
+			);
 			const result = await res.json();
 			if (result.success) {
 				notesCours = result.notes || [];
@@ -140,7 +173,9 @@
 
 	function ouvrirModifierParticipants(cours: Cours) {
 		selectedCours = cours;
-		participantsSelectionnes = cours.participants?.length ? [...cours.participants] : [...elevesClasse.map((e) => e.id)];
+		participantsSelectionnes = cours.participants?.length
+			? [...cours.participants]
+			: [...elevesClasse.map((e) => e.id)];
 		openParticipantsDialog = true;
 	}
 
@@ -152,17 +187,25 @@
 
 		fetch(`/classe/${$page.params.id}/cours?/updateCoefficient`, {
 			method: 'POST',
-			body: formData
-		}).then(async (res) => {
-			const result = await res.json();
-			if (result.success) {
-				listeCours = listeCours.map((c) =>
-					c.id === selectedCours!.id ? { ...c, coefficient: nouveauCoeff } : c
-				);
-				selectedCours = null;
-				openCoeffDialog = false;
-			}
-		}).catch(console.error);
+			body: formData,
+			credentials: 'same-origin'
+		})
+			.then(async (res) => {
+				const result = await res.json();
+				if (result.success) {
+					listeCours = listeCours.map((c) =>
+						c.id === selectedCours!.id ? { ...c, coefficient: nouveauCoeff } : c
+					);
+					selectedCours = null;
+					openCoeffDialog = false;
+				} else {
+					const error = result.error || result._form || 'Erreur lors de la mise à jour';
+					errors = { _form: error };
+				}
+			})
+			.catch(() => {
+				errors = { _form: 'Erreur réseau lors de la mise à jour' };
+			});
 	}
 
 	function sauvegarderParticipants() {
@@ -173,17 +216,25 @@
 
 		fetch(`/classe/${$page.params.id}/cours?/updateParticipants`, {
 			method: 'POST',
-			body: formData
-		}).then(async (res) => {
-			const result = await res.json();
-			if (result.success) {
-				listeCours = listeCours.map((c) =>
-					c.id === selectedCours!.id ? { ...c, participants: [...participantsSelectionnes] } : c
-				);
-				selectedCours = null;
-				openParticipantsDialog = false;
-			}
-		}).catch(console.error);
+			body: formData,
+			credentials: 'same-origin'
+		})
+			.then(async (res) => {
+				const result = await res.json();
+				if (result.success) {
+					listeCours = listeCours.map((c) =>
+						c.id === selectedCours!.id ? { ...c, participants: [...participantsSelectionnes] } : c
+					);
+					selectedCours = null;
+					openParticipantsDialog = false;
+				} else {
+					const error = result.error || result._form || 'Erreur lors de la mise à jour';
+					errors = { _form: error };
+				}
+			})
+			.catch(() => {
+				errors = { _form: 'Erreur réseau lors de la mise à jour' };
+			});
 	}
 
 	function ajouterNote() {
@@ -200,14 +251,29 @@
 
 		fetch(`/classe/${$page.params.id}/cours?/createNote`, {
 			method: 'POST',
-			body: formData
-		}).then(async (res) => {
-			const result = await res.json();
-			if (result.success) {
-				loadNotes(selectedCours!.id);
-				nouvelleNote = { valeur: 0, coefficient: 1, libelle: '', eleveId: '', coursId: '', examenId: '' };
-			}
-		}).catch(console.error);
+			body: formData,
+			credentials: 'same-origin'
+		})
+			.then(async (res) => {
+				const result = await res.json();
+				if (result.success) {
+					loadNotes(selectedCours!.id);
+					nouvelleNote = {
+						valeur: 0,
+						coefficient: 1,
+						libelle: '',
+						eleveId: '',
+						coursId: '',
+						examenId: ''
+					};
+				} else {
+					const error = result.error || result._form || 'Erreur lors de la création de la note';
+					errors = { _form: error };
+				}
+			})
+			.catch(() => {
+				errors = { _form: 'Erreur réseau lors de la création de la note' };
+			});
 	}
 </script>
 
@@ -221,51 +287,10 @@
 				{/if}
 			</h1>
 			<div class="flex flex-col gap-2 md:flex-row md:items-center">
-				<Dialog.Root bind:open={openMatiereDialog}>
-					<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'gap-2' })}>
-						<BookOpen class="size-4" />
-						Nouvelle matière
-					</Dialog.Trigger>
-					<Dialog.Content class="sm:max-w-sm">
-						<Dialog.Header>
-							<Dialog.Title>Créer une matière</Dialog.Title>
-							<Dialog.Description>Ex: Mathématiques, Physique, Histoire...</Dialog.Description>
-						</Dialog.Header>
-
-						<form
-							method="POST"
-							action={`?/createMatiere`}
-							use:enhance={() => {
-								return async ({ result }) => {
-									if (result.type === 'success' && result.data) {
-										const matiere = (result.data as any)?.matiere;
-										if (matiere) {
-											matieres = [...matieres, { id: matiere.id, nom: matiere.nom }];
-										}
-										openMatiereDialog = false;
-									}
-								};
-							}}
-							class="space-y-4"
-						>
-							<div class="grid gap-2">
-								<Label for="matiere_nom">Nom de la matière *</Label>
-								<Input id="matiere_nom" name="nom" placeholder="Ex: Mathématiques" />
-							</div>
-							<div class="grid gap-2">
-								<Label for="matiere_couleur">Couleur</Label>
-								<Input id="matiere_couleur" name="couleur" placeholder="#3b82f6" />
-							</div>
-							<Dialog.Footer class="gap-2 sm:justify-end">
-								<Button type="button" variant="outline" size="sm" onclick={() => (openMatiereDialog = false)}>Annuler</Button>
-								<Button type="submit" size="sm">Créer</Button>
-							</Dialog.Footer>
-						</form>
-					</Dialog.Content>
-				</Dialog.Root>
-
 				<Dialog.Root bind:open={openCoursDialog}>
-					<Dialog.Trigger class={buttonVariants({ variant: 'default', size: 'sm', class: 'gap-2' })}>
+					<Dialog.Trigger
+						class={buttonVariants({ variant: 'default', size: 'sm', class: 'gap-2' })}
+					>
 						<Plus class="size-4" />
 						Nouveau cours
 					</Dialog.Trigger>
@@ -276,7 +301,9 @@
 						</Dialog.Header>
 
 						{#if success}
-							<div class="mb-4 rounded-md border border-emerald-500 bg-emerald-500/10 p-3 text-center">
+							<div
+								class="mb-4 rounded-md border border-emerald-500 bg-emerald-500/10 p-3 text-center"
+							>
 								<p class="text-sm font-medium text-emerald-500">Cours créé avec succès !</p>
 							</div>
 						{/if}
@@ -297,33 +324,49 @@
 									if (result.type === 'success') {
 										const cours = (result.data as any)?.cours;
 										if (cours) {
-											listeCours = [...listeCours, {
-												id: cours.id,
-												nom: cours.matiere?.nom || 'Matière',
-												coefficient: cours.coefficient,
-												professeur: cours.professeur ? `${cours.professeur.personne?.name || ''} ${cours.professeur.personne?.lastname || ''}`.trim() || '' : '',
-												participants: cours.participants || []
-											}];
+											listeCours = [
+												...listeCours,
+												{
+													id: cours.id,
+													nom: cours.matiere?.nom || 'Matière',
+													coefficient: cours.coefficient,
+													professeur: cours.professeur
+														? `${cours.professeur.personne?.name || ''} ${cours.professeur.personne?.lastname || ''}`.trim() ||
+															''
+														: '',
+													participants: cours.participants || []
+												}
+											];
 										}
 										success = true;
 										setTimeout(() => {
 											openCoursDialog = false;
 										}, 600);
 									} else if (result.type === 'failure') {
-										errors = (result.data as any)?.errors || {};
+										const err =
+											(result.data as any)?.error ||
+											(result.data as any)?._form ||
+											'Erreur lors de la création';
+										errors = { _form: err };
 									}
 								};
 							}}
 							class="space-y-4"
 						>
 							<div class="grid gap-2">
-								<Label for="matiereId">Matière *</Label>
-								<NativeSelect.Root name="matiereId" required>
+								<Label>Matière *</Label>
+								<NativeSelect.Root bind:value={matiereSelection}>
 									<option value="">Choisir une matière</option>
 									{#each matieres as matiere}
 										<NativeSelect.Option value={matiere.id}>{matiere.nom}</NativeSelect.Option>
 									{/each}
+									<NativeSelect.Option value="__new__">+ Nouvelle matière</NativeSelect.Option>
 								</NativeSelect.Root>
+								{#if matiereSelection === '__new__'}
+									<Input name="matiereNom" placeholder="Nom de la nouvelle matière" required />
+								{:else if matiereSelection}
+									<input type="hidden" name="matiereId" value={matiereSelection} />
+								{/if}
 							</div>
 
 							<div class="grid gap-2">
@@ -331,14 +374,23 @@
 								<NativeSelect.Root name="professeurId" required>
 									<option value="">Choisir un professeur</option>
 									{#each enseignants as prof}
-										<NativeSelect.Option value={prof.id}>{prof.name} {prof.lastname}</NativeSelect.Option>
+										<NativeSelect.Option value={prof.id}
+											>{prof.name} {prof.lastname}</NativeSelect.Option
+										>
 									{/each}
 								</NativeSelect.Root>
 							</div>
 
 							<div class="grid gap-2">
 								<Label for="coefficient">Coefficient</Label>
-								<Input id="coefficient" name="coefficient" type="number" min="1" max="20" value="1" />
+								<Input
+									id="coefficient"
+									name="coefficient"
+									type="number"
+									min="1"
+									max="20"
+									value="1"
+								/>
 							</div>
 
 							<div class="grid gap-2">
@@ -347,7 +399,9 @@
 									{#each elevesClasse as eleve}
 										<div class="flex items-center gap-2">
 											<Checkbox id={`eleve-${eleve.id}`} name="participants" value={eleve.id} />
-											<label for={`eleve-${eleve.id}`} class="text-sm">{eleve.nom} {eleve.prenom}</label>
+											<label for={`eleve-${eleve.id}`} class="text-sm"
+												>{eleve.nom} {eleve.prenom}</label
+											>
 										</div>
 									{/each}
 								</div>
@@ -365,39 +419,61 @@
 										Créer le cours
 									{/if}
 								</Button>
-								<Button type="button" variant="outline" onclick={() => (openCoursDialog = false)}>Annuler</Button>
+								<Button type="button" variant="outline" onclick={() => (openCoursDialog = false)}
+									>Annuler</Button
+								>
 							</div>
 						</form>
 					</Dialog.Content>
 				</Dialog.Root>
 
 				<Dialog.Root bind:open={openExamenDialog}>
-					<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'gap-2' })}>
+					<Dialog.Trigger
+						class={buttonVariants({ variant: 'outline', size: 'sm', class: 'gap-2' })}
+					>
 						<Calendar class="size-4" />
 						Nouvel examen
 					</Dialog.Trigger>
 					<Dialog.Content class="sm:max-w-md">
 						<Dialog.Header>
 							<Dialog.Title>Créer un examen</Dialog.Title>
-							<Dialog.Description>Examen pour la classe {data.classe?.nom || ''}</Dialog.Description>
+							<Dialog.Description>Examen pour la classe {data.classe?.nom || ''}</Dialog.Description
+							>
 						</Dialog.Header>
+
+						{#if errors._form}
+							<div class="mb-4 rounded-md border border-destructive bg-destructive/10 p-3">
+								<p class="text-sm text-destructive">{errors._form}</p>
+							</div>
+						{/if}
+
 						<form
 							method="POST"
 							action={`?/createExamen`}
 							use:enhance={() => {
+								errors = {};
 								return async ({ result }) => {
 									if (result.type === 'success') {
 										const examen = (result.data as any)?.examen;
 										if (examen) {
-											listeExamens = [...listeExamens, {
-												id: examen.id,
-												nom: examen.nom,
-												date: new Date(examen.date).toISOString().split('T')[0],
-												classeId: examen.classeId,
-												periode: examen.periode || undefined
-											}];
+											listeExamens = [
+												...listeExamens,
+												{
+													id: examen.id,
+													nom: examen.nom,
+													date: new Date(examen.date).toISOString().split('T')[0],
+													classeId: examen.classeId,
+													periode: examen.periode || undefined
+												}
+											];
 										}
 										openExamenDialog = false;
+									} else if (result.type === 'failure') {
+										const error =
+											(result.data as any)?.error ||
+											(result.data as any)?._form ||
+											'Erreur lors de la création';
+										errors = { _form: error };
 									}
 								};
 							}}
@@ -416,7 +492,12 @@
 								<Input id="examen_periode" name="periode" placeholder="Semestre 1" />
 							</div>
 							<Dialog.Footer class="gap-2 sm:justify-end">
-								<Button type="button" variant="outline" size="sm" onclick={() => (openExamenDialog = false)}>Annuler</Button>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onclick={() => (openExamenDialog = false)}>Annuler</Button
+								>
 								<Button type="submit" size="sm">Créer</Button>
 							</Dialog.Footer>
 						</form>
@@ -427,19 +508,46 @@
 			{#if listeExamens.length > 0}
 				<div class="flex flex-wrap gap-2">
 					{#each listeExamens as examen (examen.id)}
-						<span class="rounded-md bg-sidebar-accent/30 px-3 py-1 text-sm">{examen.nom} - {examen.date}</span>
+						<span class="rounded-md bg-sidebar-accent/30 px-3 py-1 text-sm"
+							>{examen.nom} - {examen.date}</span
+						>
 					{/each}
 				</div>
 			{/if}
 		</div>
-	
+
+		<div class="mx-auto max-w-7xl px-4 py-3">
+			{#if matieres.length > 0}
+				<div class="mb-6 flex flex-wrap gap-2">
+					<span class="mr-2 self-center text-sm font-semibold text-muted-foreground"
+						>Matières de l'établissement :</span
+					>
+					{#each matieres as matiere}
+						<span
+							class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium"
+							style="background-color: {matiere.couleur ||
+								'#3b82f6'}15; border-color: {matiere.couleur ||
+								'#3b82f6'}; color: {matiere.couleur || '#3b82f6'}"
+						>
+							<span
+								class="size-1.5 rounded-full"
+								style="background-color: {matiere.couleur || '#3b82f6'}"
+							></span>
+							{matiere.nom}
+						</span>
+					{/each}
+				</div>
+			{/if}
+		</div>
 
 		<div class="mx-auto max-w-7xl">
 			{#if listeCours.length === 0}
 				<div class="flex flex-col items-center justify-center py-12 text-center">
 					<BookOpen class="mb-4 size-12 text-muted-foreground" />
 					<p class="text-lg font-medium text-muted-foreground">Aucun cours configuré</p>
-					<p class="text-sm text-muted-foreground">Commencez par ajouter des matières et des cours à cette classe.</p>
+					<p class="text-sm text-muted-foreground">
+						Commencez par ajouter des matières et des cours à cette classe.
+					</p>
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -475,13 +583,36 @@
 													return async ({ result }) => {
 														if (result.type === 'success') {
 															listeCours = listeCours.filter((c) => c.id !== cours.id);
+														} else {
+															const error =
+																(result.data as any)?.error || 'Erreur lors de la suppression';
+															errors = { _form: error };
 														}
 													};
 												}}
 											>
 												<input type="hidden" name="coursId" value={cours.id} />
-												<Button size="icon" variant="ghost" class="h-7 w-7" type="submit" aria-label="Supprimer le cours">
-													<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+												<Button
+													size="icon"
+													variant="ghost"
+													class="h-7 w-7"
+													type="submit"
+													aria-label="Supprimer le cours"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="14"
+														height="14"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														><path d="M3 6h18" /><path
+															d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+														/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg
+													>
 												</Button>
 											</form>
 										</div>
@@ -547,16 +678,12 @@
 			</Dialog.Header>
 			<div class="space-y-2 py-4">
 				<Label for="new_coeff" class="text-sm font-medium">Nouveau coefficient</Label>
-				<Input
-					id="new_coeff"
-					type="number"
-					min="1"
-					max="20"
-					bind:value={nouveauCoeff}
-				/>
+				<Input id="new_coeff" type="number" min="1" max="20" bind:value={nouveauCoeff} />
 			</div>
 			<Dialog.Footer class="gap-2 sm:justify-end">
-				<Button type="button" variant="outline" size="sm" onclick={() => (openCoeffDialog = false)}>Annuler</Button>
+				<Button type="button" variant="outline" size="sm" onclick={() => (openCoeffDialog = false)}
+					>Annuler</Button
+				>
 				<Button type="button" size="sm" onclick={sauvegarderCoefficient}>Sauvegarder</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
@@ -601,7 +728,12 @@
 				</p>
 			</div>
 			<Dialog.Footer class="gap-2 sm:justify-end">
-				<Button type="button" variant="outline" size="sm" onclick={() => (openParticipantsDialog = false)}>Annuler</Button>
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onclick={() => (openParticipantsDialog = false)}>Annuler</Button
+				>
 				<Button type="button" size="sm" onclick={sauvegarderParticipants}>Sauvegarder</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
@@ -611,22 +743,41 @@
 		<Dialog.Content class="sm:max-w-3xl">
 			<Dialog.Header>
 				<Dialog.Title>Gérer les notes - {selectedCours?.nom}</Dialog.Title>
-				<Dialog.Description>
-					Ajouter et consulter les notes pour ce cours
-				</Dialog.Description>
+				<Dialog.Description>Ajouter et consulter les notes pour ce cours</Dialog.Description>
 			</Dialog.Header>
 			<div class="space-y-4 py-4">
 				<div class="grid gap-4 md:grid-cols-2">
 					<div class="space-y-3 rounded-md border p-4">
 						<h3 class="text-sm font-semibold">Ajouter une note</h3>
+
+						{#if errors._form}
+							<div class="mb-4 rounded-md border border-destructive bg-destructive/10 p-3">
+								<p class="text-sm text-destructive">{errors._form}</p>
+							</div>
+						{/if}
+
 						<form
 							method="POST"
 							action={`?/createNote`}
 							use:enhance={() => {
+								errors = {};
 								return async ({ result }) => {
 									if (result.type === 'success' && selectedCours) {
 										loadNotes(selectedCours.id);
-										nouvelleNote = { valeur: 0, coefficient: 1, libelle: '', eleveId: '', coursId: '', examenId: '' };
+										nouvelleNote = {
+											valeur: 0,
+											coefficient: 1,
+											libelle: '',
+											eleveId: '',
+											coursId: '',
+											examenId: ''
+										};
+									} else if (result.type === 'failure') {
+										const error =
+											(result.data as any)?.error ||
+											(result.data as any)?._form ||
+											'Erreur lors de la création de la note';
+										errors = { _form: error };
 									}
 								};
 							}}
@@ -637,18 +788,35 @@
 								<NativeSelect.Root name="eleveId" required>
 									<option value="">Choisir un élève</option>
 									{#each elevesClasse as eleve}
-										<NativeSelect.Option value={eleve.id}>{eleve.nom} {eleve.prenom}</NativeSelect.Option>
+										<NativeSelect.Option value={eleve.id}
+											>{eleve.nom} {eleve.prenom}</NativeSelect.Option
+										>
 									{/each}
 								</NativeSelect.Root>
 							</div>
 							<div class="grid grid-cols-2 gap-2">
 								<div class="grid gap-2">
 									<Label for="valeur">Note *</Label>
-									<Input id="valeur" name="valeur" type="number" step="0.5" min="0" max="20" required />
+									<Input
+										id="valeur"
+										name="valeur"
+										type="number"
+										step="0.5"
+										min="0"
+										max="20"
+										required
+									/>
 								</div>
 								<div class="grid gap-2">
 									<Label for="coefficient">Coefficient</Label>
-									<Input id="coefficient" name="coefficient" type="number" min="1" max="20" value="1" />
+									<Input
+										id="coefficient"
+										name="coefficient"
+										type="number"
+										min="1"
+										max="20"
+										value="1"
+									/>
 								</div>
 							</div>
 							<div class="grid gap-2">
@@ -684,7 +852,8 @@
 										<div>
 											<p class="text-sm font-medium">{note.eleveNom}</p>
 											<p class="text-xs text-muted-foreground">
-												{note.libelle || 'Note'} {note.examenId ? '(examen)' : ''} - Coeff. {note.coefficient}
+												{note.libelle || 'Note'}
+												{note.examenId ? '(examen)' : ''} - Coeff. {note.coefficient}
 											</p>
 										</div>
 										<span class="text-sm font-semibold">{note.valeur}/20</span>
@@ -696,7 +865,9 @@
 				</div>
 			</div>
 			<Dialog.Footer class="gap-2 sm:justify-end">
-				<Button type="button" variant="outline" size="sm" onclick={() => (openNoteDialog = false)}>Fermer</Button>
+				<Button type="button" variant="outline" size="sm" onclick={() => (openNoteDialog = false)}
+					>Fermer</Button
+				>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>

@@ -3,7 +3,26 @@ import { getClasseById, prisma } from '$lib/server/prisma';
 import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const classe = await getClasseById(params.id);
+	const classe = await prisma.classe.findUnique({
+		where: { id: params.id },
+		include: {
+			anneeScolaire: true,
+			titulaire: {
+				include: {
+					personne: true
+				}
+			},
+			inscriptions: {
+				include: {
+					eleve: {
+						include: {
+							personne: true
+						}
+					}
+				}
+			}
+		}
+	});
 
 	const coursList = await prisma.cours.findMany({
 		where: { classeId: params.id },
