@@ -20,11 +20,8 @@
 		<Card class="w-full">
 			<CardHeader>
 				<CardTitle class="mx-auto my-3 text-center text-2xl font-bold">Connexion à Tasc</CardTitle>
-				<CardDescription class="text-center">
-					Veuillez entrer vos informations de compte
-				</CardDescription>
+				<CardDescription class="text-center">Veuillez entrer vos informations de compte</CardDescription>
 			</CardHeader>
-
 			<CardContent class="space-y-4">
 				<div class="space-y-2">
 					<Label for="matricule">Matricule</Label>
@@ -39,11 +36,9 @@
 						name="matricule"
 					/>
 				</div>
-
 				{#if error}
 					<p class="text-sm text-red-500">{error}</p>
 				{/if}
-
 				<div class="space-y-2">
 					<Label for="password">Mot de passe</Label>
 					<Input
@@ -56,11 +51,7 @@
 						name="password"
 					/>
 				</div>
-
-				<Button class="w-full" type="submit">
-					Se connecter
-				</Button>
-
+				<Button class="w-full" type="submit">Se connecter</Button>
 				<div class="text-center text-sm">
 					Pas encore de compte ?
 					<Button type="button" variant="link" class="h-auto p-0 text-sm" onclick={() => goto('/signup')}>

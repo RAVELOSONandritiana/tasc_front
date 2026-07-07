@@ -2,8 +2,18 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
+	const status = url.searchParams.get('status') || 'all';
+
+	let where: Record<string, boolean> | undefined;
+	if (status === 'libre') {
+		where = { occupe: false };
+	} else if (status === 'occupe') {
+		where = { occupe: true };
+	}
+
 	const salles = await prisma.salle.findMany({
+		where: where as never,
 		orderBy: { num: 'asc' }
 	});
 
@@ -15,7 +25,8 @@ export const load: PageServerLoad = async () => {
 			place: s.capacite,
 			occupe: s.occupe,
 			imageUrl: s.imageUrl
-		}))
+		})),
+		statusFilter: status
 	};
 };
 
@@ -63,5 +74,18 @@ export const actions: Actions = {
 		});
 
 		throw redirect(303, '/salle');
+	},
+
+	updateImage: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const imageUrl = formData.get('imageUrl') as string;
+
+		await prisma.salle.update({
+			where: { id },
+			data: { imageUrl }
+		});
+
+		return { success: true };
 	}
 };

@@ -1,21 +1,40 @@
 <script lang="ts">
+	import pb, { auth } from '$lib/pocketbase/pocketbase';
 	import type { Salle } from '$lib/types/Materiel.type';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { DoorOpen, Users } from '@lucide/svelte/icons';
+	import { DoorOpen, Users, Trash2 } from '@lucide/svelte/icons';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
+	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
+	import { Spinner } from '$lib/components/ui/spinner';
 
-	const { salle }: { salle: Salle } = $props();
+	const { salle, deleteAction = '' }: { salle: Salle; deleteAction?: string } = $props();
+
 	let editOpen = $state(false);
+	let deleteOpen = $state(false);
 	let editName = $state('');
 	let editPlace = $state('');
+	let imageOpen = $state(false);
+	let files = $state<FileList | null>(null);
+	let submitting = $state(false);
+	let imageError = $state(false);
 
 	const statutLabel = $derived(salle.occupe !== false ? 'Occupée' : 'Libre');
 	const statutClass = $derived(
 		salle.occupe ? 'bg-purple-500 text-purple-50' : 'bg-emerald-600 text-emerald-50'
 	);
+
+	async function ensureAuth() {
+		try {
+			await auth();
+		} catch (e) {
+			console.error('PocketBase unavailable', e);
+		}
+	}
 
 	async function handleEdit() {
 		editName = salle.name ?? '';
@@ -23,53 +42,97 @@
 		editOpen = true;
 	}
 
-	async function saveEdit() {
-		editOpen = false;
-		const formData = new FormData();
-		formData.append('id', salle.id);
-		formData.append('nom', editName);
-		formData.append('capacite', editPlace);
-
+	async function handleImageSubmit() {
+		if (!files || files.length === 0) return;
+		await ensureAuth();
+		const formdata = new FormData();
+		formdata.append('file', files[0]);
 		try {
-			const response = await fetch('?/', {
-				method: 'POST',
-				body: formData
-			});
+			const record = await pb.collection('tasc_statics').create(formdata);
+			if (record && record.file) {
+				const url = pb.files.getURL(record, record.file);
+				const fd = new FormData();
+				fd.append('id', salle.id);
+				fd.append('imageUrl', url);
+				const res = await fetch('/salle?/updateImage', { method: 'POST', body: fd });
+				const result = (await res.json().catch(() => null)) as { oldImageUrl?: string } | null;
+				const oldImageUrl = result?.oldImageUrl;
+				if (oldImageUrl && oldImageUrl !== url) {
+					const segments = oldImageUrl.split('/');
+					const recordId = segments[segments.length - 2];
+					if (recordId) {
+						await pb.collection('tasc_statics').delete(recordId).catch(() => {});
+					}
+				}
+			}
 		} catch (e) {
-			console.error('Update failed:', e);
+			console.error('Upload failed:', e);
 		}
+		imageOpen = false;
+		files = null;
 	}
 </script>
 
-<CardUI>
-	{#if salle.imageUrl}
-		<!-- svelte-ignore a11y_img_redundant_alt -->
-		<img
-			src={salle.imageUrl}
-			alt="image salle"
-			class="h-40 w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
-		/>
-	{:else}
-		<div
-			class="relative h-40 w-full bg-linear-to-br from-sidebar-accent/50 via-sidebar to-sidebar-accent/30"
-		>
-			<div class="absolute inset-0 flex items-center justify-center">
-				<DoorOpen class="size-10 text-sidebar-foreground/40" />
-			</div>
-		</div>
+<CardUI class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
+	{#if deleteAction}
+		<form method="POST" action={deleteAction} use:enhance={() => {
+			submitting = true;
+			return async ({ result }: { result: ActionResult }) => {
+				submitting = false;
+				if (result.type === 'success') {
+					window.location.reload();
+				} else if (result.type === 'failure') {
+					console.error('[Delete] Failure:', result.data);
+					alert(result.data?.error || 'Suppression impossible');
+				} else {
+					console.error('[Delete] Error:', result);
+					alert('Erreur lors de la suppression');
+				}
+			};
+		}}>
+			<input type="hidden" name="id" value={salle.id} />
+			<Button
+				size="icon"
+				variant="destructive"
+				class="absolute right-4 top-4 z-10 size-8 rounded-full shadow-sm"
+				title="Supprimer"
+				type="submit"
+				disabled={submitting}
+			>
+				{#if submitting}
+					<Spinner class="size-4" />
+				{:else}
+					<Trash2 class="size-4" />
+				{/if}
+			</Button>
+		</form>
 	{/if}
-	<div class="bg-white/5 p-4">
-		<div class="mb-3 flex items-center justify-between">
+	<div class="h-40 w-full overflow-hidden">
+		{#if salle.imageUrl && !imageError}
+			<!-- svelte-ignore a11y_img_redundant_alt -->
+			<img
+				src={salle.imageUrl}
+				alt="image salle"
+				class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
+				onerror={() => (imageError = true)}
+			/>
+		{:else}
+			<div class="flex h-full w-full items-center justify-center bg-muted/30">
+				<DoorOpen class="size-10 text-muted-foreground/50" />
+			</div>
+		{/if}
+	</div>
+	<div class="flex h-2 w-full bg-emerald-600"></div>
+	<div class="flex flex-col gap-4 bg-white/5 p-4">
+		<div class="flex items-center justify-between">
 			<div>
-				<div class="text-base font-semibold text-foreground">Salle {salle.num}</div>
+				<div class="text-base font-bold uppercase tracking-wider text-foreground">Salle {salle.num}</div>
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<Users class="size-3.5" />
 					<span>{salle.place} places</span>
 				</div>
 			</div>
-			<span
-				class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {statutClass}"
-			>
+			<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {statutClass}">
 				{statutLabel}
 			</span>
 		</div>
@@ -80,8 +143,19 @@
 				class="h-8 flex-1 rounded-lg px-3 text-xs"
 				onclick={handleEdit}
 			>
-				Modifier salle
+				Modifier
 			</Button>
+			<div class="flex flex-1 gap-2">
+				<Button
+					size="sm"
+					variant="default"
+					class="h-8 flex-1 rounded-lg px-3 text-xs"
+					onclick={() => (imageOpen = true)}
+				>
+					Image
+				</Button>
+				<UploadFile bind:open={imageOpen} bind:files onSubmit={handleImageSubmit} />
+			</div>
 		</div>
 	</div>
 </CardUI>
@@ -94,7 +168,7 @@
 		</Dialog.Header>
 		<form method="POST" action="?/update">
 			<input type="hidden" name="id" value={salle.id} />
-			<div class="grid gap-4">
+			<div class="grid gap-4 pb-4">
 				<div class="grid gap-3">
 					<Label for="edit-nom-salle">Nom de la salle</Label>
 					<Input id="edit-nom-salle" bind:value={editName} placeholder="ex: Salle A" name="nom" />

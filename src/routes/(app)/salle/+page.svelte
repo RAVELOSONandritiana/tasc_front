@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
+	import * as Select from '$lib/components/ui/select';
 	import type { PageProps } from './$types';
 	import Salle from '$lib/components/user/classe/Salle.svelte';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
@@ -13,8 +14,22 @@
 
 	const { data }: PageProps = $props();
 	let salleDialogOpen = $state(false);
+	let nomSalle = $state('');
 	let numSalle = $state('');
 	let nbPlaces = $state('');
+	let statusFilter = $state(data.statusFilter || 'all');
+
+	const statusOptions = [
+		{ value: 'all', label: 'Toutes' },
+		{ value: 'libre', label: 'Libres' },
+		{ value: 'occupe', label: 'Occupées' }
+	];
+
+	const filteredSalles = $derived(
+		statusFilter === 'all'
+			? data.list_salle
+			: data.list_salle.filter((s: { occupe: boolean }) => s.occupe === (statusFilter === 'occupe'))
+	);
 </script>
 
 <main class="flex h-screen flex-col bg-background text-foreground">
@@ -31,28 +46,49 @@
 						<div>
 							<h1 class="text-xl font-bold tracking-tight">Salles</h1>
 							<p class="text-xs text-muted-foreground">
-								{data.list_salle.length} salle{data.list_salle.length > 1 ? 's' : ''} disponible{data
-									.list_salle.length > 1
-									? 's'
-									: ''}
+								{filteredSalles.length} salle{filteredSalles.length > 1 ? 's' : ''} disponible{filteredSalles.length > 1 ? 's' : ''}
 							</p>
 						</div>
+						<div class="hidden sm:block">
+							<Select.Root type="single" bind:value={statusFilter}>
+								<Select.Trigger class="h-8 w-40">
+									{statusOptions.find((s) => s.value === statusFilter)?.label || 'Toutes'}
+								</Select.Trigger>
+								<Select.Content>
+									{#each statusOptions as status}
+										<Select.Item value={status.value}>{status.label}</Select.Item>
+									{/each}
+								</Select.Content>
+							</Select.Root>
+						</div>
 					</div>
-				<Dialog.Root bind:open={salleDialogOpen}>
-					<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', class: 'gap-2' })}>
-						<Plus class="size-4" />
-						Nouvelle salle
-					</Dialog.Trigger>
-					<Dialog.Content class="sm:max-w-[425px]">
-						<form method="POST" action="?/create" class="contents">
-							<Dialog.Header>
-								<Dialog.Title>Ajouter une salle</Dialog.Title>
-								<Dialog.Description
-									>Cette salle pourra ensuite être affectée à des cours.</Dialog.Description
-								>
-							</Dialog.Header>
+					<Dialog.Root bind:open={salleDialogOpen}>
+						<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', class: 'gap-2' })}>
+							<Plus class="size-4" />
+							Nouvelle salle
+						</Dialog.Trigger>
+						<Dialog.Content class="sm:max-w-[425px]">
+							<form method="POST" action="?/create" class="contents">
+								<Dialog.Header>
+									<Dialog.Title>Ajouter une salle</Dialog.Title>
+									<Dialog.Description
+										>Cette salle pourra ensuite être affectée à des cours.</Dialog.Description
+									>
+								</Dialog.Header>
 
 							<div class="grid gap-4 py-4">
+								<div class="grid gap-3">
+									<Label for="nom_salle">Nom de la salle</Label>
+									<Input
+										id="nom_salle"
+										type="text"
+										placeholder="ex: Salle 207"
+										bind:value={nomSalle}
+										name="nom"
+										required
+									/>
+								</div>
+
 								<div class="grid gap-3">
 									<Label for="num_salle">Numéro de salle</Label>
 									<Input
@@ -100,13 +136,13 @@
 
 		<div class="mx-auto max-w-7xl p-4 md:p-6">
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#if data.list_salle.length > 0}
-					{#each data.list_salle as salle, i (salle.id)}
+				{#if filteredSalles.length > 0}
+					{#each filteredSalles as salle, i (salle.id)}
 						<div
 							class="animate-slide-up opacity-0"
 							style="animation-delay: {Math.min(i * 50, 400)}ms"
 						>
-							<Salle {salle} />
+							<Salle {salle} deleteAction="?/delete" />
 						</div>
 					{/each}
 				{:else}
