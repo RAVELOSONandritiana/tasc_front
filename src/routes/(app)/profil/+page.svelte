@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Avatar } from '$lib/components/ui/avatar';
+	import * as Avatar from '$lib/components/ui/avatar';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import {
 		User,
@@ -144,7 +144,7 @@
 </script>
 
 <main class="flex-1 overflow-y-auto bg-background p-4 text-foreground md:p-6">
-	<div class="mx-auto max-w-5xl space-y-6">
+	<div class="space-y-6">
 		<!-- Header -->
 		<div
 			class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"

@@ -9,19 +9,20 @@
 	import type { PageProps } from './$types';
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
-	import { Trash } from '@lucide/svelte/icons';
+	import { Trash, Plus } from '@lucide/svelte/icons';
+	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 
 	const { data }: PageProps = $props();
 
 	let searchEleve = $state('');
 	let elevesInscrits = $state<EleveCours[]>([...data.elevesInscrits]);
 
-	let nouvelEleve = $state({
-		nom: '',
-		prenom: '',
-		dateNaissance: ''
-	});
-	let nouvelEleveDialogOpen = $state(false);
+	let openAddExistingDialog = $state(false);
+	let searchExisting = $state('');
+	let elevesDisponibles: { id: string; nom: string; prenom: string; dateNaissance: string }[] = $state([]);
+	let loadingDisponibles = $state(false);
+	let selectedExistingId = $state('');
 
 	const elevesFiltres = $derived(
 		elevesInscrits.filter((e) =>
@@ -29,9 +30,48 @@
 		)
 	);
 
+	const disponiblesFiltres = $derived(
+		searchExisting.trim().length === 0
+			? elevesDisponibles
+			: elevesDisponibles.filter((e) =>
+					`${e.nom}${e.prenom}`.toLowerCase().includes(searchExisting.toLowerCase())
+				)
+	);
+
 	function removeEleve(id: string) {
 		elevesInscrits = elevesInscrits.filter((e) => e.id !== id);
 	}
+
+	async function loadElevesDisponibles() {
+		loadingDisponibles = true;
+		try {
+			const res = await fetch(`/classe/${$page.params.id}/eleves?/getDisponibles`);
+			const result = await res.json();
+			if (result.success) {
+				elevesDisponibles = result.elevesDisponibles || [];
+			}
+		} catch (e) {
+			console.error('Failed to load disponibles:', e);
+		} finally {
+			loadingDisponibles = false;
+		}
+	}
+
+	onMount(() => {
+		if (openAddExistingDialog && elevesDisponibles.length === 0) {
+			loadElevesDisponibles();
+		}
+	});
+
+	$effect(() => {
+		if (openAddExistingDialog && elevesDisponibles.length === 0) {
+			loadElevesDisponibles();
+		}
+		if (!openAddExistingDialog) {
+			searchExisting = '';
+			selectedExistingId = '';
+		}
+	});
 </script>
 
 <div class="flex h-screen flex-col bg-sidebar text-sidebar-foreground">
@@ -40,92 +80,104 @@
 	>
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
-		<Dialog.Root bind:open={nouvelEleveDialogOpen}>
-			<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
-				Nouvel élève
-			</Dialog.Trigger>
-			<Dialog.Content class="sm:max-w-[425px]">
-				<form
-					method="POST"
-					action="?/create"
-					use:enhance={() => {
-						return async ({ result }) => {
-							if (result.type === 'success' && result.data) {
-								const newEleve = (result.data as any).eleve;
-								elevesInscrits = [...elevesInscrits, {
-									id: newEleve.id,
-									nom: newEleve.nom,
-									prenom: newEleve.prenom,
-									dateNaissance: newEleve.dateNaissance,
-									actif: newEleve.actif,
-									notes: [],
-									incidents: [],
-									absences: [],
-									retards: []
-								}];
-								nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
-								nouvelEleveDialogOpen = false;
-							} else if (result.type === 'failure') {
-								alert(result.data?.error || "Erreur lors de l'ajout");
-							}
-						};
-					}}
-				>
+		<div class="flex gap-2">
+			<Dialog.Root bind:open={openAddExistingDialog}>
+				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
+					<Plus class="mr-2 size-4" />
+					Nouvel élève
+				</Dialog.Trigger>
+				<Dialog.Content class="sm:max-w-[500px]">
 					<Dialog.Header>
-						<Dialog.Title>Ajouter un élève</Dialog.Title>
-						<Dialog.Description
-							>L'élève sera automatiquement inscrit à tous les cours</Dialog.Description
-						>
+						<Dialog.Title>Ajouter un nouvel élève</Dialog.Title>
+						<Dialog.Description>Sélectionnez un élève déjà inscrit dans l'établissement</Dialog.Description>
 					</Dialog.Header>
-					<div class="grid gap-4 py-4">
-						<div class="grid gap-2">
-							<Label for="nom_eleve">Nom *</Label>
-							<Input
-								id="nom_eleve"
-								name="nom"
-								bind:value={nouvelEleve.nom}
-								placeholder="Nom de l'élève"
-								required
-							/>
+
+					{#if loadingDisponibles}
+						<p class="text-sm text-muted-foreground">Chargement...</p>
+					{:else}
+						<div class="grid gap-4 py-4">
+							<div class="grid gap-2">
+								<Label>Rechercher</Label>
+								<SearchInput placeholder="Rechercher un élève..." bind:value={searchExisting} />
+							</div>
+
+							{#if disponiblesFiltres.length === 0}
+								<p class="text-sm text-muted-foreground">Aucun élève disponible pour l'inscription.</p>
+							{:else}
+								<div class="max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+									{#each disponiblesFiltres as e (e.id)}
+										{@const isSelected = selectedExistingId === e.id}
+										<button
+											type="button"
+											class="flex w-full flex-col rounded-md border px-3 py-2 text-left transition-colors {isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted'}"
+											onclick={() => selectedExistingId = isSelected ? '' : e.id}
+										>
+											<p class="text-sm font-medium">{e.nom} {e.prenom}</p>
+											<p class="text-xs text-muted-foreground">
+												{e.dateNaissance ? new Date(e.dateNaissance).toLocaleDateString() : ''}
+											</p>
+										</button>
+									{/each}
+								</div>
+							{/if}
 						</div>
-						<div class="grid gap-2">
-							<Label for="prenom_eleve">Prénom *</Label>
-							<Input
-								id="prenom_eleve"
-								name="prenom"
-								bind:value={nouvelEleve.prenom}
-								placeholder="Prénom de l'élève"
-								required
-							/>
-						</div>
-						<div class="grid gap-2">
-							<Label for="date_naiss">Date de naissance *</Label>
-							<Input 
-								id="date_naiss" 
-								name="dateNaissance" 
-								type="date" 
-								bind:value={nouvelEleve.dateNaissance} 
-								required 
-							/>
-						</div>
-					</div>
-					<Dialog.Footer>
+					{/if}
+
+					<Dialog.Footer class="gap-2">
 						<Button
 							variant="outline"
 							size="sm"
 							type="button"
+							disabled={!selectedExistingId}
 							onclick={() => {
-								nouvelEleve = { nom: '', prenom: '', dateNaissance: '' };
-								nouvelEleveDialogOpen = false;
+								const formData = new FormData();
+								formData.append('eleveId', selectedExistingId);
+								fetch(`/classe/${data.classeId || ''}/eleves?/addExisting`, {
+									method: 'POST',
+									body: formData,
+									credentials: 'same-origin'
+								})
+								.then(async (res) => {
+									const result = await res.json();
+									if (result.success && result.eleve) {
+										elevesInscrits = [...elevesInscrits, {
+											id: result.eleve.id,
+											nom: result.eleve.nom,
+											prenom: result.eleve.prenom,
+											dateNaissance: result.eleve.dateNaissance,
+											actif: result.eleve.actif,
+											notes: [],
+											incidents: [],
+											absences: [],
+											retards: []
+										}];
+										selectedExistingId = '';
+										searchExisting = '';
+										openAddExistingDialog = false;
+									} else {
+										alert(result.error || "Erreur lors de l'ajout de l'élève");
+									}
+								})
+								.catch(() => {
+									alert("Erreur réseau lors de l'ajout de l'élève");
+								});
+							}}
+						>
+							Ajouter
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => {
+								openAddExistingDialog = false;
 							}}
 						>
 							Annuler
 						</Button>
-						<Button variant="default" size="sm" type="submit">Ajouter</Button>
 					</Dialog.Footer>
-				</form>
 			</Dialog.Content>
 		</Dialog.Root>
+	</div>
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-4">

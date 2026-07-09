@@ -7,13 +7,14 @@
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { goto } from '$app/navigation';
 
-	const { jour, seances, salles, heures, classeId } = $props<{
+	const { jour, seances, salles, heures, classeId, cours = [] }: {
 		jour: string;
 		seances: SeanceEDT[];
 		salles: { id: string; num: number; name: string; place: number }[];
 		heures: string[];
 		classeId: string;
-	}>();
+		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string }[];
+	} = $props();
 
 	let dialogOpen = $state(false);
 	let nouvelleSeance = $state({
@@ -73,8 +74,8 @@
 						<Label for="cours">Matière *</Label>
 						<NativeSelect.Root bind:value={nouvelleSeance.coursId} class="w-full" name="coursId">
 							<NativeSelect.Option value="" disabled>Sélectionner une matière</NativeSelect.Option>
-							{#each salles as s (s.id)}
-								<NativeSelect.Option value={s.id}>Cours {s.num}</NativeSelect.Option>
+							{#each cours as c (c.id)}
+								<NativeSelect.Option value={c.id}>{c.matiereNom} {c.professeur ? `(${c.professeur})` : ''}</NativeSelect.Option>
 							{/each}
 						</NativeSelect.Root>
 					</div>

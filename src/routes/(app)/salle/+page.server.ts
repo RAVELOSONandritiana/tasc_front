@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const status = url.searchParams.get('status') || 'all';
@@ -65,7 +65,7 @@ export const actions: Actions = {
 		throw redirect(303, '/salle');
 	},
 
-	delete: async ({ request, locals }) => {
+	delete: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 

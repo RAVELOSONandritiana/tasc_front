@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import type { PageServerLoad, Actions } from './$types';
 import {
 	getClasseById,
@@ -6,10 +7,12 @@ import {
 	getCours,
 	createCours,
 	updateCours,
+	updateCoursImage,
 	deleteCours,
 	createExamen,
 	createNote,
 	getNotesByCoursId,
+	updateMatiere,
 	prisma
 } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
@@ -21,6 +24,24 @@ export const load: PageServerLoad = async ({ params }) => {
 	if (!classe) {
 		throw fail(404, { error: 'Classe introuvable' });
 	}
+
+	const mappedClasse = {
+		id: classe.id,
+		name: classe.nom || `Niveau ${classe.niveau}`,
+		niveau: classe.niveau,
+		series: classe.serie || '',
+		eleves: classe.elevesCount,
+		titulaire: classe.titulaire
+			? {
+					id: classe.titulaire.id,
+					personne: {
+						id: classe.titulaire.personne.id,
+						name: classe.titulaire.personne.name,
+						lastname: classe.titulaire.personne.lastname
+					}
+				}
+			: null
+	};
 
 	const [allMatieres, profs, coursList, examens, inscriptions] = await Promise.all([
 		getMatieres(),
@@ -65,7 +86,16 @@ export const load: PageServerLoad = async ({ params }) => {
 			professeur: c.professeur
 				? `${c.professeur.personne.name} ${c.professeur.personne.lastname}`
 				: '',
-			participants: c.participants || []
+			participants: c.participants || [],
+			matiereId: c.matiereId,
+		matiere: c.matiere
+			? {
+					id: c.matiere.id,
+					nom: c.matiere.nom,
+					couleur: c.matiere.couleur || undefined
+				}
+			: undefined,
+			url: c.imageUrl || undefined
 		}));
 
 	const listeExamens: Examen[] = examens.map((e) => ({
@@ -86,7 +116,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	}));
 
 	return {
-		classe,
+		classe: mappedClasse,
 		matieres,
 		enseignants,
 		listeCours,
@@ -166,6 +196,9 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const coursId = data.get('coursId') as string;
 		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
+		const matiereId = data.get('matiereId') as string | null;
+		const matiereNom = (data.get('matiereNom') as string | null)?.trim() || '';
+		const matiereCouleur = (data.get('matiereCouleur') as string | null)?.trim() || '';
 
 		if (!coursId) {
 			return fail(400, { error: 'coursId requis' });
@@ -175,6 +208,14 @@ export const actions: Actions = {
 			const cours = await updateCours(coursId, {
 				coefficient: Number.isFinite(coefficient) ? coefficient : 1
 			});
+
+			if (matiereId && matiereNom) {
+				await updateMatiere(matiereId, {
+					nom: matiereNom,
+					couleur: matiereCouleur || undefined
+				});
+			}
+
 			return { success: true, cours };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
@@ -247,28 +288,58 @@ export const actions: Actions = {
 
 	createNote: async ({ request, locals, params }) => {
 		const data = await request.formData();
-		const valeur = parseFloat((data.get('valeur') as string) || '0');
-		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
+		const valeurBrute = parseFloat((data.get('valeur') as string) || '0');
+		const typeNotation = (data.get('typeNotation') as string) || 'sur_20';
 		const libelle = (data.get('libelle') as string | null)?.trim() || '';
 		const eleveId = data.get('eleveId') as string;
 		const coursId = data.get('coursId') as string;
 		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+		const coefficientMode = (data.get('coefficientMode') as string) || 'unitaire';
 
-		if (isNaN(valeur) || !eleveId || !coursId) {
+		if (isNaN(valeurBrute) || !eleveId || !coursId) {
 			return fail(400, { error: 'Valeur, élève et cours requis' });
 		}
 
 		try {
+			let convertedValeur = valeurBrute;
+			switch (typeNotation) {
+				case 'sur_10':
+					convertedValeur = valeurBrute * 2;
+					break;
+				case 'sur_100':
+					convertedValeur = valeurBrute / 5;
+					break;
+				case 'sur_5':
+					convertedValeur = valeurBrute * 4;
+					break;
+				case 'sur_20':
+				default:
+					convertedValeur = valeurBrute;
+			}
+
+			let coefficient = 1;
+			if (coefficientMode === 'cours') {
+				const cours = await prisma.cours.findUnique({
+					where: { id: coursId },
+					select: { coefficient: true }
+				});
+				coefficient = cours?.coefficient && Number.isFinite(cours.coefficient) ? cours.coefficient : 1;
+			}
+
 			const note = await createNote({
-				valeur,
-				coefficient: Number.isFinite(coefficient) && coefficient > 0 ? coefficient : 1,
+				valeur: convertedValeur,
+				coefficient,
 				libelle: libelle || undefined,
 				eleveId,
 				coursId,
 				examenId
 			});
 
-			logActivity(locals.user, 'creation_note' as any, `Note créée : ${valeur}/20`).catch(() => {});
+			logActivity(
+				locals.user,
+				'creation_note' as any,
+				`Note créée : ${convertedValeur}/20`
+			).catch(() => {});
 
 			return { success: true, note };
 		} catch (e: any) {
@@ -294,6 +365,58 @@ export const actions: Actions = {
 			};
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la récupération des notes' });
+		}
+	},
+
+	updateMatiere: async ({ request }) => {
+		const data = await request.formData();
+		const matiereId = data.get('matiereId') as string;
+		const nom = (data.get('nom') as string | null)?.trim() || '';
+		const couleur = (data.get('couleur') as string | null)?.trim() || null;
+
+		if (!matiereId) {
+			return fail(400, { error: 'Matiere requise' });
+		}
+
+		try {
+			const matiere = await updateMatiere(matiereId, {
+				nom: nom || undefined,
+				couleur: couleur || undefined
+			});
+			return { success: true, matiere };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
+		}
+	},
+
+	updateCoursImage: async ({ request }) => {
+		const formData = await request.formData();
+		const coursId = formData.get('coursId') as string;
+		const file = formData.get('file') as File | null;
+
+		if (!coursId || !file) {
+			return fail(400, { error: 'coursId et fichier requis' });
+		}
+
+		try {
+			const oldCours = await prisma.cours.findUnique({
+				where: { id: coursId },
+				select: { imageUrl: true }
+			});
+
+			const bytes = Buffer.from(await file.arrayBuffer());
+			const ext = file.name.split('.').pop() || 'bin';
+			const filename = `${coursId}-${Date.now()}.${ext}`;
+			const relativePath = `uploads/cours/${filename}`;
+			const absolutePath = `/home/hashterx/tasc_front/static/${relativePath}`;
+
+			await fs.promises.writeFile(absolutePath, bytes);
+
+			await updateCoursImage(coursId, `/${relativePath}`);
+
+			return { success: true, url: `/${relativePath}`, oldImageUrl: oldCours?.imageUrl || null };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la mise a jour de l'image" });
 		}
 	}
 };

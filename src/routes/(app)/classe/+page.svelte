@@ -58,7 +58,7 @@
 <main class="flex h-screen flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
 		<div class="sticky top-0 z-10 border-b border-sidebar-border bg-background p-4 md:p-6">
-			<div class="mx-auto max-w-7xl space-y-4">
+			<div class="space-y-4">
 				<div class="flex items-center gap-3">
 					<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
 						<ClipboardList class="size-5 text-primary" />
@@ -267,17 +267,15 @@
 			</div>
 		</div>
 		<div class="p-4 md:p-6">
-			<div class="mx-auto max-w-7xl">
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{#each listClasse as l, i (l.id)}
-						<div
-							class="animate-slide-up opacity-0"
-							style="animation-delay: {Math.min(i * 50, 400)}ms"
-						>
-							<Classe classe={l} id={l.id} deleteAction="?/delete" />
-						</div>
-					{/each}
-				</div>
+			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+				{#each listClasse as l, i (l.id)}
+					<div
+						class="animate-slide-up opacity-0"
+						style="animation-delay: {Math.min(i * 50, 400)}ms"
+					>
+						<Classe classe={l} id={l.id} deleteAction="?/delete" {enseignants} />
+					</div>
+			{/each}
 			</div>
 		</div>
 	</div>

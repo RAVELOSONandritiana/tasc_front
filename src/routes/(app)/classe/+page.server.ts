@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasses, getProfesseurs, createClasse, updateClasseImage, deleteClasse, prisma } from '$lib/server/prisma';
+import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseImage, deleteClasse, prisma } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
@@ -65,8 +65,8 @@ export const actions: Actions = {
 			).catch(() => {});
 
 			return { success: true, classe };
-		} catch (e: any) {
-			return fail(500, { errors: { _form: e?.message || "Erreur lors de la création" } });
+		} catch (e: unknown) {
+			return fail(500, { errors: { _form: (e as Error)?.message || "Erreur lors de la création" } });
 		}
 	},
 	updateImage: async ({ request }) => {
@@ -83,8 +83,61 @@ export const actions: Actions = {
 			});
 			await updateClasseImage(id, imageUrl);
 			return { success: true, oldImageUrl: oldClasse?.imageUrl || null };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la mise à jour de l'image" });
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || "Erreur lors de la mise à jour de l'image" });
+		}
+	},
+	update: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const nom = (data.get('nom') as string | null)?.trim() || '';
+		const niveau = parseInt((data.get('niveau') as string) || '0', 10);
+		const serie = (data.get('serie') as string | null)?.trim() || '';
+		const titulaireId = (data.get('titulaireId') as string | null)?.trim() || '';
+
+		const errors: Record<string, string> = {};
+
+		if (!id) {
+			errors.id = 'ID requis';
+		}
+
+		if (isNaN(niveau) || niveau < 0 || niveau > 2) {
+			errors.niveau = 'Niveau invalide';
+		}
+
+		if (Object.keys(errors).length > 0) {
+			return fail(400, { errors });
+		}
+
+		try {
+			const classe = await updateClasse(id, {
+				nom: nom || undefined,
+				niveau,
+				serie: serie || undefined,
+				titulaireId: titulaireId || undefined
+			});
+
+			logActivity(
+				locals.user,
+				'modification_classe',
+				`Modification de la classe ${classe.nom || niveau + (serie ? ' ' + serie.toUpperCase() : '')}`
+			).catch(() => {});
+
+			return {
+				success: true,
+				classe: {
+					id: classe.id,
+					nom: classe.nom || '',
+					niveau: classe.niveau,
+					series: classe.serie || '',
+					titulaire: classe.titulaire ? `${classe.titulaire.personne.name} ${classe.titulaire.personne.lastname}` : '',
+					titulaireId: classe.titulaireId,
+					eleves: classe.elevesCount || 0,
+					url: classe.imageUrl || undefined
+				}
+			};
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la mise à jour' });
 		}
 	},
 	delete: async ({ request, locals }) => {
@@ -99,8 +152,8 @@ export const actions: Actions = {
 				'Suppression de la classe'
 			).catch(() => {});
 			return { success: true };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la suppression' });
 		}
 	}
 };

@@ -16,7 +16,11 @@ export const load: PageServerLoad = async ({ params }) => {
 				include: {
 					eleve: {
 						include: {
-							personne: true
+							personne: true,
+							notes: true,
+							absences: true,
+							retards: true,
+							incidents: true
 						}
 					}
 				}
@@ -40,7 +44,10 @@ export const load: PageServerLoad = async ({ params }) => {
 		id: c.id,
 		nom: c.matiere.nom,
 		coefficient: c.coefficient,
-		professeur: c.professeur ? `${c.professeur.personne.name} ${c.professeur.personne.lastname}` : ''
+		professeur: c.professeur ? `${c.professeur.personne.name} ${c.professeur.personne.lastname}` : '',
+		participants: c.participants || [],
+		matiereId: c.matiereId,
+		matiere: c.matiere ? { id: c.matiere.id, nom: c.matiere.nom, couleur: c.matiere.couleur || undefined } : undefined
 	}));
 
 	const examens = await prisma.examen.findMany({

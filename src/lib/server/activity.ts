@@ -9,6 +9,7 @@ export type ActivityAction =
 	| 'modification_eleve'
 	| 'creation_cours'
 	| 'creation_classe'
+	| 'modification_classe'
 	| 'suppression_classe'
 	| 'validation_compte'
 	| 'creation_personnel'

@@ -1,10 +1,33 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur } from '$lib/server/prisma';
 import type { Professeur } from '$lib/types/Personne.type';
+import type { Personne } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
-function mapProfesseur(prismaProf: any): Professeur {
+type PrismaProfesseurShape = {
+	id: string;
+	matiere: string[];
+	retards: number;
+	absences: number;
+	heuresCours: number;
+	incidents: number;
+	notesPositives: number;
+	notesNegatives: number;
+	personne: {
+		id: string;
+		name: string;
+		lastname: string;
+		domicile: string | null;
+		fokontany: string | null;
+		commune: string | null;
+		phone: string;
+		email: string;
+		compte?: { id: string; role: string; matricule: string } | null;
+	};
+};
+
+function mapProfesseur(prismaProf: PrismaProfesseurShape): Professeur {
 	return {
 		id: prismaProf.id,
 		name: prismaProf.personne.name,
@@ -32,9 +55,20 @@ export const load: PageServerLoad = async () => {
 	const profs = await getProfesseurs();
 	const listProfesseur: Professeur[] = profs.map(mapProfesseur);
 	const personnel = await getAllPersonnes();
+	const personnelList: Personne[] = personnel.map((personne) => ({
+		id: personne.id,
+		name: personne.name,
+		lastname: personne.lastname,
+		domicile: personne.domicile ?? undefined,
+		fokontany: personne.fokontany ?? undefined,
+		commune: personne.commune ?? undefined,
+		phone: personne.phone,
+		email: personne.email,
+		compte: personne.compte ?? undefined
+	}));
 	return {
 		professeur: listProfesseur,
-		personnel
+		personnel: personnelList
 	};
 };
 
@@ -65,8 +99,8 @@ export const actions: Actions = {
 			).catch(() => {});
 
 			return { success: true, result };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de la création' });
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la création' });
 		}
 	},
 	delete: async ({ request, locals }) => {
@@ -81,8 +115,8 @@ export const actions: Actions = {
 				'Suppression de l\'enseignant'
 			).catch(() => {});
 			return { success: true };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la suppression' });
 		}
 	}
 };

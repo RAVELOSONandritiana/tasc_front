@@ -30,13 +30,14 @@
 				<div class="flex h-full flex-col p-3">
 					<h3 class="mb-2 font-semibold text-foreground">{jour}</h3>
 					<div class="flex-1">
-						<SeanceCard
-							{jour}
-							seances={seancesParJour[jour]}
-							salles={data.salles}
-							heures={data.heures}
-							classeId={data.classe.id}
-						/>
+					<SeanceCard
+						{jour}
+						seances={seancesParJour[jour]}
+						salles={data.salles}
+						heures={data.heures}
+						classeId={data.classe.id}
+						cours={data.cours}
+					/>
 					</div>
 				</div>
 			</Card>

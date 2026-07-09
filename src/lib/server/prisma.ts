@@ -386,6 +386,17 @@ export async function createMatiere(data: { nom: string; couleur?: string | null
 	});
 }
 
+export async function updateMatiere(id: string, data: { nom?: string; couleur?: string | null; icone?: string | null }) {
+	return prisma.matiere.update({
+		where: { id },
+		data: {
+			nom: data.nom,
+			couleur: data.couleur,
+			icone: data.icone
+		}
+	});
+}
+
 export async function getCours() {
 	return prisma.cours.findMany({
 		include: {
@@ -662,8 +673,128 @@ export async function createClasse(data: {
 	});
 }
 
+export async function updateClasse(id: string, data: {
+	nom?: string;
+	niveau?: number;
+	serie?: string;
+	titulaireId?: string | null;
+}) {
+	return prisma.classe.update({
+		where: { id },
+		data: {
+			nom: data.nom,
+			niveau: data.niveau,
+			serie: data.serie || null,
+			titulaireId: data.titulaireId || null
+		},
+		include: {
+			titulaire: {
+				include: {
+					personne: true
+				}
+			}
+		}
+	});
+}
+
+export async function getElevesNotInClasse(classeId: string) {
+	return prisma.eleve.findMany({
+		where: {
+			inscriptions: {
+				none: {
+					classeId,
+					actif: true
+				}
+			}
+		},
+		include: {
+			personne: true
+		},
+		orderBy: {
+			personne: {
+				name: 'asc'
+			}
+		}
+	});
+}
+
+export async function addEleveToClasse(eleveId: string, classeId: string) {
+	return prisma.$transaction(async (tx) => {
+		const annee = await tx.anneeScolaire.findFirst({ where: { active: true } });
+		if (!annee) {
+			throw new Error('Aucune année scolaire active');
+		}
+
+		const existingInscription = await tx.inscription.findFirst({
+			where: {
+				eleveId,
+				classeId,
+				anneeId: annee.id
+			}
+		});
+
+		if (existingInscription) {
+			if (!existingInscription.actif) {
+				await tx.inscription.update({
+					where: { id: existingInscription.id },
+					data: { actif: true }
+				});
+			}
+			const eleve = await tx.eleve.findUnique({
+				where: { id: eleveId },
+				include: { personne: true }
+			});
+			return {
+				id: eleve?.id,
+				nom: eleve?.personne.name,
+				prenom: eleve?.personne.lastname,
+				dateNaissance: eleve?.dateNaissance?.toISOString().split('T')[0] || '',
+				actif: true
+			};
+		}
+
+		const inscription = await tx.inscription.create({
+			data: {
+				eleveId,
+				classeId,
+				anneeId: annee.id,
+				actif: true
+			}
+		});
+
+		await tx.classe.update({
+			where: { id: classeId },
+			data: {
+				elevesCount: {
+					increment: 1
+				}
+			}
+		});
+
+		const eleve = await tx.eleve.findUnique({
+			where: { id: eleveId },
+			include: { personne: true }
+		});
+
+		return {
+			id: eleve?.id,
+			nom: eleve?.personne.name,
+			prenom: eleve?.personne.lastname,
+			dateNaissance: eleve?.dateNaissance?.toISOString().split('T')[0] || '',
+			actif: inscription.actif
+		};
+	});
+}
+
 export async function updateClasseImage(id: string, imageUrl: string | null) {
 	return prisma.classe.update({
+		where: { id },
+		data: { imageUrl }
+	});
+}
+
+export async function updateCoursImage(id: string, imageUrl: string | null) {
+	return prisma.cours.update({
 		where: { id },
 		data: { imageUrl }
 	});
@@ -798,6 +929,7 @@ export async function createCours(data: {
 }
 
 export async function updateCours(id: string, data: {
+	matiereId?: string;
 	coefficient?: number;
 	participants?: string[];
 	professeurId?: string;

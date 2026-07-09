@@ -18,7 +18,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Matricule et mot de passe requis' });
 		}
 
-		const compte = await prisma.compte.findUnique({
+		const compte = await prisma.compte.findFirst({
 			where: { matricule },
 			include: { personne: true }
 		});

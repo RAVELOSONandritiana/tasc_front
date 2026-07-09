@@ -8,12 +8,19 @@ export type Salle = {
 };
 
 export type Classe = {
-	id: number;
+	id: string;
 	niveau: number;
 	name: string;
 	series: string;
 	eleves: number;
-	titulaire: string;
+	titulaire?: {
+		id: string;
+		personne: {
+			id: string;
+			name: string;
+			lastname: string;
+		};
+	} | null;
 	url?: string;
 };
 
@@ -23,6 +30,9 @@ export type Cours = {
 	coefficient: number;
 	professeur?: string;
 	participants?: string[];
+	matiereId?: string;
+	matiere?: { id: string; nom: string; couleur?: string };
+	url?: string;
 };
 
 export type EleveCours = {

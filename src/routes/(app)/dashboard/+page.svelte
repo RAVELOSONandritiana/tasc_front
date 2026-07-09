@@ -96,7 +96,7 @@
 
 <div class="min-h-screen bg-background text-foreground">
 	<div class="sticky top-0 z-20 border-b border-sidebar-border bg-background/80 backdrop-blur-sm">
-		<div class="mx-auto max-w-7xl p-4 md:p-6">
+		<div class="p-4 md:p-6">
 			<div class="animate-slide-down flex items-center gap-3">
 				<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
 					<School class="size-5 text-primary" />
@@ -109,7 +109,7 @@
 		</div>
 	</div>
 
-	<div class="mx-auto max-w-7xl p-4 md:p-6 space-y-6">
+	<div class="p-4 md:p-6 space-y-6">
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
 				<div class="flex items-center gap-3">

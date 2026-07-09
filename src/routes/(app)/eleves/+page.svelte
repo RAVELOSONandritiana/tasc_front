@@ -29,7 +29,7 @@
 <main class="flex h-screen flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
 		<div class="sticky top-0 z-10 border-b border-sidebar-border bg-background p-4 md:p-6">
-			<div class="mx-auto max-w-7xl space-y-4">
+			<div class="space-y-4">
 				<!-- Header -->
 				<div
 					class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -84,7 +84,7 @@
 		</div>
 
 		<!-- Content -->
-		<div class="mx-auto max-w-7xl p-4 md:p-6">
+		<div class="p-4 md:p-6">
 			{#if elevesFiltres.length === 0}
 				<div
 					class="animate-fade-in flex flex-col items-center justify-center py-16 text-muted-foreground"

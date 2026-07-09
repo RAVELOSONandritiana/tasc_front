@@ -2,6 +2,7 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Upload } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
+	import { Button } from '$lib/components/ui/button';
 
 	let {
 		open = $bindable(false),
@@ -14,15 +15,34 @@
 		header?: string;
 		children?: Snippet;
 		files?: FileList | null;
-		onSubmit?: () => void;
+		onSubmit?: () => Promise<void> | void;
 	} = $props();
 	let previewUrl = $state('');
+	let submitting = $state(false);
 
 	$effect(() => {
 		if (files && files.length > 0) {
 			previewUrl = URL.createObjectURL(files[0]);
 		}
 	});
+
+	function handleSubmit() {
+		if (!onSubmit) return;
+		submitting = true;
+		const result = onSubmit();
+		if (result && typeof result.then === 'function') {
+			result.then(() => {
+				open = false;
+				previewUrl = '';
+			}).finally(() => {
+				submitting = false;
+			});
+		} else {
+			open = false;
+			previewUrl = '';
+			submitting = false;
+		}
+	}
 </script>
 
 <AlertDialog.Root bind:open>
@@ -48,7 +68,9 @@
 			{#if children}
 				{@render children()}
 			{:else if onSubmit}
-				<AlertDialog.Action onclick={onSubmit}>Envoyer</AlertDialog.Action>
+				<Button type="button" onclick={handleSubmit} size="sm" disabled={submitting}>
+					{submitting ? 'Envoi...' : 'Envoyer'}
+				</Button>
 			{/if}
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

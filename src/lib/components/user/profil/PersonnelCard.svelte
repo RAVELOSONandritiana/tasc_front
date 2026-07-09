@@ -31,6 +31,9 @@
 			retards: number;
 			absences: number;
 			incidents: number;
+			heuresCours?: number;
+			notesPositives?: number;
+			notesNegatives?: number;
 		};
 	};
 

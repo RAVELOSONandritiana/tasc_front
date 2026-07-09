@@ -5,7 +5,6 @@ import type { Prisma } from '@prisma/client';
 import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
-
 function mapIncident(prismaIncident: Prisma.IncidentGetPayload<{
 	include: { eleve: { include: { personne: true } }; reactions: true; comments: true }
 }>): Incident {
@@ -81,14 +80,15 @@ export const actions: Actions = {
 					}
 				});
 
-				const updateData: { incidentsCount?: number; notesPositives?: number; notesNegatives?: number } = {
-					incidentsCount: { increment: 1 }
-				};
+				const updateData: Prisma.EleveUpdateInput = {};
+
+				// atomic increment for incidentsCount
+				updateData.incidentsCount = { increment: 1 } as Prisma.IntFieldUpdateOperationsInput;
 
 				if (type === 'NOTE') {
-					updateData.notesPositives = { increment: 1 };
+					updateData.notesPositives = { increment: 1 } as Prisma.IntFieldUpdateOperationsInput;
 				} else if (type === 'ERREUR') {
-					updateData.notesNegatives = { increment: 1 };
+					updateData.notesNegatives = { increment: 1 } as Prisma.IntFieldUpdateOperationsInput;
 				}
 
 				await tx.eleve.update({
@@ -130,14 +130,15 @@ export const actions: Actions = {
 			await prisma.$transaction(async (tx) => {
 				await tx.incident.delete({ where: { id: incidentId } });
 
-				const updateData: { incidentsCount?: number; notesPositives?: number; notesNegatives?: number } = {
-					incidentsCount: { decrement: 1 }
-				};
+				const updateData: Prisma.EleveUpdateInput = {};
+
+				// atomic decrement for incidentsCount
+				updateData.incidentsCount = { decrement: 1 } as Prisma.IntFieldUpdateOperationsInput;
 
 				if (incident.type === 'NOTE') {
-					updateData.notesPositives = { decrement: 1 };
+					updateData.notesPositives = { decrement: 1 } as Prisma.IntFieldUpdateOperationsInput;
 				} else if (incident.type === 'ERREUR') {
-					updateData.notesNegatives = { decrement: 1 };
+					updateData.notesNegatives = { decrement: 1 } as Prisma.IntFieldUpdateOperationsInput;
 				}
 
 				await tx.eleve.update({

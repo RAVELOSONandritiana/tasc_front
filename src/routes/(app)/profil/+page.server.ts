@@ -78,7 +78,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 };
 
-export const actions = {
+export const actions: Actions = {
 	changePassword: async ({ request, locals }) => {
 		if (!locals.user) {
 			return fail(401, { error: 'Non autorisé' });

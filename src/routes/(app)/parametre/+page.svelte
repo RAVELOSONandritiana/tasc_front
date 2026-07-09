@@ -29,7 +29,7 @@
 
 <div class="h-screen flex flex-col bg-background text-foreground">
 	<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
-		<div class="mx-auto max-w-7xl space-y-4">
+		<div class="space-y-4">
 			<div class="animate-slide-down flex items-center gap-3">
 				<div class="flex size-10 items-center justify-center rounded-xl bg-primary/10">
 					<Settings class="size-5 text-primary" />
@@ -43,7 +43,7 @@
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-4 md:p-6">
-		<div class="mx-auto max-w-7xl space-y-6">
+		<div class="space-y-6">
 			<Card class="animate-slide-up stagger-1 opacity-0 p-5 space-y-4">
 				<div class="flex flex-wrap items-center justify-between gap-4">
 					<div class="flex items-center gap-2">

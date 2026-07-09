@@ -47,7 +47,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	];
 	const heures = ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
 
-	const emploiDuTemps = classe.emploisDuTemps[0];
+	const emploiDuTemps = classe.emploisDuTemps?.[0];
 	const seances = (emploiDuTemps?.seances ?? []).map((seance) => ({
 		id: seance.id,
 		jour: seance.jour,
@@ -57,6 +57,26 @@ export const load: PageServerLoad = async ({ params }) => {
 		coursNom: seance.cours.matiere.nom,
 		salleId: seance.salle?.id,
 		salleNom: seance.salle?.nom
+	}));
+
+	const coursList = await prisma.cours.findMany({
+		where: { classeId: classeId },
+		include: {
+			matiere: true,
+			professeur: {
+				include: {
+					personne: true
+				}
+			}
+		}
+	});
+
+	const cours = coursList.map((c) => ({
+		id: c.id,
+		matiereId: c.matiereId,
+		matiereNom: c.matiere?.nom || 'Matière',
+		coefficient: c.coefficient,
+		professeur: c.professeur ? `${c.professeur.personne.name} ${c.professeur.personne.lastname}` : ''
 	}));
 
 	return {
@@ -70,7 +90,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			imageUrl: s.imageUrl
 		})),
 		jours,
-		heures
+		heures,
+		cours
 	};
 };
 

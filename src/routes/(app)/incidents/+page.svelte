@@ -65,7 +65,7 @@
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-4">
-		<div class="max-w-2xl mx-auto space-y-4">
+		<div class="space-y-4">
 			{#if incidents.length === 0}
 				<div class="flex flex-col items-center justify-center py-20 text-muted-foreground">
 					<div class="size-20 rounded-full bg-muted/30 flex items-center justify-center mb-4">

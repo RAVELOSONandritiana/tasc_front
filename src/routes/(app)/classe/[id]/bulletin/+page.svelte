@@ -237,7 +237,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="p-6 max-w-4xl mx-auto space-y-6 print:p-0 print:m-0 print:max-w-none">
+	<div class="p-6 space-y-6 print:p-0 print:m-0 print:max-w-none">
 		<div class="flex justify-between items-center print:hidden border-b pb-4 mb-4">
 			<Button variant="outline" onclick={retourListe}>Retour à la liste</Button>
 			<Button onclick={imprimerBulletin} class="gap-2" variant="default">

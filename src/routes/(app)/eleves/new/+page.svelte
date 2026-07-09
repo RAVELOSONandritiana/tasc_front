@@ -75,7 +75,7 @@
 </script>
 
 <main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
-	<div class="mx-auto max-w-4xl">
+	<div>
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouvel élève</h1>
 			<p class="text-sm text-muted-foreground">

@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getElevesByClasseId, deleteEleve, prisma } from '$lib/server/prisma';
+import { getElevesByClasseId, deleteEleve, addEleveToClasse, getElevesNotInClasse, prisma } from '$lib/server/prisma';
 import type { EleveCours } from '$lib/types/Materiel.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
@@ -43,74 +43,26 @@ export const load: PageServerLoad = async ({ params }) => {
 	}));
 
 	return {
-		elevesInscrits
+		elevesInscrits,
+		classeId: params.id
 	};
 };
 
 export const actions: Actions = {
-	create: async ({ request, params }) => {
-		const data = await request.formData();
-		const nom = (data.get('nom') as string | null)?.trim() || '';
-		const prenom = (data.get('prenom') as string | null)?.trim() || '';
-		const dateNaissance = (data.get('dateNaissance') as string | null)?.trim() || '';
-
-		if (!nom || !prenom || !dateNaissance) {
-			return fail(400, { error: 'Nom, prénom et date de naissance requis' });
-		}
-
+	getDisponibles: async ({ params }) => {
 		try {
-			const annee = await prisma.anneeScolaire.findFirst({ where: { active: true } });
-			if (!annee) {
-				return fail(400, { error: 'Aucune année scolaire active trouvée' });
-			}
-
-			const result = await prisma.$transaction(async (tx) => {
-				const personne = await tx.personne.create({
-					data: {
-						name: nom,
-						lastname: prenom,
-						email: `${nom.toLowerCase()}.${prenom.toLowerCase()}.${Date.now()}@tasc.com`,
-						phone: ''
-					}
-				});
-
-				const eleve = await tx.eleve.create({
-					data: {
-						personneId: personne.id,
-						dateNaissance: new Date(dateNaissance)
-					}
-				});
-
-				const inscription = await tx.inscription.create({
-					data: {
-						eleveId: eleve.id,
-						classeId: params.id,
-						anneeId: annee.id,
-						actif: true
-					}
-				});
-
-				await tx.classe.update({
-					where: { id: params.id },
-					data: {
-						elevesCount: {
-							increment: 1
-						}
-					}
-				});
-
-				return {
-					id: eleve.id,
-					nom: personne.name,
-					prenom: personne.lastname,
-					dateNaissance: eleve.dateNaissance.toISOString().split('T')[0],
-					actif: inscription.actif
-				};
-			});
-
-			return { success: true, eleve: result };
+			const elevesDisponibles = await getElevesNotInClasse(params.id);
+			return {
+				success: true,
+				elevesDisponibles: elevesDisponibles.map((e: any) => ({
+					id: e.id,
+					nom: e.personne.name,
+					prenom: e.personne.lastname,
+					dateNaissance: e.dateNaissance?.toISOString().split('T')[0] || ''
+				}))
+			};
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de l'ajout de l'élève" });
+			return fail(500, { error: e?.message || 'Erreur lors du chargement' });
 		}
 	},
 
@@ -128,6 +80,65 @@ export const actions: Actions = {
 			return { success: true };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
+		}
+	},
+
+	addExisting: async ({ request, params, locals }) => {
+		const data = await request.formData();
+		const eleveId = data.get('eleveId') as string;
+
+		if (!eleveId) {
+			return fail(400, { error: 'ID de l\'élève requis' });
+		}
+
+		try {
+			const existingInscription = await prisma.inscription.findFirst({
+				where: {
+					eleveId,
+					classeId: params.id,
+					anneeId: (await prisma.anneeScolaire.findFirst({ where: { active: true } }))?.id
+				}
+			});
+
+			if (existingInscription) {
+				if (existingInscription.actif) {
+					return fail(400, { error: 'Cet élève est déjà inscrit dans cette classe' });
+				}
+
+				await prisma.inscription.update({
+					where: { id: existingInscription.id },
+					data: { actif: true }
+				});
+
+				const eleve = await prisma.eleve.findUnique({
+					where: { id: eleveId },
+					include: { personne: true }
+				});
+
+				return {
+					success: true,
+					eleve: {
+						id: eleve?.id,
+						nom: eleve?.personne.name,
+						prenom: eleve?.personne.lastname,
+						dateNaissance: eleve?.dateNaissance?.toISOString().split('T')[0] || '',
+						actif: true,
+						dejaInscrit: true
+					}
+				};
+			}
+
+			const eleve = await addEleveToClasse(eleveId, params.id);
+
+			logActivity(
+				locals.user,
+				'creation_eleve',
+				`Inscription de l'élève ${eleve.nom} ${eleve.prenom} dans la classe`
+			).catch(() => {});
+
+			return { success: true, eleve };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de l\'inscription' });
 		}
 	}
 };

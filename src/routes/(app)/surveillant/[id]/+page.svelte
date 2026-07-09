@@ -28,8 +28,8 @@
 	const stats = surv.stats;
 </script>
 
-<main class="min-h-full bg-sidebar p-6 text-sidebar-foreground">
-	<div class="mx-auto max-w-3xl space-y-6">
+<main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
+	<div class="space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-bold">Profil du surveillant</h1>
 			<Button variant="outline" onclick={() => goto('/surveillant')}>Retour</Button>

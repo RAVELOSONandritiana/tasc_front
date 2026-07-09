@@ -7,6 +7,22 @@
 	import PersonnelCard from '$lib/components/user/profil/PersonnelCard.svelte';
 	import type { PageProps } from './$types';
 	import type { Personne } from '$lib/types/Personne.type';
+	import type { RoleCompte } from '@prisma/client';
+
+	type ServerPersonne = {
+		id: string;
+		name: string;
+		lastname: string;
+		domicile: string | null;
+		fokontany: string | null;
+		commune: string | null;
+		phone: string;
+		email: string;
+		compte?: { id: string; matricule: string; role: RoleCompte } | null;
+		createdAt?: string | Date;
+		updatedAt?: string | Date;
+	};
+
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Card } from '$lib/components/ui/card';
 	import { UserCog, Plus, X } from '@lucide/svelte/icons';
@@ -17,7 +33,17 @@
 	const { data }: PageProps = $props();
 
 	let listProfesseur = $state(data.professeur);
-	const allPersonnel = $state<Personne[]>(data.personnel || []);
+	const allPersonnel = $state<Personne[]>((data.personnel || []).map((p: ServerPersonne) => ({
+		id: p.id,
+		name: p.name,
+		lastname: p.lastname,
+		domicile: p.domicile ?? undefined,
+		fokontany: p.fokontany ?? undefined,
+		commune: p.commune ?? undefined,
+		phone: p.phone,
+		email: p.email,
+		compte: p.compte ?? undefined
+	})));
 
 	let searchText = $state('');
 	let dialogOpen = $state(false);
@@ -76,7 +102,7 @@
 <main class="flex h-screen flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
 		<div class="sticky top-0 z-10 border-b border-sidebar-border bg-background p-4 md:p-6">
-			<div class="mx-auto max-w-7xl space-y-4">
+			<div class="space-y-4">
 				<div
 					class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
 				>
@@ -106,7 +132,7 @@
 			</div>
 		</div>
 
-		<div class="mx-auto max-w-7xl p-4 md:p-6">
+		<div class="p-4 md:p-6">
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each listFiltered as prof, i (i)}
 					<div

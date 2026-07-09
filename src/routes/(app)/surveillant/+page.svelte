@@ -65,7 +65,7 @@
 <main class="flex h-screen flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
 		<div class="sticky top-0 z-10 border-b border-sidebar-border bg-background p-4 md:p-6">
-			<div class="mx-auto max-w-7xl space-y-4">
+			<div class="space-y-4">
 				<div
 					class="animate-slide-down flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
 				>
@@ -95,7 +95,7 @@
 			</div>
 		</div>
 
-		<div class="mx-auto max-w-7xl p-4 md:p-6">
+		<div class="p-4 md:p-6">
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
 				{#each listFiltered as p, i (p.phone || `${p.name}${p.lastname}`)}
 					<div

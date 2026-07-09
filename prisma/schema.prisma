@@ -88,6 +88,7 @@ model Cours {
   professeurId  String
   anneeId       String
   participants  String[]
+  imageUrl      String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)

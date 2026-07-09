@@ -111,7 +111,7 @@
 
 <main class="flex h-screen flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
-		<div class="mx-auto max-w-6xl p-4 md:p-6">
+		<div class="p-4 md:p-6">
 			<div class="mb-4 flex items-center justify-between">
 				<div class="flex items-center gap-3">
 					<Button variant="ghost" class="gap-2" onclick={() => goto(`/profil/${profileId}`)}>

@@ -44,7 +44,12 @@ export const load: PageServerLoad = async ({ params }) => {
 			professeur: c.professeur
 				? `${c.professeur.personne.name} ${c.professeur.personne.lastname}`
 				: '',
-			participants: c.participants || []
+			participants: c.participants || [],
+			matiereId: c.matiereId,
+			matiere: c.matiere
+				? { id: c.matiere.id, nom: c.matiere.nom, couleur: c.matiere.couleur || undefined }
+				: undefined,
+			url: c.imageUrl || undefined
 		}));
 
 	const listeExamens = examens.map((e) => ({
