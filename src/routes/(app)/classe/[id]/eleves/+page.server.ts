@@ -1,5 +1,11 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getElevesByClasseId, deleteEleve, addEleveToClasse, getElevesNotInClasse, prisma } from '$lib/server/prisma';
+import {
+	getElevesByClasseId,
+	deleteEleve,
+	addEleveToClasse,
+	getElevesDisponiblesForClasse,
+	prisma
+} from '$lib/server/prisma';
 import type { EleveCours } from '$lib/types/Materiel.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
@@ -44,29 +50,13 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		elevesInscrits,
+		elevesDisponibles: await getElevesDisponiblesForClasse(params.id),
 		classeId: params.id
 	};
 };
 
 export const actions: Actions = {
-	getDisponibles: async ({ params }) => {
-		try {
-			const elevesDisponibles = await getElevesNotInClasse(params.id);
-			return {
-				success: true,
-				elevesDisponibles: elevesDisponibles.map((e: any) => ({
-					id: e.id,
-					nom: e.personne.name,
-					prenom: e.personne.lastname,
-					dateNaissance: e.dateNaissance?.toISOString().split('T')[0] || ''
-				}))
-			};
-		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors du chargement' });
-		}
-	},
-
-	delete: async ({ request, params, locals }) => {
+	delete: async ({ request, locals }) => {
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		if (!id) return fail(400, { error: 'ID requis' });
@@ -78,8 +68,9 @@ export const actions: Actions = {
 				'Suppression de l\'élève'
 			).catch(() => {});
 			return { success: true };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
+		} catch (e) {
+			const message = e instanceof Error ? e.message : 'Erreur lors de la suppression';
+			return fail(500, { error: message });
 		}
 	},
 
@@ -88,15 +79,20 @@ export const actions: Actions = {
 		const eleveId = data.get('eleveId') as string;
 
 		if (!eleveId) {
-			return fail(400, { error: 'ID de l\'élève requis' });
+			return fail(400, { error: "ID de l'élève requis" });
 		}
 
 		try {
+			const annee = await prisma.anneeScolaire.findFirst({ where: { active: true } });
+			if (!annee) {
+				return fail(500, { error: 'Aucune année scolaire active' });
+			}
+
 			const existingInscription = await prisma.inscription.findFirst({
 				where: {
 					eleveId,
 					classeId: params.id,
-					anneeId: (await prisma.anneeScolaire.findFirst({ where: { active: true } }))?.id
+					anneeId: annee.id
 				}
 			});
 
@@ -115,13 +111,17 @@ export const actions: Actions = {
 					include: { personne: true }
 				});
 
+				if (!eleve) {
+					return fail(404, { error: 'Élève introuvable' });
+				}
+
 				return {
 					success: true,
 					eleve: {
-						id: eleve?.id,
-						nom: eleve?.personne.name,
-						prenom: eleve?.personne.lastname,
-						dateNaissance: eleve?.dateNaissance?.toISOString().split('T')[0] || '',
+						id: eleve.id,
+						nom: eleve.personne.name,
+						prenom: eleve.personne.lastname,
+						dateNaissance: eleve.dateNaissance?.toISOString().split('T')[0] || '',
 						actif: true,
 						dejaInscrit: true
 					}
@@ -137,8 +137,9 @@ export const actions: Actions = {
 			).catch(() => {});
 
 			return { success: true, eleve };
-		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de l\'inscription' });
+		} catch (e) {
+			const message = e instanceof Error ? e.message : "Erreur lors de l'inscription";
+			return fail(500, { error: message });
 		}
 	}
 };

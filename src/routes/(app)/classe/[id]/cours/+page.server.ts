@@ -11,13 +11,16 @@ import {
 	deleteCours,
 	createExamen,
 	createNote,
-	getNotesByCoursId,
+	getNotesByCoursIdSorted,
+	deleteNote,
 	updateMatiere,
+	getActiveAnneeScolaire,
 	prisma
 } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
+import pb from '$lib/pocketbase/pocketbase';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const classe = await getClasseById(params.id);
@@ -296,11 +299,29 @@ export const actions: Actions = {
 		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
 		const coefficientMode = (data.get('coefficientMode') as string) || 'unitaire';
 
-		if (isNaN(valeurBrute) || !eleveId || !coursId) {
-			return fail(400, { error: 'Valeur, élève et cours requis' });
+		const errors: Record<string, string> = {};
+		if (isNaN(valeurBrute)) {
+			errors.valeur = 'La note doit être un nombre valide';
+		}
+		if (!eleveId) {
+			errors.eleveId = 'Veuillez sélectionner un élève';
+		}
+		if (!coursId) {
+			errors.coursId = 'Cours introuvable';
+		}
+		if (Object.keys(errors).length > 0) {
+			return fail(400, { errors, valeur: valeurBrute, eleveId, libelle });
 		}
 
 		try {
+			const cours = await prisma.cours.findUnique({
+				where: { id: coursId },
+				select: { classeId: true, coefficient: true }
+			});
+			if (!cours) {
+				return fail(404, { errors: { coursId: 'Cours introuvable' } });
+			}
+
 			let convertedValeur = valeurBrute;
 			switch (typeNotation) {
 				case 'sur_10':
@@ -317,14 +338,35 @@ export const actions: Actions = {
 					convertedValeur = valeurBrute;
 			}
 
+			if (convertedValeur < 0 || convertedValeur > 20) {
+				return fail(400, {
+					errors: { valeur: 'La note doit être comprise entre 0 et 20' },
+					valeur: valeurBrute,
+					eleveId,
+					libelle
+				});
+			}
+
 			let coefficient = 1;
 			if (coefficientMode === 'cours') {
-				const cours = await prisma.cours.findUnique({
-					where: { id: coursId },
-					select: { coefficient: true }
-				});
-				coefficient = cours?.coefficient && Number.isFinite(cours.coefficient) ? cours.coefficient : 1;
+				coefficient =
+					cours.coefficient && Number.isFinite(cours.coefficient) ? cours.coefficient : 1;
 			}
+
+			const annee = await getActiveAnneeScolaire();
+			if (!annee) {
+				return fail(500, { errors: { _form: 'Aucune année scolaire active' } });
+			}
+
+			const inscription = await prisma.inscription.findFirst({
+				where: {
+					eleveId,
+					classeId: cours.classeId,
+					anneeId: annee.id,
+					actif: true
+				},
+				select: { id: true }
+			});
 
 			const note = await createNote({
 				valeur: convertedValeur,
@@ -332,7 +374,8 @@ export const actions: Actions = {
 				libelle: libelle || undefined,
 				eleveId,
 				coursId,
-				examenId
+				examenId: examenId || undefined,
+				inscriptionId: inscription?.id || undefined
 			});
 
 			logActivity(
@@ -343,14 +386,37 @@ export const actions: Actions = {
 
 			return { success: true, note };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || 'Erreur lors de la création de la note' });
+			return fail(500, {
+				errors: { _form: e?.message || 'Erreur lors de la création de la note' }
+			});
 		}
 	},
 
-	getNotes: async ({ params }) => {
+	deleteNote: async ({ request, locals }) => {
+		const data = await request.formData();
+		const noteId = data.get('noteId') as string;
+
+		if (!noteId) {
+			return fail(400, { error: 'noteId requis' });
+		}
+
 		try {
-			const coursId = params.id;
-			const notes = await getNotesByCoursId(coursId);
+			await deleteNote(noteId);
+			logActivity(locals.user, 'suppression_note' as any, 'Note supprimée').catch(() => {});
+			return { success: true, noteId };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression de la note' });
+		}
+	},
+
+	getNotes: async ({ request, params }) => {
+		try {
+			const url = new URL(request.url);
+			const coursId = url.searchParams.get('coursId');
+			if (!coursId) {
+				return fail(400, { error: 'coursId requis' });
+			}
+			const notes = await getNotesByCoursIdSorted(coursId);
 			return {
 				success: true,
 				notes: notes.map((n) => ({
@@ -360,7 +426,9 @@ export const actions: Actions = {
 					libelle: n.libelle || '',
 					eleveId: n.eleveId,
 					eleveNom: `${n.eleve.personne.name} ${n.eleve.personne.lastname}`,
-					coursId: n.coursId
+					coursId: n.coursId,
+					examenId: n.examenId || undefined,
+					date: n.date.toISOString()
 				}))
 			};
 		} catch (e: any) {

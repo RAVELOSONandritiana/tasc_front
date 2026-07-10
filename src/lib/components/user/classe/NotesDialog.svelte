@@ -3,13 +3,11 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import {
-		Switch as SwitchPrimitive
-	} from '$lib/components/ui/switch/index.js';
-	import type { WithoutChildrenOrChild } from '$lib/utils.js';
+	import * as SwitchPrimitive from '$lib/components/ui/switch/index.js';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
+	import { Trash2, CheckCircle2 } from '@lucide/svelte';
 	import type { Cours, EleveCours, Examen, Note } from '$lib/types/Materiel.type';
 
 	let {
@@ -19,7 +17,6 @@
 		listeExamens = [],
 		notesCours = [],
 		notesLoading = false,
-		onCreateNote,
 		onLoadNotes
 	}: {
 		open?: boolean;
@@ -28,56 +25,39 @@
 		listeExamens: Examen[];
 		notesCours: Note[];
 		notesLoading: boolean;
-		onCreateNote?: (note: {
-			valeur: number;
-			coefficient: number;
-			libelle: string;
-			eleveId: string;
-			coursId: string;
-			examenId?: string;
-		}) => void;
 		onLoadNotes?: (coursId: string) => void;
 	} = $props();
 
 	let errors = $state<Record<string, string>>({});
+	let success = $state(false);
 
-	let nouvelleNote = $state({
-		valeur: 0,
-		coefficient: 1,
-		libelle: '',
-		eleveId: '',
-		coursId: '',
-		examenId: ''
-	});
-
-	let utiliserCoefficientCours = $state(false);
-	let typeNotation = $state<'sur_20' | 'sur_10' | 'sur_100' | 'sur_5'>('sur_20');
+	let selectedEleveId = $state('');
 	let valeurSaisie = $state(0);
+	let typeNotation = $state<'sur_20' | 'sur_10' | 'sur_100' | 'sur_5'>('sur_20');
+	let libelleSaisi = $state('');
+	let selectedExamenId = $state('');
+	let utiliserCoefficientCours = $state(false);
 	let apercuSur20 = $state(0);
 
 	$effect(() => {
 		if (open) {
-			nouvelleNote = {
-				valeur: 0,
-				coefficient: 1,
-				libelle: '',
-				eleveId: '',
-				coursId: '',
-				examenId: ''
-			};
-			utiliserCoefficientCours = false;
-			typeNotation = 'sur_20';
-			valeurSaisie = 0;
-			apercuSur20 = 0;
-			errors = {};
+			resetForm();
 		}
 	});
 
-	function calculerApercu() {
-		if (!open) {
-			apercuSur20 = 0;
-			return;
-		}
+	function resetForm() {
+		selectedEleveId = '';
+		valeurSaisie = 0;
+		typeNotation = 'sur_20';
+		libelleSaisi = '';
+		selectedExamenId = '';
+		utiliserCoefficientCours = false;
+		apercuSur20 = 0;
+		errors = {};
+		success = false;
+	}
+
+	$effect(() => {
 		const v = Number(valeurSaisie);
 		switch (typeNotation) {
 			case 'sur_10':
@@ -93,23 +73,31 @@
 			default:
 				apercuSur20 = Number.isFinite(v) ? v : 0;
 		}
-	}
-
-	$effect(() => {
-		calculerApercu();
 	});
-
-	function openNotesDialog() {
-		if (cours) {
-			onLoadNotes?.(cours.id);
-		}
-	}
 
 	$effect(() => {
 		if (open && cours) {
-			openNotesDialog();
+			onLoadNotes?.(cours.id);
 		}
 	});
+
+	const moyenneParEleve = $derived(
+		elevesClasse
+			.map((eleve) => {
+				const notesEleve = notesCours.filter((n) => n.eleveId === eleve.id);
+				if (notesEleve.length === 0) return null;
+				const total = notesEleve.reduce((s, n) => s + n.valeur * n.coefficient, 0);
+				const coeff = notesEleve.reduce((s, n) => s + n.coefficient, 0);
+				return {
+					id: eleve.id,
+					nom: `${eleve.nom} ${eleve.prenom}`,
+					moyenne: coeff > 0 ? total / coeff : 0,
+					nombre: notesEleve.length
+				};
+			})
+			.filter((m): m is { id: string; nom: string; moyenne: number; nombre: number } => m !== null)
+			.sort((a, b) => b.moyenne - a.moyenne)
+	);
 </script>
 
 <Dialog.Root bind:open>
@@ -119,42 +107,41 @@
 			<Dialog.Description>Ajouter et consulter les notes pour ce cours</Dialog.Description>
 		</Dialog.Header>
 		<div class="space-y-4 py-4">
+			{#if success}
+				<div class="flex items-center gap-2 rounded-md border border-emerald-500 bg-emerald-500/10 p-3">
+					<CheckCircle2 class="size-4 text-emerald-500" />
+					<p class="text-sm font-medium text-emerald-500">Note enregistrée avec succès</p>
+				</div>
+			{/if}
+
+			{#if errors._form}
+				<div class="rounded-md border border-destructive bg-destructive/10 p-3">
+					<p class="text-sm text-destructive">{errors._form}</p>
+				</div>
+			{/if}
+
 			<div class="grid gap-4 md:grid-cols-2">
 				<div class="space-y-3 rounded-md border p-4">
 					<h3 class="text-sm font-semibold">Ajouter une note</h3>
-
-					{#if errors._form}
-						<div class="mb-4 rounded-md border border-destructive bg-destructive/10 p-3">
-							<p class="text-sm text-destructive">{errors._form}</p>
-						</div>
-					{/if}
 
 					<form
 						method="POST"
 						action="?/createNote"
 						use:enhance={() => {
 							errors = {};
+							success = false;
 							return async ({ result }) => {
 								if (result.type === 'success' && cours) {
 									onLoadNotes?.(cours.id);
-									nouvelleNote = {
-										valeur: 0,
-										coefficient: 1,
-										libelle: '',
-										eleveId: '',
-										coursId: '',
-										examenId: ''
-									};
-									valeurSaisie = 0;
-									typeNotation = 'sur_20';
-									apercuSur20 = 0;
-									utiliserCoefficientCours = false;
+									resetForm();
+									success = true;
+									setTimeout(() => (success = false), 2000);
 								} else if (result.type === 'failure') {
-									const error =
-										(result.data as any)?.error ||
-										(result.data as any)?._form ||
-										'Erreur lors de la création de la note';
-									errors = { _form: error };
+									const data = result.data as any;
+									errors = data?.errors || { _form: data?.error || 'Erreur lors de la création de la note' };
+									selectedEleveId = data?.eleveId || '';
+									valeurSaisie = typeof data?.valeur === 'number' ? data.valeur : valeurSaisie;
+									libelleSaisi = data?.libelle || '';
 								}
 							};
 						}}
@@ -165,7 +152,7 @@
 
 						<div class="grid gap-2 w-full">
 							<Label for="eleveId">Élève *</Label>
-							<NativeSelect.Root name="eleveId" required class="w-full">
+							<NativeSelect.Root name="eleveId" required class="w-full" bind:value={selectedEleveId}>
 								<option value="">Choisir un élève</option>
 								{#each elevesClasse as eleve (eleve.id)}
 									<NativeSelect.Option value={eleve.id}>
@@ -173,6 +160,9 @@
 									</NativeSelect.Option>
 								{/each}
 							</NativeSelect.Root>
+							{#if errors.eleveId}
+								<p class="text-xs text-destructive">{errors.eleveId}</p>
+							{/if}
 						</div>
 
 						<div class="grid gap-2 w-full">
@@ -198,6 +188,9 @@
 								bind:value={valeurSaisie}
 								class="w-full"
 							/>
+							{#if errors.valeur}
+								<p class="text-xs text-destructive">{errors.valeur}</p>
+							{/if}
 							{#if typeNotation !== 'sur_20'}
 								<p class="text-xs text-muted-foreground">
 									Aperçu sur 20 : {apercuSur20.toFixed(2)}/20
@@ -213,7 +206,7 @@
 										{utiliserCoefficientCours ? `Coeff. ${cours?.coefficient}` : 'Coeff. 1'}
 									</p>
 								</div>
-								<SwitchPrimitive
+								<SwitchPrimitive.Root
 									checked={utiliserCoefficientCours}
 									onCheckedChange={(checked: boolean) => {
 										utiliserCoefficientCours = checked;
@@ -224,12 +217,19 @@
 
 						<div class="grid gap-2 w-full">
 							<Label for="libelle">Libellé</Label>
-							<Input id="libelle" name="libelle" placeholder="Devoir, Interrogation..." class="w-full" />
+							<Input
+								id="libelle"
+								name="libelle"
+								placeholder="Devoir, Interrogation..."
+								bind:value={libelleSaisi}
+								class="w-full"
+							/>
 						</div>
+
 						{#if listeExamens.length > 0}
 							<div class="grid gap-2 w-full">
 								<Label for="examenId">Examen</Label>
-								<NativeSelect.Root name="examenId" class="w-full">
+								<NativeSelect.Root name="examenId" class="w-full" bind:value={selectedExamenId}>
 									<option value="">Sans examen</option>
 									{#each listeExamens as examen (examen.id)}
 										<NativeSelect.Option value={examen.id}>{examen.nom}</NativeSelect.Option>
@@ -242,28 +242,68 @@
 					</form>
 				</div>
 
-				<div class="space-y-2">
-					<h3 class="text-sm font-semibold">Notes enregistrées</h3>
-					{#if notesLoading}
-						<p class="text-sm text-muted-foreground">Chargement...</p>
-					{:else if notesCours.length === 0}
-						<p class="text-sm text-muted-foreground">Aucune note enregistrée</p>
-					{:else}
-						<div class="max-h-80 space-y-2 overflow-y-auto rounded-md border p-2">
-							{#each notesCours as note (note.id)}
-								<div class="flex items-center justify-between rounded-md bg-muted/30 p-2">
-									<div>
-										<p class="text-sm font-medium">{note.eleveNom}</p>
-										<p class="text-xs text-muted-foreground">
-											{note.libelle || 'Note'}
-											{note.examenId ? '(examen)' : ''} - Coeff. {note.coefficient}
-										</p>
+				<div class="space-y-4">
+					{#if moyenneParEleve.length > 0}
+						<div class="space-y-2">
+							<h3 class="text-sm font-semibold">Moyennes</h3>
+							<div class="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+								{#each moyenneParEleve as m (m.id)}
+									<div class="flex items-center justify-between text-sm">
+										<span class="truncate">{m.nom} <span class="text-xs text-muted-foreground">({m.nombre})</span></span>
+										<span class="font-semibold">{m.moyenne.toFixed(2)}/20</span>
 									</div>
-									<span class="text-sm font-semibold">{note.valeur}/20</span>
-								</div>
-							{/each}
+								{/each}
+							</div>
 						</div>
 					{/if}
+
+					<div class="space-y-2">
+						<h3 class="text-sm font-semibold">Notes enregistrées</h3>
+						{#if notesLoading}
+							<p class="text-sm text-muted-foreground">Chargement...</p>
+						{:else if notesCours.length === 0}
+							<p class="text-sm text-muted-foreground">Aucune note enregistrée</p>
+						{:else}
+							<div class="max-h-80 space-y-2 overflow-y-auto rounded-md border p-2">
+								{#each notesCours as note (note.id)}
+									<div class="flex items-center justify-between rounded-md bg-muted/30 p-2">
+										<div>
+											<p class="text-sm font-medium">{note.eleveNom}</p>
+											<p class="text-xs text-muted-foreground">
+												{note.libelle || 'Note'}
+												{note.examenId ? '(examen)' : ''} - Coeff. {note.coefficient}
+											</p>
+										</div>
+										<div class="flex items-center gap-2">
+											<span class="text-sm font-semibold">{note.valeur}/20</span>
+											<form
+												method="POST"
+												action="?/deleteNote"
+												use:enhance={() => {
+													return async ({ result }) => {
+														if (result.type === 'success' && cours) {
+															onLoadNotes?.(cours.id);
+														}
+													};
+												}}
+											>
+												<input type="hidden" name="noteId" value={note.id} />
+												<Button
+													type="submit"
+													variant="ghost"
+													size="icon-sm"
+													class="size-7 text-destructive hover:bg-destructive/10"
+													title="Supprimer"
+												>
+													<Trash2 class="size-3.5" />
+												</Button>
+											</form>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>

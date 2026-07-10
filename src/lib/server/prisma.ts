@@ -22,8 +22,6 @@ export async function initDb() {
 	}
 }
 
-await initDb();
-
 export async function getEleves() {
 	return prisma.eleve.findMany({
 		include: {
@@ -31,6 +29,9 @@ export async function getEleves() {
 			inscriptions: {
 				include: {
 					classe: true
+				},
+				orderBy: {
+					dateInscription: 'desc'
 				}
 			}
 		},
@@ -47,11 +48,14 @@ export async function getEleveById(id: string) {
 		where: { id },
 		include: {
 			personne: true,
-			inscriptions: {
-				include: {
-					classe: true
-				}
+		inscriptions: {
+			include: {
+				classe: true
 			},
+			orderBy: {
+				dateInscription: 'desc'
+			}
+		},
 			incidents: true
 		}
 	});
@@ -376,24 +380,33 @@ export async function getMatieres() {
 	});
 }
 
-export async function createMatiere(data: { nom: string; couleur?: string | null; icone?: string | null }) {
+export async function createMatiere(data: { nom: string; couleur?: string | null; icone?: string | null; imageUrl?: string | null }) {
 	return prisma.matiere.create({
 		data: {
 			nom: data.nom,
 			couleur: data.couleur || null,
-			icone: data.icone || null
+			icone: data.icone || null,
+			imageUrl: data.imageUrl || null
 		}
 	});
 }
 
-export async function updateMatiere(id: string, data: { nom?: string; couleur?: string | null; icone?: string | null }) {
+export async function updateMatiere(id: string, data: { nom?: string; couleur?: string | null; icone?: string | null; imageUrl?: string | null }) {
 	return prisma.matiere.update({
 		where: { id },
 		data: {
 			nom: data.nom,
 			couleur: data.couleur,
-			icone: data.icone
+			icone: data.icone,
+			imageUrl: data.imageUrl
 		}
+	});
+}
+
+export async function updateMatiereImage(id: string, imageUrl: string | null) {
+	return prisma.matiere.update({
+		where: { id },
+		data: { imageUrl }
 	});
 }
 
@@ -697,25 +710,28 @@ export async function updateClasse(id: string, data: {
 	});
 }
 
-export async function getElevesNotInClasse(classeId: string) {
-	return prisma.eleve.findMany({
-		where: {
-			inscriptions: {
-				none: {
-					classeId,
-					actif: true
-				}
-			}
-		},
-		include: {
-			personne: true
-		},
-		orderBy: {
-			personne: {
-				name: 'asc'
-			}
-		}
+export async function getElevesDisponiblesForClasse(classeId: string) {
+	const annee = await getActiveAnneeScolaire();
+	if (!annee) return [];
+
+	const inscriptionsActives = await prisma.inscription.findMany({
+		where: { anneeId: annee.id, actif: true },
+		select: { eleveId: true }
 	});
+	const inscritsIds = new Set(inscriptionsActives.map((i) => i.eleveId));
+
+	const eleves = await prisma.eleve.findMany({
+		where: { id: { notIn: [...inscritsIds] } },
+		include: { personne: true },
+		orderBy: { personne: { name: 'asc' } }
+	});
+
+	return eleves.map((eleve) => ({
+		id: eleve.id,
+		nom: eleve.personne.name,
+		prenom: eleve.personne.lastname,
+		dateNaissance: eleve.dateNaissance?.toISOString().split('T')[0] || ''
+	}));
 }
 
 export async function addEleveToClasse(eleveId: string, classeId: string) {
@@ -992,11 +1008,26 @@ export async function createNote(data: {
 }
 
 export async function getNotesByCoursId(coursId: string) {
-	return prisma.note.findMany({
-		where: { coursId },
-		include: {
-			eleve: { include: { personne: true } },
-			cours: { include: { matiere: true } }
-		}
-	});
+  return prisma.note.findMany({
+    where: { coursId },
+    include: {
+      eleve: { include: { personne: true } },
+      cours: { include: { matiere: true } }
+    }
+  });
+}
+
+export async function getNotesByCoursIdSorted(coursId: string) {
+  return prisma.note.findMany({
+    where: { coursId },
+    orderBy: { date: 'desc' },
+    include: {
+      eleve: { include: { personne: true } },
+      cours: { include: { matiere: true } }
+    }
+  });
+}
+
+export async function deleteNote(id: string) {
+  return prisma.note.delete({ where: { id } });
 }

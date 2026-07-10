@@ -40,7 +40,6 @@
 	let openImageDialog = $state(false);
 	let selectedCoursForImage: Cours | null = $state(null);
 	let coursImageFiles = $state<FileList | null>(null);
-	let saveTime = $state(0);
 
 	const DEFAULT_MATIERE_COLOR = '#3b82f6';
 
@@ -55,7 +54,7 @@
 		notesLoading = true;
 		try {
 			const res = await fetch(
-				`/classe/${$page.params.id}/cours/${coursId}?/getNotes&coursId=${coursId}`
+				`/classe/${$page.params.id}/cours?/getNotes&coursId=${coursId}`
 			);
 			const result = await res.json();
 			if (result.success) {
@@ -105,13 +104,11 @@
 				m.id === matiereId ? { ...m, nom: matiereNom, couleur: matiereCouleur } : m
 			);
 		}
-		saveTime = Date.now();
 	}
 	function sauvegarderParticipants(coursId: string, participants: string[]) {
 		listeCours = listeCours.map((c) =>
 			c.id === coursId ? { ...c, participants } : c
 		);
-		saveTime = Date.now();
 	}
 
 	function onCreateCours(cours: Cours) {
@@ -120,40 +117,6 @@
 
 	function onCreateExamen(examen: Examen) {
 		listeExamens = [...listeExamens, examen];
-	}
-
-	function onCreateNote(note: {
-		valeur: number;
-		coefficient: number;
-		libelle: string;
-		eleveId: string;
-		coursId: string;
-		examenId?: string;
-	}) {
-		const formData = new FormData();
-		formData.append('valeur', note.valeur.toString());
-		formData.append('coefficient', note.coefficient.toString());
-		formData.append('libelle', note.libelle);
-		formData.append('eleveId', note.eleveId);
-		formData.append('coursId', note.coursId);
-		if (note.examenId) {
-			formData.append('examenId', note.examenId);
-		}
-
-		fetch(`/classe/${$page.params.id}/cours?/createNote`, {
-			method: 'POST',
-			body: formData,
-			credentials: 'same-origin'
-		})
-			.then(async (res) => {
-				const result = await res.json();
-				if (result.success) {
-					loadNotes(note.coursId);
-				}
-			})
-			.catch(() => {
-				console.error('Erreur réseau lors de la création de la note');
-			});
 	}
 
 	async function handleUploadCoursImage() {
@@ -172,7 +135,6 @@
 				listeCours = listeCours.map((c) =>
 					c.id === selectedCoursForImage!.id ? { ...c, url: result.url } : c
 				);
-				saveTime = Date.now();
 			}
 		} catch (e) {
 			console.error('Upload failed:', e);
@@ -213,19 +175,19 @@
 				<div class="grid grid-cols-3 gap-3">
 					{#each coursFiltres as cours (cours.id)}
 						{@const matiere = matiereMap[cours.matiereId || '']}
-						<CourseCard
-							{cours}
-							{matiere}
-							defaultMatiereColor={DEFAULT_MATIERE_COLOR}
-							formatParticipants={formaterParticipants}
-							onEditCoefficient={ouvrirModifierCoefficient}
-							onEditParticipants={ouvrirModifierParticipants}
-							onOpenNotes={openNotes}
-							onOpenImageDialog={(c) => {
-								selectedCoursForImage = c;
-								openImageDialog = true;
-							}}
-						/>
+					<CourseCard
+						{cours}
+						{matiere}
+						defaultMatiereColor={DEFAULT_MATIERE_COLOR}
+						formatParticipants={formaterParticipants}
+						onEditCoefficient={ouvrirModifierCoefficient}
+						onEditParticipants={ouvrirModifierParticipants}
+						onOpenNotes={openNotes}
+						onOpenImageDialog={(c) => {
+							selectedCoursForImage = c;
+							openImageDialog = true;
+						}}
+					/>
 					{/each}
 				</div>
 			{/if}
@@ -266,7 +228,6 @@
 		{listeExamens}
 		{notesCours}
 		{notesLoading}
-		{onCreateNote}
 		onLoadNotes={loadNotes}
 	/>
 

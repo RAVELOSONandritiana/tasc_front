@@ -9,19 +9,18 @@
 	import type { PageProps } from './$types';
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
-	import { Trash, Plus } from '@lucide/svelte/icons';
-	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { Trash, Plus, UserCheck, X } from '@lucide/svelte';
 
 	const { data }: PageProps = $props();
 
 	let searchEleve = $state('');
 	let elevesInscrits = $state<EleveCours[]>([...data.elevesInscrits]);
+	let elevesDisponibles = $state<
+		{ id: string; nom: string; prenom: string; dateNaissance: string }[]
+	>([...(data.elevesDisponibles || [])]);
 
-	let openAddExistingDialog = $state(false);
-	let searchExisting = $state('');
-	let elevesDisponibles: { id: string; nom: string; prenom: string; dateNaissance: string }[] = $state([]);
-	let loadingDisponibles = $state(false);
+	let openAddDialog = $state(false);
+	let searchQuery = $state('');
 	let selectedExistingId = $state('');
 
 	const elevesFiltres = $derived(
@@ -30,48 +29,55 @@
 		)
 	);
 
-	const disponiblesFiltres = $derived(
-		searchExisting.trim().length === 0
-			? elevesDisponibles
-			: elevesDisponibles.filter((e) =>
-					`${e.nom}${e.prenom}`.toLowerCase().includes(searchExisting.toLowerCase())
+	const resultats = $derived(
+		searchQuery.trim().length > 0 && !selectedExistingId
+			? elevesDisponibles.filter((e) =>
+					`${e.nom} ${e.prenom}`.toLowerCase().includes(searchQuery.toLowerCase())
 				)
+			: []
 	);
+
+	const eleveSelectionne = $derived(
+		selectedExistingId ? elevesDisponibles.find((e) => e.id === selectedExistingId) || null : null
+	);
+
+	function resetAddDialog() {
+		searchQuery = '';
+		selectedExistingId = '';
+	}
+
+	function selectEleve(e: { id: string; nom: string; prenom: string; dateNaissance: string }) {
+		selectedExistingId = e.id;
+		searchQuery = `${e.nom} ${e.prenom}`;
+	}
 
 	function removeEleve(id: string) {
 		elevesInscrits = elevesInscrits.filter((e) => e.id !== id);
 	}
 
-	async function loadElevesDisponibles() {
-		loadingDisponibles = true;
-		try {
-			const res = await fetch(`/classe/${$page.params.id}/eleves?/getDisponibles`);
-			const result = await res.json();
-			if (result.success) {
-				elevesDisponibles = result.elevesDisponibles || [];
+	function inscrireLocalement(eleve: {
+		id: string;
+		nom: string;
+		prenom: string;
+		dateNaissance: string;
+		actif: boolean;
+	}) {
+		elevesInscrits = [
+			...elevesInscrits,
+			{
+				id: eleve.id,
+				nom: eleve.nom,
+				prenom: eleve.prenom,
+				dateNaissance: eleve.dateNaissance,
+				actif: eleve.actif,
+				notes: [],
+				incidents: [],
+				absences: [],
+				retards: []
 			}
-		} catch (e) {
-			console.error('Failed to load disponibles:', e);
-		} finally {
-			loadingDisponibles = false;
-		}
+		];
+		elevesDisponibles = elevesDisponibles.filter((e) => e.id !== eleve.id);
 	}
-
-	onMount(() => {
-		if (openAddExistingDialog && elevesDisponibles.length === 0) {
-			loadElevesDisponibles();
-		}
-	});
-
-	$effect(() => {
-		if (openAddExistingDialog && elevesDisponibles.length === 0) {
-			loadElevesDisponibles();
-		}
-		if (!openAddExistingDialog) {
-			searchExisting = '';
-			selectedExistingId = '';
-		}
-	});
 </script>
 
 <div class="flex h-screen flex-col bg-sidebar text-sidebar-foreground">
@@ -81,103 +87,144 @@
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
 		<div class="flex gap-2">
-			<Dialog.Root bind:open={openAddExistingDialog}>
+			<Dialog.Root
+				bind:open={openAddDialog}
+				onOpenChange={(open) => {
+					if (!open) resetAddDialog();
+				}}
+			>
 				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
 					<Plus class="mr-2 size-4" />
 					Nouvel élève
 				</Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-[500px]">
 					<Dialog.Header>
-						<Dialog.Title>Ajouter un nouvel élève</Dialog.Title>
-						<Dialog.Description>Sélectionnez un élève déjà inscrit dans l'établissement</Dialog.Description>
+						<Dialog.Title>Ajouter un élève à la classe</Dialog.Title>
+						<Dialog.Description>
+							Recherchez puis sélectionnez un élève déjà inscrit dans l'établissement.
+						</Dialog.Description>
 					</Dialog.Header>
 
-					{#if loadingDisponibles}
-						<p class="text-sm text-muted-foreground">Chargement...</p>
-					{:else}
-						<div class="grid gap-4 py-4">
-							<div class="grid gap-2">
-								<Label>Rechercher</Label>
-								<SearchInput placeholder="Rechercher un élève..." bind:value={searchExisting} />
-							</div>
+					<div class="grid gap-4 py-2">
+						<div class="grid gap-2">
+							<Label>Rechercher un élève</Label>
+							<div class="relative">
+								<Input
+									id="searchExisting"
+									placeholder="Nom de l'élève..."
+									value={searchQuery}
+									oninput={(e) =>
+										(searchQuery = (e.target as HTMLInputElement).value
+											.replace(/\s+/g, ' ')
+											.trimStart())}
+								/>
 
-							{#if disponiblesFiltres.length === 0}
-								<p class="text-sm text-muted-foreground">Aucun élève disponible pour l'inscription.</p>
-							{:else}
-								<div class="max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
-									{#each disponiblesFiltres as e (e.id)}
-										{@const isSelected = selectedExistingId === e.id}
+								{#if resultats.length > 0 && !selectedExistingId}
+									<div
+										class="mt-2 max-h-64 space-y-2 overflow-y-auto rounded-md border p-2"
+									>
+										{#each resultats as e (e.id)}
+											<button
+												type="button"
+												class="flex w-full flex-col rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted"
+												onclick={() => selectEleve(e)}
+											>
+												<p class="text-sm font-medium">{e.nom} {e.prenom}</p>
+												<p class="text-xs text-muted-foreground">
+													{e.dateNaissance
+														? new Date(e.dateNaissance).toLocaleDateString()
+														: ''}
+												</p>
+											</button>
+										{/each}
+									</div>
+								{/if}
+
+								{#if eleveSelectionne}
+									<div
+										class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-muted/30 p-2"
+									>
+										<div class="flex items-center gap-2">
+											<div
+												class="flex size-8 items-center justify-center rounded-full bg-primary/10"
+											>
+												<span class="text-sm font-bold text-primary">
+													{eleveSelectionne.nom[0]}{eleveSelectionne.prenom[0]}
+												</span>
+											</div>
+											<span class="text-sm font-medium">
+												{eleveSelectionne.nom} {eleveSelectionne.prenom}
+											</span>
+										</div>
 										<button
 											type="button"
-											class="flex w-full flex-col rounded-md border px-3 py-2 text-left transition-colors {isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted'}"
-											onclick={() => selectedExistingId = isSelected ? '' : e.id}
+											class="rounded-full p-1 hover:bg-muted"
+											onclick={() => {
+												selectedExistingId = '';
+												searchQuery = '';
+											}}
 										>
-											<p class="text-sm font-medium">{e.nom} {e.prenom}</p>
-											<p class="text-xs text-muted-foreground">
-												{e.dateNaissance ? new Date(e.dateNaissance).toLocaleDateString() : ''}
-											</p>
+											<X class="size-4 text-muted-foreground" />
 										</button>
-									{/each}
-								</div>
-							{/if}
+									</div>
+								{/if}
+							</div>
 						</div>
-					{/if}
+
+						{#if searchQuery.trim().length > 0 && resultats.length === 0 && !selectedExistingId}
+							<p class="text-sm text-muted-foreground">
+								Aucun élève correspondant trouvé.
+							</p>
+						{/if}
+					</div>
 
 					<Dialog.Footer class="gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							type="button"
-							disabled={!selectedExistingId}
-							onclick={() => {
-								const formData = new FormData();
-								formData.append('eleveId', selectedExistingId);
-								fetch(`/classe/${data.classeId || ''}/eleves?/addExisting`, {
-									method: 'POST',
-									body: formData,
-									credentials: 'same-origin'
-								})
-								.then(async (res) => {
-									const result = await res.json();
-									if (result.success && result.eleve) {
-										elevesInscrits = [...elevesInscrits, {
-											id: result.eleve.id,
-											nom: result.eleve.nom,
-											prenom: result.eleve.prenom,
-											dateNaissance: result.eleve.dateNaissance,
-											actif: result.eleve.actif,
-											notes: [],
-											incidents: [],
-											absences: [],
-											retards: []
-										}];
+						<form
+							method="POST"
+							action="?/addExisting"
+							use:enhance={() => {
+								return async ({ result }: { result: ActionResult }) => {
+									if (result.type === 'success' && result.data?.eleve) {
+										const eleve = result.data.eleve as {
+											id: string;
+											nom: string;
+											prenom: string;
+											dateNaissance: string;
+											actif: boolean;
+										};
+										inscrireLocalement(eleve);
 										selectedExistingId = '';
-										searchExisting = '';
-										openAddExistingDialog = false;
-									} else {
-										alert(result.error || "Erreur lors de l'ajout de l'élève");
+										searchQuery = '';
+										openAddDialog = false;
+										resetAddDialog();
+									} else if (result.type === 'failure') {
+										alert(result.data?.error || "Erreur lors de l'ajout de l'élève");
 									}
-								})
-								.catch(() => {
-									alert("Erreur réseau lors de l'ajout de l'élève");
-								});
+								};
 							}}
 						>
-							Ajouter
-						</Button>
+							<input type="hidden" name="eleveId" value={selectedExistingId} />
+							<Button
+								type="submit"
+								variant="outline"
+								size="sm"
+								disabled={!selectedExistingId}
+							>
+								<UserCheck class="mr-2 size-4" />
+								Ajouter
+							</Button>
+						</form>
 						<Button
 							variant="outline"
 							size="sm"
-							onclick={() => {
-								openAddExistingDialog = false;
-							}}
+							onclick={() => (openAddDialog = false)}
 						>
 							Annuler
 						</Button>
 					</Dialog.Footer>
-			</Dialog.Content>
-		</Dialog.Root>
-	</div>
+				</Dialog.Content>
+			</Dialog.Root>
+		</div>
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-4">
@@ -187,63 +234,69 @@
 
 		<div class="overflow-x-auto rounded-md border">
 			<Table.Root>
-			<Table.Header>
-				<Table.Row>
-					<Table.Head>Nom</Table.Head>
-					<Table.Head>Prénom</Table.Head>
-					<Table.Head>Date naissance</Table.Head>
-					<Table.Head class="text-center">Notes</Table.Head>
-					<Table.Head class="text-center">Moyenne</Table.Head>
-					<Table.Head class="text-center">Incidents</Table.Head>
-					<Table.Head class="text-center">Absences</Table.Head>
-					<Table.Head class="text-center">Retards</Table.Head>
-					<Table.Head class="text-center">Action</Table.Head>
-				</Table.Row>
-			</Table.Header>
-			<Table.Body>
-				{#each elevesFiltres as eleve (eleve.id)}
+				<Table.Header>
 					<Table.Row>
-						<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
-						<Table.Cell>{eleve.prenom}</Table.Cell>
-						<Table.Cell>
-							{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
-						</Table.Cell>
-						<Table.Cell class="text-center">
-							{eleve.notes?.length || 0}
-						</Table.Cell>
-						<Table.Cell class="text-center">
-							{eleve.notes && eleve.notes.length > 0
-								? (
-										eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length
-									).toFixed(1)
-								: '—'}
-						</Table.Cell>
-						<Table.Cell class="text-center">
-							{eleve.incidents?.length || 0}
-						</Table.Cell>
-						<Table.Cell class="text-center">
-							{eleve.absences?.length || 0}
-						</Table.Cell>
-						<Table.Cell class="text-center">
-							{eleve.retards?.length || 0}
-						</Table.Cell>
-						<Table.Cell class="text-center">
-							<form method="POST" action="?/delete" use:enhance={() => {
-								return async ({ result }: { result: ActionResult }) => {
-									if (result.type === 'success') {
-										removeEleve(eleve.id);
-									}
-								};
-							}}>
-								<input type="hidden" name="id" value={eleve.id} />
-								<Button type="submit" variant="destructive" size="icon" class="size-8">
-									<Trash class="size-4" />
-								</Button>
-							</form>
-						</Table.Cell>
+						<Table.Head>Nom</Table.Head>
+						<Table.Head>Prénom</Table.Head>
+						<Table.Head>Date naissance</Table.Head>
+						<Table.Head class="text-center">Notes</Table.Head>
+						<Table.Head class="text-center">Moyenne</Table.Head>
+						<Table.Head class="text-center">Incidents</Table.Head>
+						<Table.Head class="text-center">Absences</Table.Head>
+						<Table.Head class="text-center">Retards</Table.Head>
+						<Table.Head class="text-center">Action</Table.Head>
 					</Table.Row>
-				{/each}
-			</Table.Body>
+				</Table.Header>
+				<Table.Body>
+					{#each elevesFiltres as eleve (eleve.id)}
+						<Table.Row>
+							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
+							<Table.Cell>{eleve.prenom}</Table.Cell>
+							<Table.Cell>
+								{eleve.dateNaissance
+									? new Date(eleve.dateNaissance).toLocaleDateString()
+									: '—'}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.notes?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.notes && eleve.notes.length > 0
+									? (
+											eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length
+										).toFixed(1)
+									: '—'}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.incidents?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.absences?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{eleve.retards?.length || 0}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								<form
+									method="POST"
+									action="?/delete"
+									use:enhance={() => {
+										return async ({ result }: { result: ActionResult }) => {
+											if (result.type === 'success') {
+												removeEleve(eleve.id);
+											}
+										};
+									}}
+								>
+									<input type="hidden" name="id" value={eleve.id} />
+									<Button type="submit" variant="destructive" size="icon" class="size-8">
+										<Trash class="size-4" />
+									</Button>
+								</form>
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
 			</Table.Root>
 		</div>
 	</div>

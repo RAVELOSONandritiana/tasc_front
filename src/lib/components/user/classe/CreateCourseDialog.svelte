@@ -36,6 +36,8 @@
 		participants: [] as string[]
 	});
 
+	let participantsSelectionnes = $state<string[]>([]);
+
 	let nouvelleMatiereNom = $state('');
 	let matiereSelection = $state('');
 
@@ -44,10 +46,19 @@
 			nouveauCours = { matiereId: '', professeurId: '', coefficient: 1, participants: [] };
 			nouvelleMatiereNom = '';
 			matiereSelection = '';
+			participantsSelectionnes = elevesClasse.map((e) => e.id);
 			errors = {};
 			success = false;
 		}
 	});
+
+	function toggleParticipant(eleveId: string) {
+		if (participantsSelectionnes.includes(eleveId)) {
+			participantsSelectionnes = participantsSelectionnes.filter((id) => id !== eleveId);
+		} else {
+			participantsSelectionnes = [...participantsSelectionnes, eleveId];
+		}
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -151,13 +162,20 @@
 				<div class="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
 					{#each elevesClasse as eleve (eleve.id)}
 						<div class="flex items-center gap-2">
-							<Checkbox id={`eleve-${eleve.id}`} name="participants" value={eleve.id} />
+							<Checkbox
+								id={`eleve-${eleve.id}`}
+								checked={participantsSelectionnes.includes(eleve.id)}
+								onclick={() => toggleParticipant(eleve.id)}
+							/>
 							<label for={`eleve-${eleve.id}`} class="text-sm">
 								{eleve.nom} {eleve.prenom}
 							</label>
 						</div>
 					{/each}
 				</div>
+				{#each participantsSelectionnes as participantId}
+					<input type="hidden" name="participants" value={participantId} />
+				{/each}
 			</div>
 
 			<div class="flex items-center gap-2">

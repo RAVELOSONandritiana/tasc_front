@@ -64,7 +64,8 @@
 			const record = await pb.collection('tasc_statics').create(formdata);
 			if (record && record.file) {
 					const url = pb.files.getURL(record, record.file);
-					c.url = url;
+				c.url = url;
+				imageError = false;
 					try {
 						const fd = new FormData();
 						fd.append('id', c.id);

@@ -5,7 +5,6 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 	import { Card } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
 	import * as Select from '$lib/components/ui/select';
 	import type { PageProps } from './$types';
 	import Salle from '$lib/components/user/classe/Salle.svelte';
@@ -55,7 +54,7 @@
 									{statusOptions.find((s) => s.value === statusFilter)?.label || 'Toutes'}
 								</Select.Trigger>
 								<Select.Content>
-									{#each statusOptions as status}
+									{#each statusOptions as status (status.value)}
 										<Select.Item value={status.value}>{status.label}</Select.Item>
 									{/each}
 								</Select.Content>
@@ -67,7 +66,7 @@
 							<Plus class="size-4" />
 							Nouvelle salle
 						</Dialog.Trigger>
-						<Dialog.Content class="sm:max-w-[425px]">
+						<Dialog.Content class="sm:max-w-106.25">
 							<form method="POST" action="?/create" class="contents">
 								<Dialog.Header>
 									<Dialog.Title>Ajouter une salle</Dialog.Title>

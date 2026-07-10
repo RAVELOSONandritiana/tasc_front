@@ -36,8 +36,8 @@
 			<Plus class="size-3.5" />
 			Ajouter une séance
 		</Dialog.Trigger>
-		<form method="POST" action="?/createSeance">
-			<Dialog.Content class="sm:max-w-100">
+		<Dialog.Content class="sm:max-w-100">
+			<form method="POST" action="?/createSeance">
 				<Dialog.Header>
 					<Dialog.Title>Ajouter une séance pour {jour}</Dialog.Title>
 					<Dialog.Description>Planifiez un cours dans l'emploi du temps</Dialog.Description>
@@ -93,8 +93,8 @@
 					<Button variant="outline" size="sm" type="button" onclick={handleClose}>Annuler</Button>
 					<Button variant="default" size="sm" type="submit">Ajouter</Button>
 				</Dialog.Footer>
-			</Dialog.Content>
-		</form>
+			</form>
+		</Dialog.Content>
 	</Dialog.Root>
 
 	<div class="space-y-2">

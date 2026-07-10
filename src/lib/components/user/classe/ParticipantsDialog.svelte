@@ -7,6 +7,7 @@
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import type { EleveCours } from '$lib/types/Materiel.type';
+	import { CheckCheck, XCircle, Search } from '@lucide/svelte/icons';
 
 	let {
 		open = $bindable(false),
@@ -21,6 +22,24 @@
 	} = $props();
 
 	let participantsSelectionnes = $state<string[]>([]);
+	let searchQuery = $state('');
+
+	let submitting = $state(false);
+	let success = $state(false);
+	let errors = $state<Record<string, string>>({});
+
+	const tousLesIds = $derived(elevesClasse.map((e) => e.id));
+
+	const elevesFiltres = $derived(
+		searchQuery.trim().length === 0
+			? elevesClasse
+			: elevesClasse.filter((e) =>
+					`${e.nom} ${e.prenom}`.toLowerCase().includes(searchQuery.toLowerCase())
+				)
+	);
+
+	const nbSelectionnes = $derived(participantsSelectionnes.length);
+	const tousSelectionnes = $derived(nbSelectionnes === elevesClasse.length);
 
 	function toggleParticipantSelection(eleveId: string) {
 		if (participantsSelectionnes.includes(eleveId)) {
@@ -30,15 +49,25 @@
 		}
 	}
 
-	let submitting = $state(false);
-	let success = $state(false);
-	let errors = $state<Record<string, string>>({});
+	function toutSelectionner() {
+		participantsSelectionnes = [...tousLesIds];
+	}
+
+	function toutDeselectionner() {
+		participantsSelectionnes = [];
+	}
+
+	function basculerTous() {
+		if (tousSelectionnes) toutDeselectionner();
+		else toutSelectionner();
+	}
 
 	$effect(() => {
 		if (open && cours) {
 			participantsSelectionnes = cours.participants?.length
 				? [...cours.participants]
-				: [...elevesClasse.map((e) => e.id)];
+				: [...tousLesIds];
+			searchQuery = '';
 			submitting = false;
 			success = false;
 			errors = {};
@@ -57,7 +86,7 @@
 
 		{#if success}
 			<div class="mb-4 rounded-md border border-emerald-500 bg-emerald-500/10 p-3 text-center">
-				<p class="text-sm font-medium text-emerald-500">Participants mis a jour !</p>
+				<p class="text-sm font-medium text-emerald-500">Participants mis à jour !</p>
 			</div>
 		{/if}
 		{#if errors._form}
@@ -85,7 +114,7 @@
 							open = false;
 						}, 600);
 					} else if (result.type === 'failure') {
-						const error = (result.data as any)?.error || 'Erreur lors de la mise a jour';
+						const error = (result.data as any)?.error || 'Erreur lors de la mise à jour';
 						errors = { _form: error };
 					}
 				};
@@ -97,7 +126,32 @@
 				<input type="hidden" name="participants" value={participantId} />
 			{/each}
 
-			<div class="space-y-2 py-4">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div class="relative w-full sm:max-w-xs">
+					<Search class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+					<input
+						placeholder="Rechercher un élève..."
+						bind:value={searchQuery}
+						class="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm"
+					/>
+				</div>
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-muted-foreground">
+						{nbSelectionnes} / {elevesClasse.length} sélectionné{nbSelectionnes > 1 ? 's' : ''}
+					</span>
+					<Button type="button" variant="outline" size="sm" onclick={basculerTous}>
+						{#if tousSelectionnes}
+							<XCircle class="mr-1.5 size-3.5" />
+							Tout désélectionner
+						{:else}
+							<CheckCheck class="mr-1.5 size-3.5" />
+							Tout sélectionner
+						{/if}
+					</Button>
+				</div>
+			</div>
+
+			<div class="space-y-2 py-2">
 				<div class="max-h-96 overflow-y-auto rounded-md border">
 					<Table.Root>
 						<Table.Header>
@@ -108,7 +162,7 @@
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{#each elevesClasse as eleve (eleve.id)}
+							{#each elevesFiltres as eleve (eleve.id)}
 								<Table.Row>
 									<Table.Cell>
 										<Checkbox
@@ -120,11 +174,19 @@
 									<Table.Cell>{eleve.prenom}</Table.Cell>
 								</Table.Row>
 							{/each}
+							{#if elevesFiltres.length === 0}
+								<Table.Row>
+									<Table.Cell colspan={3} class="py-6 text-center text-sm text-muted-foreground">
+										Aucun élève trouvé.
+									</Table.Cell>
+								</Table.Row>
+							{/if}
 						</Table.Body>
 					</Table.Root>
 				</div>
 				<p class="text-xs text-muted-foreground">
-					Cochez uniquement les élèves qui participent à ce cours.
+					Cochez uniquement les élèves qui participent à ce cours. Une liste vide équivaut à
+					« tous les élèves ».
 				</p>
 			</div>
 
@@ -136,8 +198,6 @@
 					{#if submitting}
 						<Spinner class="mr-2 size-4" />
 						Sauvegarde...
-					{:else if success}
-						Sauvegarder
 					{:else}
 						Sauvegarder
 					{/if}

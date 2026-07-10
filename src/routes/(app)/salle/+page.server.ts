@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			name: s.nom,
 			place: s.capacite,
 			occupe: s.occupe,
-			imageUrl: s.imageUrl
+			imageUrl: s.imageUrl || undefined
 		})),
 		statusFilter: status
 	};
@@ -99,11 +99,16 @@ export const actions: Actions = {
 		const id = formData.get('id') as string;
 		const imageUrl = formData.get('imageUrl') as string;
 
+		const oldSalle = await prisma.salle.findUnique({
+			where: { id },
+			select: { imageUrl: true }
+		});
+
 		await prisma.salle.update({
 			where: { id },
 			data: { imageUrl }
 		});
 
-		return { success: true };
+		return { success: true, oldImageUrl: oldSalle?.imageUrl || null };
 	}
 };

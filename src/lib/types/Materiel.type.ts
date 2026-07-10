@@ -55,6 +55,7 @@ export type Note = {
 	date: string;
 	libelle: string;
 	coursId: string;
+	eleveId: string;
 	examenId?: string;
 	eleveNom?: string;
 };
