@@ -7,6 +7,7 @@
 	import { Plus, Printer, School } from '@lucide/svelte/icons';
 	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
+	import { formatClasseNom } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -67,8 +68,17 @@
 	}
 
 	function getNotesEleveExamens(e: EleveCours | null, examenIds: string[]): Note[] {
-		if (!e || examenIds.length === 0) return [];
-		return e.notes?.filter((n) => n.examenId && examenIds.includes(n.examenId)) || [];
+		if (!e) return [];
+		const seen = new Set<string>();
+		return (
+			e.notes?.filter((n) => {
+				if (!(!n.examenId || examenIds.includes(n.examenId))) return false;
+				const key = `${n.coursId}|${n.valeur}|${n.coefficient}|${n.examenId ?? ''}|${n.libelle ?? ''}`;
+				if (seen.has(key)) return false;
+				seen.add(key);
+				return true;
+			}) || []
+		);
 	}
 
 	function getNotesMatiere(eleve: EleveCours, coursId: string, examenIds: string[]): Note[] {
@@ -82,24 +92,33 @@
 		return totalCoef > 0 ? Math.round((totalPoints / totalCoef) * 100) / 100 : 0;
 	}
 
-	function calculerMoyenneNotes(notes: Note[]): number {
-		if (notes.length === 0) return 0;
-		const totalPoints = notes.reduce((sum, n) => sum + n.valeur * getNoteCoefficient(n), 0);
-		const totalCoef = notes.reduce((sum, n) => sum + getNoteCoefficient(n), 0);
-		return totalCoef > 0 ? Math.round((totalPoints / totalCoef) * 100) / 100 : 0;
-	}
-
 	function calculerMoyenneGenerale(eleve: EleveCours, examenIds: string[]): number {
-		return calculerMoyenneNotes(getNotesEleveExamens(eleve, examenIds));
+		if (listeCours.length === 0) return 0;
+		const totalCoef = listeCours.reduce((s, c) => s + (c.coefficient || 0), 0);
+		if (totalCoef === 0) return 0;
+		const totalPoints = listeCours.reduce((s, c) => {
+			const notesM = getNotesMatiere(eleve, c.id, examenIds);
+			const moy = calculerMoyenneMatiere(notesM);
+			return s + moy * (c.coefficient || 0);
+		}, 0);
+		return Math.round((totalPoints / totalCoef) * 100) / 100;
 	}
 
 	function calculerRang(eleveId: string, examenIds: string[]): number {
 		if (examenIds.length === 0) return 0;
-		const notes = elevesClasse.map((e) => ({
-			id: e.id,
-			moy: calculerMoyenneGenerale(e, examenIds)
-		})).sort((a, b) => b.moy - a.moy);
-		return notes.findIndex((n) => n.id === eleveId) + 1;
+		const tries = elevesClasse
+			.map((e) => ({ id: e.id, moy: calculerMoyenneGenerale(e, examenIds) }))
+			.sort((a, b) => b.moy - a.moy);
+		let rank = 0;
+		let prevMoy: number | null = null;
+		for (let i = 0; i < tries.length; i++) {
+			if (tries[i].moy !== prevMoy) {
+				rank = i + 1;
+				prevMoy = tries[i].moy;
+			}
+			if (tries[i].id === eleveId) return rank;
+		}
+		return 0;
 	}
 
 	// Update list local data if data properties change
@@ -211,7 +230,7 @@
 								{moyenne > 0 ? `${formatNombre(moyenne)}/20` : '—'}
 							</Table.Cell>
 							<Table.Cell class="text-center">
-								{#if rang > 0 && moyenne > 0}
+								{#if rang > 0}
 									<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary">
 										{rang}<sup>{rang === 1 ? 'er' : 'e'}</sup>
 									</span>
@@ -277,7 +296,7 @@
 		</div>
 
 		<!-- Student Info -->
-		<div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+		<div class="grid grid-cols-2 gap-4 mb-2 text-sm">
 			<div>
 				<p><span class="font-bold text-gray-700">Nom & Prénom :</span> {eleve.nom} {eleve.prenom}</p>
 				<p>
@@ -289,11 +308,11 @@
 					{/if}
 				</p>
 			</div>
-			<div class="text-right">
-				<p><span class="font-bold text-gray-700">Classe :</span> {data.classe?.nom || ''}</p>
-				<p><span class="font-bold text-gray-700">Professeur Principal :</span> {data.classe?.titulaire ? `${data.classe.titulaire.personne.name} ${data.classe.titulaire.personne.lastname}` : '—'}</p>
-			</div>
 		</div>
+		<p class="mb-6 text-sm">
+			<span class="font-bold text-gray-700">Classe :</span> {formatClasseNom(data.classe?.niveau, data.classe?.nom)}
+			<span class="font-bold text-gray-700 ml-4">Professeur Principal :</span> {data.classe?.titulaire?.personne ? `${data.classe.titulaire.personne.name} ${data.classe.titulaire.personne.lastname}` : '—'}
+		</p>
 
 		<!-- Grades Table -->
 		<table class="w-full border-collapse border border-gray-800 text-sm mb-6">
@@ -302,7 +321,7 @@
 					<th class="border border-gray-800 px-4 py-2 text-left">Matière</th>
 					<th class="border border-gray-800 px-4 py-2 text-center w-24">Coefficient</th>
 					<th class="border border-gray-800 px-4 py-2 text-center w-40">Notes</th>
-					<th class="border border-gray-800 px-4 py-2 text-center w-32">Moyenne / 20</th>
+					<th class="border border-gray-800 px-4 py-2 text-center w-32">Note × Coeff.</th>
 					<th class="border border-gray-800 px-4 py-2 text-left">Enseignant & Appréciations</th>
 				</tr>
 			</thead>
@@ -314,16 +333,24 @@
 						<td class="border border-gray-800 px-4 py-2.5 font-semibold">{cours.nom}</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-center">{cours.coefficient}</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-center text-xs">
-							{#each notesM as note}
-								<span class="inline-block bg-gray-100 rounded px-1.5 py-0.5 m-0.5 border border-gray-300 font-mono">
-									{note.valeur}/20
-								</span>
-							{:else}
-								<span class="text-gray-400 italic">aucune</span>
-							{/each}
+							<div class="flex flex-wrap items-center justify-center gap-1">
+								{#each notesM as note}
+									<span class="inline-block rounded px-1.5 py-0.5 font-mono">
+										{note.valeur}/20
+									</span>
+								{:else}
+									<span class="text-gray-400 italic">0/20</span>
+								{/each}
+							</div>
 						</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-center font-bold">
-							{notesM.length > 0 ? formatNombre(moyM) : '—'}
+							<div class="flex flex-wrap items-center justify-center gap-1">
+								{#each notesM as note}
+									<span class="font-mono">{note.valeur * getCoefficientCours(note.coursId)}</span>
+								{:else}
+									<span class="text-gray-400 italic">0</span>
+								{/each}
+							</div>
 						</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-xs text-gray-700 font-sans">
 							<span class="font-medium text-black block">{cours.professeur || '—'}</span>
@@ -335,7 +362,7 @@
 								{:else} Travail insuffisant, doit progresser.
 								{/if}
 							{:else}
-								Pas d'évaluation.
+								Absent(e) - noté 0.
 							{/if}
 						</td>
 					</tr>
@@ -352,7 +379,7 @@
 				
 				<div class="font-bold text-gray-700">Rang :</div>
 				<div class="font-bold text-base text-right">
-					{#if rangG > 0 && moyenneG > 0}
+					{#if rangG > 0}
 						{rangG} {rangG === 1 ? 'er' : 'e'} sur {elevesClasse.length}
 					{:else}
 						—

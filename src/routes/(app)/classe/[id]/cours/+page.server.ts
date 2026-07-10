@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import type { PageServerLoad, Actions } from './$types';
 import {
 	getClasseById,
@@ -298,6 +297,7 @@ export const actions: Actions = {
 		const coursId = data.get('coursId') as string;
 		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
 		const coefficientMode = (data.get('coefficientMode') as string) || 'unitaire';
+		const bonus = parseFloat((data.get('bonus') as string) || '0') || 0;
 
 		const errors: Record<string, string> = {};
 		if (isNaN(valeurBrute)) {
@@ -338,9 +338,11 @@ export const actions: Actions = {
 					convertedValeur = valeurBrute;
 			}
 
-			if (convertedValeur < 0 || convertedValeur > 20) {
+			const valeurFinale = convertedValeur + bonus;
+
+			if (valeurFinale < 0 || valeurFinale > 40) {
 				return fail(400, {
-					errors: { valeur: 'La note doit être comprise entre 0 et 20' },
+					errors: { valeur: 'La note (avec bonus) doit être comprise entre 0 et 40' },
 					valeur: valeurBrute,
 					eleveId,
 					libelle
@@ -368,8 +370,22 @@ export const actions: Actions = {
 				select: { id: true }
 			});
 
+			const noteExistante = await prisma.note.findFirst({
+				where: {
+					eleveId,
+					coursId,
+					valeur: valeurFinale,
+					coefficient,
+					examenId: examenId || null,
+					libelle: libelle || null
+				}
+			});
+			if (noteExistante) {
+				return { success: true, note: noteExistante, duplicate: true };
+			}
+
 			const note = await createNote({
-				valeur: convertedValeur,
+				valeur: valeurFinale,
 				coefficient,
 				libelle: libelle || undefined,
 				eleveId,
@@ -381,7 +397,7 @@ export const actions: Actions = {
 			logActivity(
 				locals.user,
 				'creation_note' as any,
-				`Note créée : ${convertedValeur}/20`
+				`Note créée : ${valeurFinale}/20`
 			).catch(() => {});
 
 			return { success: true, note };
@@ -389,6 +405,103 @@ export const actions: Actions = {
 			return fail(500, {
 				errors: { _form: e?.message || 'Erreur lors de la création de la note' }
 			});
+		}
+	},
+
+	createNoteAll: async ({ request, locals }) => {
+		const data = await request.formData();
+		const valeurBrute = parseFloat((data.get('valeur') as string) || '0');
+		const typeNotation = (data.get('typeNotation') as string) || 'sur_20';
+		const libelle = (data.get('libelle') as string | null)?.trim() || '';
+		const coursId = data.get('coursId') as string;
+		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+		const coefficientMode = (data.get('coefficientMode') as string) || 'unitaire';
+		const bonus = parseFloat((data.get('bonus') as string) || '0') || 0;
+
+		if (isNaN(valeurBrute) || !coursId) {
+			return fail(400, { error: 'Valeur et cours requis' });
+		}
+
+		try {
+			const cours = await prisma.cours.findUnique({
+				where: { id: coursId },
+				select: { classeId: true, coefficient: true }
+			});
+			if (!cours) {
+				return fail(404, { error: 'Cours introuvable' });
+			}
+
+			let convertedValeur = valeurBrute;
+			switch (typeNotation) {
+				case 'sur_10':
+					convertedValeur = valeurBrute * 2;
+					break;
+				case 'sur_100':
+					convertedValeur = valeurBrute / 5;
+					break;
+				case 'sur_5':
+					convertedValeur = valeurBrute * 4;
+					break;
+				default:
+					convertedValeur = valeurBrute;
+			}
+
+			const valeurFinale = convertedValeur + bonus;
+
+			if (valeurFinale < 0 || valeurFinale > 40) {
+				return fail(400, { error: 'La note (avec bonus) doit être comprise entre 0 et 40' });
+			}
+
+			let coefficient = 1;
+			if (coefficientMode === 'cours') {
+				coefficient =
+					cours.coefficient && Number.isFinite(cours.coefficient) ? cours.coefficient : 1;
+			}
+
+			const annee = await getActiveAnneeScolaire();
+			if (!annee) {
+				return fail(500, { error: 'Aucune année scolaire active' });
+			}
+
+			const inscriptions = await prisma.inscription.findMany({
+				where: { classeId: cours.classeId, anneeId: annee.id, actif: true },
+				select: { id: true, eleveId: true }
+			});
+
+			let creees = 0;
+			for (const ins of inscriptions) {
+				const existante = await prisma.note.findFirst({
+					where: {
+						eleveId: ins.eleveId,
+						coursId,
+						valeur: valeurFinale,
+						coefficient,
+						examenId: examenId || null,
+						libelle: libelle || null
+					}
+				});
+				if (existante) continue;
+				await createNote({
+					valeur: valeurFinale,
+					coefficient,
+					libelle: libelle || undefined,
+					eleveId: ins.eleveId,
+					coursId,
+					examenId: examenId || undefined,
+					inscriptionId: ins.id
+				});
+				creees++;
+			}
+
+			logActivity(
+				locals.user,
+				'creation_note' as any,
+				`Notes créées pour la classe (${creees})`
+			).catch(() => {});
+
+			return { success: true, creees };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la création des notes' });
 		}
 	},
 
@@ -460,31 +573,17 @@ export const actions: Actions = {
 	updateCoursImage: async ({ request }) => {
 		const formData = await request.formData();
 		const coursId = formData.get('coursId') as string;
-		const file = formData.get('file') as File | null;
+		const imageUrl = formData.get('imageUrl') as string;
 
-		if (!coursId || !file) {
-			return fail(400, { error: 'coursId et fichier requis' });
+		if (!coursId || !imageUrl) {
+			return fail(400, { error: 'coursId et imageUrl requis' });
 		}
 
 		try {
-			const oldCours = await prisma.cours.findUnique({
-				where: { id: coursId },
-				select: { imageUrl: true }
-			});
-
-			const bytes = Buffer.from(await file.arrayBuffer());
-			const ext = file.name.split('.').pop() || 'bin';
-			const filename = `${coursId}-${Date.now()}.${ext}`;
-			const relativePath = `uploads/cours/${filename}`;
-			const absolutePath = `/home/hashterx/tasc_front/static/${relativePath}`;
-
-			await fs.promises.writeFile(absolutePath, bytes);
-
-			await updateCoursImage(coursId, `/${relativePath}`);
-
-			return { success: true, url: `/${relativePath}`, oldImageUrl: oldCours?.imageUrl || null };
+			await updateCoursImage(coursId, imageUrl);
+			return { success: true, url: imageUrl };
 		} catch (e: any) {
-			return fail(500, { error: e?.message || "Erreur lors de la mise a jour de l'image" });
+			return fail(500, { error: e?.message || "Erreur lors de la mise à jour de l'image" });
 		}
 	}
 };

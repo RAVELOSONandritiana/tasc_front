@@ -69,7 +69,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		prenom: i.eleve.personne.lastname,
 		dateNaissance: i.eleve.dateNaissance?.toISOString().split('T')[0] || '',
 		actif: i.actif,
-		notes: i.notes?.map((n: any) => ({
+		notes: i.eleve.notes?.map((n: any) => ({
 			id: n.id,
 			valeur: n.valeur,
 			coefficient: n.coefficient,

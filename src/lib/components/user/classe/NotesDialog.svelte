@@ -35,8 +35,10 @@
 	let valeurSaisie = $state(0);
 	let typeNotation = $state<'sur_20' | 'sur_10' | 'sur_100' | 'sur_5'>('sur_20');
 	let libelleSaisi = $state('');
+	let bonusSaisie = $state(0);
 	let selectedExamenId = $state('');
 	let utiliserCoefficientCours = $state(false);
+	let appliquerTous = $state(false);
 	let apercuSur20 = $state(0);
 
 	$effect(() => {
@@ -50,8 +52,10 @@
 		valeurSaisie = 0;
 		typeNotation = 'sur_20';
 		libelleSaisi = '';
+		bonusSaisie = 0;
 		selectedExamenId = '';
 		utiliserCoefficientCours = false;
+		appliquerTous = false;
 		apercuSur20 = 0;
 		errors = {};
 		success = false;
@@ -126,7 +130,7 @@
 
 					<form
 						method="POST"
-						action="?/createNote"
+						action={appliquerTous ? '?/createNoteAll' : '?/createNote'}
 						use:enhance={() => {
 							errors = {};
 							success = false;
@@ -149,10 +153,11 @@
 					>
 						<input type="hidden" name="coursId" value={cours?.id || ''} />
 						<input type="hidden" name="coefficientMode" value={utiliserCoefficientCours ? 'cours' : 'unitaire'} />
+						<input type="hidden" name="bonus" value={bonusSaisie} />
 
 						<div class="grid gap-2 w-full">
 							<Label for="eleveId">Élève *</Label>
-							<NativeSelect.Root name="eleveId" required class="w-full" bind:value={selectedEleveId}>
+							<NativeSelect.Root name="eleveId" required={!appliquerTous} disabled={appliquerTous} class="w-full" bind:value={selectedEleveId}>
 								<option value="">Choisir un élève</option>
 								{#each elevesClasse as eleve (eleve.id)}
 									<NativeSelect.Option value={eleve.id}>
@@ -163,6 +168,23 @@
 							{#if errors.eleveId}
 								<p class="text-xs text-destructive">{errors.eleveId}</p>
 							{/if}
+						</div>
+
+						<div class="grid gap-2 w-full">
+							<div class="flex items-center justify-between rounded-md border p-2">
+								<div class="space-y-0.5">
+									<Label class="text-sm">Appliquer à tous les élèves</Label>
+									<p class="text-xs text-muted-foreground">
+										{appliquerTous ? `Note pour ${elevesClasse.length} élèves` : 'Note pour un élève'}
+									</p>
+								</div>
+								<SwitchPrimitive.Root
+									checked={appliquerTous}
+									onCheckedChange={(checked: boolean) => {
+										appliquerTous = checked;
+									}}
+								/>
+							</div>
 						</div>
 
 						<div class="grid gap-2 w-full">
@@ -222,6 +244,19 @@
 								name="libelle"
 								placeholder="Devoir, Interrogation..."
 								bind:value={libelleSaisi}
+								class="w-full"
+							/>
+						</div>
+
+						<div class="grid gap-2 w-full">
+							<Label for="bonus">Bonus (points ajoutés)</Label>
+							<Input
+								id="bonus"
+								name="bonus"
+								type="number"
+								step="0.5"
+								min="0"
+								bind:value={bonusSaisie}
 								class="w-full"
 							/>
 						</div>

@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { getEleves } from '$lib/server/prisma';
 import type { Eleve } from '$lib/types/Personne.type';
+import { formatClasseNom } from '$lib/utils';
 
 function mapEleve(prismaEleve: any): Eleve {
 	const inscription = prismaEleve.inscriptions?.[0];
@@ -9,7 +10,7 @@ function mapEleve(prismaEleve: any): Eleve {
 		nom: prismaEleve.personne.name,
 		prenom: prismaEleve.personne.lastname,
 		dateNaissance: prismaEleve.personne.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
-		classe: inscription?.classe?.nom || '',
+		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
 		stats: {
 			retards: 0,
 			absences: 0,

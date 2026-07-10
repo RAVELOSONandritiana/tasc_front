@@ -11,6 +11,7 @@
 	import { BookOpen } from '@lucide/svelte/icons';
 	import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
+	import pb, { auth } from '$lib/pocketbase/pocketbase';
 
 	const { data }: PageProps = $props();
 
@@ -122,19 +123,38 @@
 	async function handleUploadCoursImage() {
 		if (!selectedCoursForImage || !coursImageFiles || coursImageFiles.length === 0) return;
 		try {
-			const fd = new FormData();
-			fd.append('coursId', selectedCoursForImage.id);
-			fd.append('file', coursImageFiles[0]);
-			const res = await fetch(`/classe/${$page.params.id}/cours?/updateCoursImage`, {
-				method: 'POST',
-				body: fd,
-				credentials: 'same-origin'
-			});
-			const result = await res.json().catch(() => null);
-			if (result?.success && result.url) {
-				listeCours = listeCours.map((c) =>
-					c.id === selectedCoursForImage!.id ? { ...c, url: result.url } : c
-				);
+			await auth();
+			const formdata = new FormData();
+			formdata.append('file', coursImageFiles[0]);
+			const record = await pb.collection('tasc_statics').create(formdata);
+			if (record && record.file) {
+				const url = pb.files.getURL(record, record.file);
+				try {
+					const fd = new FormData();
+					fd.append('coursId', selectedCoursForImage.id);
+					fd.append('imageUrl', url);
+					const res = await fetch(`/classe/${$page.params.id}/cours?/updateCoursImage`, {
+						method: 'POST',
+						body: fd,
+						credentials: 'same-origin'
+					});
+					const result = await res.json().catch(() => null);
+					if (result?.success && result.url) {
+						listeCours = listeCours.map((c) =>
+							c.id === selectedCoursForImage!.id ? { ...c, url: result.url } : c
+						);
+					}
+					const oldImageUrl = selectedCoursForImage.url;
+					if (oldImageUrl && oldImageUrl !== url) {
+						const segments = oldImageUrl.split('/');
+						const recordId = segments[segments.length - 2];
+						if (recordId) {
+							await pb.collection('tasc_statics').delete(recordId).catch(() => {});
+						}
+					}
+				} catch (e) {
+					console.error('Failed to save image to DB:', e);
+				}
 			}
 		} catch (e) {
 			console.error('Upload failed:', e);

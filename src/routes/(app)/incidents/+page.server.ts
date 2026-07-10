@@ -4,6 +4,7 @@ import type { Incident, IncidentType } from '$lib/types/Incident.type';
 import type { Prisma } from '@prisma/client';
 import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { formatClasseNom } from '$lib/utils';
 
 function mapIncident(prismaIncident: Prisma.IncidentGetPayload<{
 	include: { eleve: { include: { personne: true } }; reactions: true; comments: true }
@@ -43,7 +44,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		id: e.id,
 		nom: e.personne.lastname,
 		prenom: e.personne.name,
-		classe: e.inscriptions?.find(i => i.actif)?.classe?.nom || '',
+		classe: formatClasseNom(e.inscriptions?.find(i => i.actif)?.classe?.niveau, e.inscriptions?.find(i => i.actif)?.classe?.nom),
 		dateNaissance: e.dateNaissance?.toISOString().split('T')[0] || ''
 	}));
 	return { incidents: incidents.map(mapIncident), eleves, currentUserId: locals.user?.userId };

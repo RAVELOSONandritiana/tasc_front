@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getEleveById } from '$lib/server/prisma';
 import type { Eleve, EleveStats } from '$lib/types/Personne.type';
 import type { IncidentType } from '$lib/types/Incident.type';
+import { formatClasseNom } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const prismaEleve = await getEleveById(params.id);
@@ -35,7 +36,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		nom: prismaEleve.personne.name,
 		prenom: prismaEleve.personne.lastname,
 		dateNaissance: prismaEleve.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
-		classe: inscription?.classe?.nom || '',
+		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
 		stats
 	};
 	return { eleve, incidents };
