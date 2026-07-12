@@ -16,6 +16,11 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		throw redirect(303, '/signin');
 	}
 
+	const annees = await prisma.anneeScolaire.findMany({
+		orderBy: { dateCreation: 'desc' }
+	});
+	const anneeActive = annees.find((a) => a.active) || null;
+
 	return {
 		user: {
 			userId: compte.id,
@@ -23,7 +28,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			role: compte.role,
 			nom: compte.personne.lastname,
 			prenom: compte.personne.name,
+			imageUrl: compte.personne.imageUrl || null,
 			statut: compte.statut
-		}
+		},
+		annees: annees.map((a) => ({ id: a.id, nom: a.nom, active: a.active })),
+		anneeActiveId: anneeActive?.id || ''
 	};
 };

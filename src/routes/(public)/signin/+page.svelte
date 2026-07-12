@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/button/button.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
 	import CardContent from '$lib/components/ui/card/card-content.svelte';
 	import CardDescription from '$lib/components/ui/card/card-description.svelte';
 	import CardHeader from '$lib/components/ui/card/card-header.svelte';
@@ -12,11 +13,12 @@
 	let { form } = $props();
 	let matricule = $state('');
 	let password = $state('');
+	let submitting = $state(false);
 	let error = $derived(form?.error || '');
 </script>
 
 <div class="flex min-h-screen items-center justify-center px-4">
-	<form class="w-full max-w-sm md:max-w-lg" method="POST" action="?/login">
+	<form class="w-full max-w-sm md:max-w-lg" method="POST" action="?/login" onsubmit={() => (submitting = true)}>
 		<Card class="w-full">
 			<CardHeader>
 				<CardTitle class="mx-auto my-3 text-center text-2xl font-bold">Connexion à Tasc</CardTitle>
@@ -51,7 +53,12 @@
 						name="password"
 					/>
 				</div>
-				<Button class="w-full" type="submit">Se connecter</Button>
+				<Button class="w-full" type="submit" disabled={submitting}>
+					{#if submitting}
+						<Spinner class="mr-2 size-4" />
+					{/if}
+					Se connecter
+				</Button>
 				<div class="text-center text-sm">
 					Pas encore de compte ?
 					<Button type="button" variant="link" class="h-auto p-0 text-sm" onclick={() => goto('/signup')}>

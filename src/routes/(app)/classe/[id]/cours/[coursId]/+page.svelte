@@ -73,11 +73,11 @@
 
 	const coursInfo = $derived(listeCours.find((c) => c.id === coursId));
 
-	const elevesParticipants = $derived(
-		elevesClasse.filter(
-			(e) => e.actif && (!coursInfo?.participants?.length || coursInfo.participants.includes(e.id))
-		)
-	);
+		const elevesParticipants = $derived(
+			elevesClasse.filter(
+				(e) => e.actif && (coursInfo?.participants?.length ? coursInfo.participants.includes(e.id) : false)
+			)
+		);
 
 	let examenSelectionne = $derived<Examen | null>(
 		(() => {

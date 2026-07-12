@@ -5,6 +5,7 @@ import {
 	getProfesseurs,
 	getCours,
 	createCours,
+	createMatiere,
 	updateCours,
 	updateCoursImage,
 	deleteCours,
@@ -18,8 +19,7 @@ import {
 } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
-import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
-import pb from '$lib/pocketbase/pocketbase';
+import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const classe = await getClasseById(params.id);
@@ -46,9 +46,9 @@ export const load: PageServerLoad = async ({ params }) => {
 	};
 
 	const [allMatieres, profs, coursList, examens, inscriptions] = await Promise.all([
-		getMatieres(),
+		getMatieres(classe.anneeId),
 		getProfesseurs(),
-		getCours(),
+		getCours(classe.anneeId),
 		prisma.examen.findMany({
 			where: { classeId: params.id },
 			orderBy: { date: 'asc' }
@@ -145,11 +145,20 @@ export const actions: Actions = {
 		}
 
 		try {
+			const classeCourante = await prisma.classe.findUnique({
+				where: { id: params.id },
+				select: { anneeId: true }
+			});
+			const anneeId = classeCourante?.anneeId;
+			if (!anneeId) {
+				return fail(400, { error: 'Année scolaire introuvable pour cette classe' });
+			}
+
 			let finalMatiereId = matiereId;
 
 			if (matiereNom) {
-				let matiere = await prisma.matiere.findUnique({
-					where: { nom: matiereNom }
+				let matiere = await prisma.matiere.findFirst({
+					where: { nom: matiereNom, anneeId }
 				});
 
 				if (!matiere) {
@@ -163,12 +172,7 @@ export const actions: Actions = {
 						'#06b6d4'
 					];
 					const randomColor = colors[Math.floor(Math.random() * colors.length)];
-					matiere = await prisma.matiere.create({
-						data: {
-							nom: matiereNom,
-							couleur: randomColor
-						}
-					});
+					matiere = await createMatiere({ nom: matiereNom, couleur: randomColor }, anneeId);
 				}
 
 				finalMatiereId = matiere.id;
@@ -194,7 +198,7 @@ export const actions: Actions = {
 		}
 	},
 
-	updateCoefficient: async ({ request, params }) => {
+	updateCoefficient: async ({ request }) => {
 		const data = await request.formData();
 		const coursId = data.get('coursId') as string;
 		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);

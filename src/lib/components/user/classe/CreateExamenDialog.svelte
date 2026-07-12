@@ -3,7 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { enhance } from '$app/forms';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import { Calendar } from '@lucide/svelte/icons';
 	import type { Examen } from '$lib/types/Materiel.type';
 
@@ -49,29 +49,29 @@
 		<form
 			method="POST"
 			action="?/createExamen"
-			use:enhance={() => {
-				errors = {};
-				return async ({ result }) => {
-					if (result.type === 'success') {
-						const examen = (result.data as any)?.examen;
-						if (examen && onCreate) {
-							onCreate({
-								id: examen.id,
-								nom: examen.nom,
-								date: new Date(examen.date).toISOString().split('T')[0],
-								classeId: examen.classeId,
-								periode: examen.periode || undefined
-							});
+			use:loadingForm={{
+				handler: () => {
+					errors = {};
+					return async ({ result }) => {
+						const data = result.data as { examen?: Examen; error?: string; _form?: string } | undefined;
+						if (result.type === 'success') {
+							const examen = data?.examen;
+							if (examen && onCreate) {
+								onCreate({
+									id: examen.id,
+									nom: examen.nom,
+									date: new Date(examen.date).toISOString().split('T')[0],
+									classeId: examen.classeId,
+									periode: examen.periode || undefined
+								});
+							}
+							open = false;
+						} else if (result.type === 'failure') {
+							const error = data?.error || data?._form || 'Erreur lors de la création';
+							errors = { _form: error };
 						}
-						open = false;
-					} else if (result.type === 'failure') {
-						const error =
-							(result.data as any)?.error ||
-							(result.data as any)?._form ||
-							'Erreur lors de la création';
-						errors = { _form: error };
-					}
-				};
+					};
+				}
 			}}
 			class="space-y-4"
 		>

@@ -4,7 +4,6 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
 	import {
-		User,
 		Mail,
 		Phone,
 		MapPin,
@@ -22,12 +21,14 @@
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 	import type { EleveIncident } from '$lib/types/Incident.type';
+	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
 
 	const { data }: PageProps = $props();
 	const eleve = data.eleve;
 	const incidents: EleveIncident[] = data.incidents || [];
 
 	const initial = eleve.prenom.charAt(0) + eleve.nom.charAt(0);
+	let photo = $state<string | null>(eleve.imageUrl ?? null);
 	const stats = eleve.stats;
 
 	let positivesOpen = $state(false);
@@ -48,9 +49,12 @@
 
 		<Card class="p-6">
 			<div class="flex items-center gap-4">
-				<div class="flex size-16 items-center justify-center rounded-full bg-primary/10">
-					<User class="size-8 text-primary" />
-				</div>
+				<ProfileImage
+					personneId={eleve.personneId}
+					imageUrl={photo}
+					initials={initial}
+					onChange={(url) => (photo = url)}
+				/>
 				<div>
 					<h2 class="text-2xl font-semibold">{eleve.prenom} {eleve.nom}</h2>
 					<Badge variant="secondary" class="text-xs">{eleve.classe}</Badge>
@@ -76,21 +80,21 @@
 					<Mail class="size-4 text-muted-foreground" />
 					<div>
 						<Label class="text-xs text-muted-foreground">Email</Label>
-						<p class="text-sm font-medium">eleve@example.com</p>
+						<p class="text-sm font-medium">{eleve.email || '—'}</p>
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
 					<Phone class="size-4 text-muted-foreground" />
 					<div>
 						<Label class="text-xs text-muted-foreground">Téléphone</Label>
-						<p class="text-sm font-medium">+261 34 000 00 00</p>
+						<p class="text-sm font-medium">{eleve.telephone || '—'}</p>
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
 					<MapPin class="size-4 text-muted-foreground" />
 					<div>
 						<Label class="text-xs text-muted-foreground">Adresse</Label>
-						<p class="text-sm font-medium">Antananarivo, Madagascar</p>
+						<p class="text-sm font-medium">{eleve.adresse || '—'}</p>
 					</div>
 				</div>
 			</Card>
@@ -113,6 +117,29 @@
 				</div>
 			</Card>
 		</div>
+
+		<Card class="space-y-4 p-5">
+			<div class="flex items-center gap-2">
+				<Users class="size-5 text-primary" />
+				<h3 class="font-semibold">Responsables (parents / tuteur)</h3>
+			</div>
+			<div class="grid gap-4 md:grid-cols-3">
+				{#each [{ titre: 'Père', nom: eleve.nomPere, prenom: eleve.prenomPere, tel: eleve.telephonePere }, { titre: 'Mère', nom: eleve.nomMere, prenom: eleve.prenomMere, tel: eleve.telephoneMere }, { titre: 'Tuteur', nom: eleve.nomTuteur, prenom: eleve.prenomTuteur, tel: eleve.telephoneTuteur }] as responsable (responsable.titre)}
+					<div class="rounded-lg border p-3">
+						<p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{responsable.titre}</p>
+						{#if responsable.nom || responsable.prenom}
+							<p class="text-sm font-medium">{responsable.prenom || ''} {responsable.nom || ''}</p>
+							<p class="mt-1 flex items-center gap-2 text-sm">
+								<Phone class="size-3.5 text-muted-foreground" />
+								{responsable.tel || '—'}
+							</p>
+						{:else}
+							<p class="text-sm text-muted-foreground italic">Non renseigné</p>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</Card>
 
 		{#if stats}
 			<Card class="space-y-4 p-5">

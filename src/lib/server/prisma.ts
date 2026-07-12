@@ -22,11 +22,20 @@ export async function initDb() {
 	}
 }
 
-export async function getEleves() {
+export async function getEleves(anneeId?: string) {
 	return prisma.eleve.findMany({
+		where: {
+			...(anneeId ? { inscriptions: { some: { anneeId, actif: true } } } : {}),
+			personne: {
+				personnel: null,
+				professeur: null,
+				surveillant: null
+			}
+		},
 		include: {
 			personne: true,
 			inscriptions: {
+				where: anneeId ? { anneeId, actif: true } : undefined,
 				include: {
 					classe: true
 				},
@@ -246,34 +255,9 @@ export async function getAllPersonnes() {
 	});
 }
 
-export async function searchPersonnesByName(query: string) {
-	if (!query.trim()) return [];
-	return prisma.personne.findMany({
-		where: {
-			eleve: null,
-			professeur: null,
-			name: {
-				contains: query.trim(),
-				mode: 'insensitive'
-			}
-		},
-		include: {
-			compte: {
-				select: {
-					id: true,
-					role: true,
-					matricule: true
-				}
-			}
-		},
-		orderBy: {
-			name: 'asc'
-		}
-	});
-}
-
-export async function getClasses() {
+export async function getClasses(anneeId?: string) {
 	return prisma.classe.findMany({
+		where: anneeId ? { anneeId } : undefined,
 		select: {
 			id: true,
 			nom: true,
@@ -316,22 +300,9 @@ export async function getClasseById(id: string) {
 	});
 }
 
-export async function getSalles() {
-	return prisma.salle.findMany({
-		orderBy: {
-			num: 'asc'
-		}
-	});
-}
-
-export async function getSalleById(id: string) {
-	return prisma.salle.findUnique({
-		where: { id }
-	});
-}
-
-export async function getIncidents() {
+export async function getIncidents(anneeId?: string) {
 	return prisma.incident.findMany({
+		where: anneeId ? { anneeId } : undefined,
 		include: {
 			eleve: {
 				include: {
@@ -372,21 +343,26 @@ export async function getAnneeScolaires() {
 	});
 }
 
-export async function getMatieres() {
+export async function getMatieres(anneeId?: string) {
 	return prisma.matiere.findMany({
+		where: anneeId ? { anneeId } : undefined,
 		orderBy: {
 			nom: 'asc'
 		}
 	});
 }
 
-export async function createMatiere(data: { nom: string; couleur?: string | null; icone?: string | null; imageUrl?: string | null }) {
+export async function createMatiere(
+	data: { nom: string; couleur?: string | null; icone?: string | null; imageUrl?: string | null },
+	anneeId: string
+) {
 	return prisma.matiere.create({
 		data: {
 			nom: data.nom,
 			couleur: data.couleur || null,
 			icone: data.icone || null,
-			imageUrl: data.imageUrl || null
+			imageUrl: data.imageUrl || null,
+			anneeId
 		}
 	});
 }
@@ -410,8 +386,9 @@ export async function updateMatiereImage(id: string, imageUrl: string | null) {
 	});
 }
 
-export async function getCours() {
+export async function getCours(anneeId?: string) {
 	return prisma.cours.findMany({
+		where: anneeId ? { anneeId } : undefined,
 		include: {
 			matiere: true,
 			professeur: {
@@ -477,98 +454,6 @@ export async function createPersonnel(data: {
 	});
 }
 
-export async function createSurveillant(data: {
-	name: string;
-	lastname: string;
-	email: string;
-	phone: string;
-	domicile: string;
-	fokontany: string;
-	commune: string;
-	region?: string;
-	poste: string;
-}) {
-	return prisma.$transaction(async (tx) => {
-		const personne = await tx.personne.create({
-			data: {
-				name: data.name,
-				lastname: data.lastname,
-				email: data.email,
-				phone: data.phone,
-				domicile: data.domicile,
-				fokontany: data.fokontany,
-				commune: data.commune
-			}
-		});
-
-		const matricule = `SRV-${Date.now().toString(36).toUpperCase()}`;
-		const compte = await tx.compte.create({
-			data: {
-				matricule,
-				password: '123456',
-				role: 'SURVEILLANT',
-				statut: 'EN_ATTENTE',
-				personneId: personne.id
-			}
-		});
-
-		const surveillant = await tx.surveillant.create({
-			data: {
-				personneId: personne.id,
-				poste: data.poste
-			}
-		});
-
-		return { personne, compte, surveillant };
-	});
-}
-
-export async function createProfesseur(data: {
-	name: string;
-	lastname: string;
-	email: string;
-	phone: string;
-	domicile?: string;
-	fokontany?: string;
-	commune?: string;
-	region?: string;
-	matiere: string[];
-}) {
-	return prisma.$transaction(async (tx) => {
-		const personne = await tx.personne.create({
-			data: {
-				name: data.name,
-				lastname: data.lastname,
-				email: data.email,
-				phone: data.phone,
-				domicile: data.domicile || '',
-				fokontany: data.fokontany || '',
-				commune: data.commune || ''
-			}
-		});
-
-		const matricule = `ENS-${Date.now().toString(36).toUpperCase()}`;
-		const compte = await tx.compte.create({
-			data: {
-				matricule,
-				password: '123456',
-				role: 'ENSEIGNANT',
-				statut: 'EN_ATTENTE',
-				personneId: personne.id
-			}
-		});
-
-		const professeur = await tx.professeur.create({
-			data: {
-				personneId: personne.id,
-				matiere: data.matiere
-			}
-		});
-
-		return { personne, compte, professeur };
-	});
-}
-
 export async function createProfesseurFromPersonne(personneId: string, matricule: string, matiere: string[]) {
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
@@ -612,21 +497,33 @@ export async function createProfesseurFromPersonne(personneId: string, matricule
 	});
 }
 
-export async function createEleve(data: {
-	name: string;
-	lastname: string;
-	email: string;
-	phone: string;
-	domicile: string;
-	fokontany: string;
-	commune: string;
-	region?: string;
-	province?: string;
-	dateNaissance: string;
-	lieuNaissance?: string;
-	regionNaissance?: string;
-	provinceNaissance?: string;
-}) {
+export async function createEleve(
+	data: {
+		name: string;
+		lastname: string;
+		email: string;
+		phone: string;
+		domicile: string;
+		fokontany: string;
+		commune: string;
+		region?: string;
+		province?: string;
+		dateNaissance: string;
+		lieuNaissance?: string;
+		regionNaissance?: string;
+		provinceNaissance?: string;
+		nomPere?: string | null;
+		prenomPere?: string | null;
+		telephonePere?: string | null;
+		nomMere?: string | null;
+		prenomMere?: string | null;
+		telephoneMere?: string | null;
+		nomTuteur?: string | null;
+		prenomTuteur?: string | null;
+		telephoneTuteur?: string | null;
+	},
+	anneeId?: string
+) {
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.create({
 			data: {
@@ -643,9 +540,28 @@ export async function createEleve(data: {
 		const eleve = await tx.eleve.create({
 			data: {
 				personneId: personne.id,
-				dateNaissance: new Date(data.dateNaissance)
+				dateNaissance: new Date(data.dateNaissance),
+				nomPere: data.nomPere || null,
+				prenomPere: data.prenomPere || null,
+				telephonePere: data.telephonePere || null,
+				nomMere: data.nomMere || null,
+				prenomMere: data.prenomMere || null,
+				telephoneMere: data.telephoneMere || null,
+				nomTuteur: data.nomTuteur || null,
+				prenomTuteur: data.prenomTuteur || null,
+				telephoneTuteur: data.telephoneTuteur || null
 			}
 		});
+
+		if (anneeId) {
+			await tx.inscription.create({
+				data: {
+					eleveId: eleve.id,
+					anneeId,
+					actif: true
+				}
+			});
+		}
 
 		return { personne, eleve };
 	});
@@ -655,6 +571,32 @@ export async function getActiveAnneeScolaire() {
 	return prisma.anneeScolaire.findFirst({
 		where: { active: true },
 		orderBy: { dateCreation: 'desc' }
+	});
+}
+
+export async function createAnneeScolaire(nom: string) {
+	return prisma.$transaction(async (tx) => {
+		const hasActive = await tx.anneeScolaire.findFirst({ where: { active: true } });
+		// La nouvelle annee est inactive par defaut ; elle ne devient active
+		// qu'apres selection explicite. Si aucune annee n'est active, on l'active
+		// pour eviter de bloquer l'application.
+		const active = !hasActive;
+		if (active) {
+			await tx.anneeScolaire.updateMany({ data: { active: false } });
+		}
+		return tx.anneeScolaire.create({
+			data: { nom, active }
+		});
+	});
+}
+
+export async function setActiveAnneeScolaire(id: string) {
+	return prisma.$transaction(async (tx) => {
+		await tx.anneeScolaire.updateMany({ data: { active: false } });
+		return tx.anneeScolaire.update({
+			where: { id },
+			data: { active: true }
+		});
 	});
 }
 
@@ -714,14 +656,26 @@ export async function getElevesDisponiblesForClasse(classeId: string) {
 	const annee = await getActiveAnneeScolaire();
 	if (!annee) return [];
 
-	const inscriptionsActives = await prisma.inscription.findMany({
-		where: { anneeId: annee.id, actif: true },
+	// Seuls les eleves deja affectes a une classe cette annee sont consideres
+	// comme non disponibles. Un eleve sans classe (nouvellement cree) reste
+	// inscrivable.
+	const inscriptionsAvecClasse = await prisma.inscription.findMany({
+		where: { anneeId: annee.id, actif: true, classeId: { not: null } },
 		select: { eleveId: true }
 	});
-	const inscritsIds = new Set(inscriptionsActives.map((i) => i.eleveId));
+	const inscritsIds = new Set(inscriptionsAvecClasse.map((i) => i.eleveId));
 
+	// Un eleve dont la personne est aussi un personnel / professeur /
+	// surveillant ne doit jamais etre proposable pour une inscription en classe.
 	const eleves = await prisma.eleve.findMany({
-		where: { id: { notIn: [...inscritsIds] } },
+		where: {
+			id: { notIn: [...inscritsIds] },
+			personne: {
+				personnel: null,
+				professeur: null,
+				surveillant: null
+			}
+		},
 		include: { personne: true },
 		orderBy: { personne: { name: 'asc' } }
 	});
@@ -744,16 +698,26 @@ export async function addEleveToClasse(eleveId: string, classeId: string) {
 		const existingInscription = await tx.inscription.findFirst({
 			where: {
 				eleveId,
-				classeId,
 				anneeId: annee.id
 			}
 		});
 
 		if (existingInscription) {
-			if (!existingInscription.actif) {
-				await tx.inscription.update({
-					where: { id: existingInscription.id },
-					data: { actif: true }
+			const changementClasse = existingInscription.classeId !== classeId;
+			await tx.inscription.update({
+				where: { id: existingInscription.id },
+				data: { classeId, actif: true }
+			});
+			if (changementClasse) {
+				if (existingInscription.classeId) {
+					await tx.classe.update({
+						where: { id: existingInscription.classeId },
+						data: { elevesCount: { decrement: 1 } }
+					});
+				}
+				await tx.classe.update({
+					where: { id: classeId },
+					data: { elevesCount: { increment: 1 } }
 				});
 			}
 			const eleve = await tx.eleve.findUnique({
@@ -809,6 +773,13 @@ export async function updateClasseImage(id: string, imageUrl: string | null) {
 	});
 }
 
+export async function updatePersonneImage(personneId: string, imageUrl: string | null) {
+	return prisma.personne.update({
+		where: { id: personneId },
+		data: { imageUrl }
+	});
+}
+
 export async function updateCoursImage(id: string, imageUrl: string | null) {
 	return prisma.cours.update({
 		where: { id },
@@ -824,6 +795,7 @@ export async function deleteEleve(id: string) {
 		});
 		if (!eleve) throw new Error('Élève introuvable');
 		for (const ins of eleve.inscriptions) {
+			if (!ins.classeId) continue;
 			await tx.classe.update({
 				where: { id: ins.classeId },
 				data: {

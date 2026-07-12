@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import * as Dialog from '$lib/components/ui/dialog';
+	import { Button } from '$lib/components/ui/button';
 	import * as Table from '$lib/components/ui/table';
-	import { Plus, Printer, School } from '@lucide/svelte/icons';
+	import { Printer, School } from '@lucide/svelte/icons';
 	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
 	import { formatClasseNom } from '$lib/utils';
@@ -15,33 +12,10 @@
 	let listeExamens = $state<Examen[]>([...data.listeExamens]);
 	let elevesClasse = $state<EleveCours[]>([...data.elevesClasse]);
 
-	let nouvelExamen = $state({
-		nom: '',
-		date: '',
-		periode: ''
-	});
-
 	let bulletinEleve = $state<EleveCours | null>(null);
 	let bulletinExamenIds = $state<string[]>([]);
 	let bulletinTousEleves = $state(false);
 	let examensActifs = $state<string[]>(data.listeExamens.map((e) => e.id));
-	let examenDialogOpen = $state(false);
-
-	const notesBulletin = $derived(getNotesEleveExamens(bulletinEleve, bulletinExamenIds));
-
-	function ajouterExamen() {
-		if (!nouvelExamen.nom || !nouvelExamen.date) return;
-		const examen: Examen = {
-			id: Date.now().toString(),
-			nom: nouvelExamen.nom,
-			date: nouvelExamen.date,
-			classeId: data.classe?.id || '',
-			periode: nouvelExamen.periode
-		};
-		listeExamens = [...listeExamens, examen];
-		nouvelExamen = { nom: '', date: '', periode: '' };
-		examenDialogOpen = false;
-	}
 
 	function toggleExamen(examenId: string) {
 		if (examensActifs.includes(examenId)) {
@@ -69,6 +43,7 @@
 
 	function getNotesEleveExamens(e: EleveCours | null, examenIds: string[]): Note[] {
 		if (!e) return [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const seen = new Set<string>();
 		return (
 			e.notes?.filter((n) => {
@@ -92,11 +67,21 @@
 		return totalCoef > 0 ? Math.round((totalPoints / totalCoef) * 100) / 100 : 0;
 	}
 
+	function estParticipant(cours: Cours, eleve: EleveCours): boolean {
+		const participants = cours.participants;
+		if (!participants || participants.length === 0) return false;
+		return participants.includes(eleve.id);
+	}
+
 	function calculerMoyenneGenerale(eleve: EleveCours, examenIds: string[]): number {
 		if (listeCours.length === 0) return 0;
-		const totalCoef = listeCours.reduce((s, c) => s + (c.coefficient || 0), 0);
+		const totalCoef = listeCours.reduce((s, c) => {
+			if (!estParticipant(c, eleve)) return s;
+			return s + (c.coefficient || 0);
+		}, 0);
 		if (totalCoef === 0) return 0;
 		const totalPoints = listeCours.reduce((s, c) => {
+			if (!estParticipant(c, eleve)) return s;
 			const notesM = getNotesMatiere(eleve, c.id, examenIds);
 			const moy = calculerMoyenneMatiere(notesM);
 			return s + moy * (c.coefficient || 0);
@@ -269,7 +254,7 @@
 			{@render singleBulletin(bulletinEleve)}
 		{:else if bulletinTousEleves}
 			<div class="space-y-12 print:space-y-0">
-				{#each elevesClasse as eleve}
+				{#each elevesClasse as eleve (eleve.id)}
 					<div class="print:break-after-page mb-12">
 						{@render singleBulletin(eleve)}
 					</div>
@@ -326,7 +311,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each listeCours as cours}
+				{#each listeCours as cours (cours.id)}
 					{@const notesM = getNotesMatiere(eleve, cours.id, bulletinExamenIds)}
 					{@const moyM = calculerMoyenneMatiere(notesM)}
 					<tr class="border-b border-gray-800">
@@ -334,7 +319,7 @@
 						<td class="border border-gray-800 px-4 py-2.5 text-center">{cours.coefficient}</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-center text-xs">
 							<div class="flex flex-wrap items-center justify-center gap-1">
-								{#each notesM as note}
+								{#each notesM as note (note.id)}
 									<span class="inline-block rounded px-1.5 py-0.5 font-mono">
 										{note.valeur}/20
 									</span>
@@ -345,7 +330,7 @@
 						</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-center font-bold">
 							<div class="flex flex-wrap items-center justify-center gap-1">
-								{#each notesM as note}
+								{#each notesM as note (note.id)}
 									<span class="font-mono">{note.valeur * getCoefficientCours(note.coursId)}</span>
 								{:else}
 									<span class="text-gray-400 italic">0</span>
@@ -399,6 +384,11 @@
 			<div class="grid grid-cols-2 gap-4 text-center mt-4 md:mt-0">
 				<div>
 					<p class="font-bold underline text-gray-700">Le Professeur Principal</p>
+					{#if data.classe?.titulaire?.personne}
+						<p class="mt-1 text-sm font-medium">
+							{data.classe.titulaire.personne.name} {data.classe.titulaire.personne.lastname}
+						</p>
+					{/if}
 					<div class="h-16"></div>
 				</div>
 				<div>

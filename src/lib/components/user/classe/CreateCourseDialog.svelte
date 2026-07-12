@@ -87,8 +87,9 @@
 				errors = {};
 				return async ({ result }) => {
 					submitting = false;
+					const data = result.data as { cours?: Cours; error?: string; _form?: string } | undefined;
 					if (result.type === 'success') {
-						const cours = (result.data as any)?.cours;
+						const cours = data?.cours;
 						if (cours && onCreate) {
 							onCreate({
 								id: cours.id,
@@ -107,10 +108,7 @@
 							open = false;
 						}, 600);
 					} else if (result.type === 'failure') {
-						const err =
-							(result.data as any)?.error ||
-							(result.data as any)?._form ||
-							'Erreur lors de la création';
+						const err = data?.error || data?._form || 'Erreur lors de la création';
 						errors = { _form: err };
 					}
 				};
@@ -165,7 +163,7 @@
 							<Checkbox
 								id={`eleve-${eleve.id}`}
 								checked={participantsSelectionnes.includes(eleve.id)}
-								onclick={() => toggleParticipant(eleve.id)}
+								onCheckedChange={() => toggleParticipant(eleve.id)}
 							/>
 							<label for={`eleve-${eleve.id}`} class="text-sm">
 								{eleve.nom} {eleve.prenom}

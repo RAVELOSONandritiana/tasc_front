@@ -2,9 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Avatar } from '$lib/components/ui/avatar';
 	import {
-		User,
 		Mail,
 		Phone,
 		Shield,
@@ -19,11 +17,13 @@
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
+	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
 
 	const { data }: PageProps = $props();
 	const surv = data.surveillant;
 
 	const initial = surv.name.charAt(0) + surv.lastname.charAt(0);
+	let photo = $state<string | null>(surv.imageUrl ?? null);
 
 	const stats = surv.stats;
 </script>
@@ -37,11 +37,12 @@
 
 		<Card class="p-6">
 			<div class="flex items-center gap-4">
-				<Avatar class="h-20 w-20">
-					<Avatar.Fallback class="bg-primary/10 text-xl font-bold text-primary">
-						{initial}
-					</Avatar.Fallback>
-				</Avatar>
+				<ProfileImage
+					personneId={surv.personneId}
+					imageUrl={photo}
+					initials={initial}
+					onChange={(url) => (photo = url)}
+				/>
 				<div>
 					<h2 class="text-2xl font-semibold">{surv.name} {surv.lastname}</h2>
 					<Badge variant="outline" class="text-xs">Surveillant</Badge>

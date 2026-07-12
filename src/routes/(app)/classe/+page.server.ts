@@ -1,10 +1,11 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseImage, deleteClasse, prisma } from '$lib/server/prisma';
+import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseImage, deleteClasse, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
 export const load: PageServerLoad = async () => {
-	const classes = await getClasses();
+	const annee = await getActiveAnneeScolaire();
+	const classes = annee ? await getClasses(annee.id) : [];
 	const listClasse = classes.map(
 		(c): { id: string; nom: string; niveau: number; series: string; titulaire: string; titulaireId: string | null; eleves: number; url?: string } => ({
 			id: c.id,

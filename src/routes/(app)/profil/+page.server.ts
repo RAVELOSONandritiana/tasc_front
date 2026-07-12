@@ -64,6 +64,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		profil: {
 			id: compte.id,
+			personneId: compte.personne.id,
+			imageUrl: compte.personne.imageUrl || null,
 			nom: compte.personne.lastname,
 			prenom: compte.personne.name,
 			email: compte.personne.email,

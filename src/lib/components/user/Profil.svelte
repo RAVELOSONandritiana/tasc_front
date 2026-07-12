@@ -1,10 +1,20 @@
 <script lang="ts">
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import * as Avatar from '$lib/components/ui/avatar';
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
 	import { Bell, Sun, Moon, X, Check } from '@lucide/svelte/icons';
 	import * as Drawer from '$lib/components/ui/drawer';
 	import { browser } from '$app/environment';
+	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
+
+	let {
+		imageUrl = null,
+		nom = '',
+		prenom = ''
+	}: {
+		imageUrl?: string | null;
+		nom?: string;
+		prenom?: string;
+	} = $props();
 
 	let checked = $state(true);
 	let notificationOpen = $state(false);
@@ -141,10 +151,7 @@
 
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
-			<Avatar.Root>
-				<Avatar.Image src="https://github.com/vanessa.png" alt="Vanessa" />
-				<Avatar.Fallback>VA</Avatar.Fallback>
-			</Avatar.Root>
+			<PersonAvatar {imageUrl} name={prenom} lastname={nom} sizeClass="size-9" />
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content class="z-[100] w-56">
 			<DropdownMenu.Label>Mon Compte</DropdownMenu.Label>

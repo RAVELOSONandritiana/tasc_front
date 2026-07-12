@@ -4,6 +4,7 @@
 	import { ArrowLeft, Check, X, Save } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -67,7 +68,7 @@
 			</div>
 		</div>
 
-		<form method="POST" action="?/updatePresence" class="space-y-2">
+		<form method="POST" action="?/updatePresence" class="space-y-2" use:loadingForm>
 			{#each data.eleves as eleve (eleve.id)}
 				<div
 					class="flex items-center gap-3 rounded-lg border p-3 {getEleveStatus(eleve.id) ===

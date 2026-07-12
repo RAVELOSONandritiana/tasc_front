@@ -8,12 +8,15 @@
 	import Card from '$lib/components/ui/card/card.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	let matricule = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
+	let submitting = $state(false);
 
 	function handleSubmit() {
+		submitting = true;
 		goto('/signin');
 	}
 
@@ -72,7 +75,12 @@
 					/>
 				</div>
 
-				<Button class="w-full" type="submit">Créer un compte</Button>
+				<Button class="w-full" type="submit" disabled={submitting}>
+				{#if submitting}
+					<Spinner class="mr-2 size-4" />
+				{/if}
+				Créer un compte
+			</Button>
 
 				<div class="text-center text-sm">
 					Déjà un compte ?

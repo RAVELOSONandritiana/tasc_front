@@ -10,6 +10,7 @@ type InscriptionWithEleve = {
 		personne: {
 			name: string;
 			lastname: string;
+			imageUrl?: string | null;
 		};
 	};
 	actif: boolean;
@@ -74,7 +75,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		prenom: inscription.eleve.personne.name,
 		dateNaissance: inscription.eleve.dateNaissance.toISOString().split('T')[0],
 		actif: inscription.actif,
-		photoUrl: inscription.eleve.photoUrl
+		photoUrl: inscription.eleve.photoUrl,
+		imageUrl: inscription.eleve.personne.imageUrl || null
 	}));
 
 	const absenceNotes = await prisma.absence.findMany({

@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	const [coursList, examens, inscriptions] = await Promise.all([
-		getCours(),
+		getCours(classe.anneeId),
 		prisma.examen.findMany({
 			where: { classeId },
 			orderBy: { date: 'asc' }
@@ -107,9 +107,8 @@ export const actions: Actions = {
 					// Fetch inscription for this student to attach to the note
 					const inscription = await tx.inscription.findUnique({
 						where: {
-							eleveId_classeId_anneeId: {
+							eleveId_anneeId: {
 								eleveId,
-								classeId: params.id,
 								anneeId: (await tx.anneeScolaire.findFirst({ where: { active: true } }))?.id || ''
 							}
 						}

@@ -189,6 +189,37 @@
 	}
 }
 
+@keyframes btn-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Loading state applied by use:loadingForm to prevent double submissions */
+button[data-loading='true'] {
+	position: relative;
+	color: transparent !important;
+	pointer-events: none;
+}
+
+button[data-loading='true'] svg {
+	opacity: 0;
+}
+
+button[data-loading='true']::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 1rem;
+	height: 1rem;
+	margin: -0.5rem 0 0 -0.5rem;
+	border: 2px solid rgb(140 140 140 / 0.35);
+	border-top-color: rgb(140 140 140 / 0.9);
+	border-radius: 50%;
+	animation: btn-spin 0.6s linear infinite;
+}
+
 @keyframes fadeIn {
 	from {
 		opacity: 0;

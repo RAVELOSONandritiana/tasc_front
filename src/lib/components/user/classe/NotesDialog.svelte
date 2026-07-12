@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as SwitchPrimitive from '$lib/components/ui/switch/index.js';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
-	import { enhance } from '$app/forms';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Trash2, CheckCircle2 } from '@lucide/svelte';
 	import type { Cours, EleveCours, Examen, Note } from '$lib/types/Materiel.type';
@@ -130,8 +130,9 @@
 
 					<form
 						method="POST"
-						action={appliquerTous ? '?/createNoteAll' : '?/createNote'}
-						use:enhance={() => {
+					action={appliquerTous ? '?/createNoteAll' : '?/createNote'}
+					use:loadingForm={{
+						handler: () => {
 							errors = {};
 							success = false;
 							return async ({ result }) => {
@@ -140,15 +141,22 @@
 									resetForm();
 									success = true;
 									setTimeout(() => (success = false), 2000);
-								} else if (result.type === 'failure') {
-									const data = result.data as any;
-									errors = data?.errors || { _form: data?.error || 'Erreur lors de la création de la note' };
-									selectedEleveId = data?.eleveId || '';
-									valeurSaisie = typeof data?.valeur === 'number' ? data.valeur : valeurSaisie;
-									libelleSaisi = data?.libelle || '';
-								}
+							} else if (result.type === 'failure') {
+								const data = result.data as {
+									errors?: Record<string, string>;
+									error?: string;
+									eleveId?: string;
+									valeur?: number;
+									libelle?: string;
+								} | undefined;
+								errors = data?.errors || { _form: data?.error || 'Erreur lors de la création de la note' };
+								selectedEleveId = data?.eleveId || '';
+								valeurSaisie = typeof data?.valeur === 'number' ? data.valeur : valeurSaisie;
+								libelleSaisi = data?.libelle || '';
+							}
 							};
-						}}
+						}
+					}}
 						class="space-y-3"
 					>
 						<input type="hidden" name="coursId" value={cours?.id || ''} />
@@ -313,14 +321,16 @@
 											<span class="text-sm font-semibold">{note.valeur}/20</span>
 											<form
 												method="POST"
-												action="?/deleteNote"
-												use:enhance={() => {
+											action="?/deleteNote"
+											use:loadingForm={{
+												handler: () => {
 													return async ({ result }) => {
 														if (result.type === 'success' && cours) {
 															onLoadNotes?.(cours.id);
 														}
 													};
-												}}
+												}
+											}}
 											>
 												<input type="hidden" name="noteId" value={note.id} />
 												<Button

@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import * as Avatar from '$lib/components/ui/avatar';
+	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
 	import {
 		AlertCircle,
 		Info,
@@ -15,10 +15,11 @@
 		Trash2
 	} from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
+	import { loadingForm } from '$lib/actions/loadingForm';
 
 	const { incident, eleves, currentUserId } = $props<{
 		incident: Incident;
-		eleves: { id: string; nom: string; prenom: string }[];
+		eleves: { id: string; nom: string; prenom: string; imageUrl?: string | null }[];
 		currentUserId?: string;
 	}>();
 
@@ -56,9 +57,9 @@
 		return e ? `${e.prenom} ${e.nom}` : 'Inconnu';
 	}
 
-	function getEleveInitials(id: string) {
-		const e = eleves.find((el: { id: string; nom: string; prenom: string }) => el.id === id);
-		return e ? `${e.prenom[0]}${e.nom[0]}` : '??';
+	function getEleveImage(id: string) {
+		const e = eleves.find((el: { id: string; nom: string; prenom: string; imageUrl?: string | null }) => el.id === id);
+		return e?.imageUrl || null;
 	}
 
 	function handleEleveClick(id: string) {
@@ -86,11 +87,12 @@
 		<div class="p-4">
 			<div class="flex items-start justify-between">
 				<div class="flex items-center gap-3">
-					<Avatar.Root class="size-10">
-						<Avatar.Fallback class="bg-primary/10 text-xs font-bold">
-							{getEleveInitials(incident.eleveId)}
-						</Avatar.Fallback>
-					</Avatar.Root>
+					<PersonAvatar
+						imageUrl={getEleveImage(incident.eleveId)}
+						name={getEleveName(incident.eleveId).split(' ')[0] || ''}
+						lastname={getEleveName(incident.eleveId).split(' ')[1] || ''}
+						sizeClass="size-10"
+					/>
 					<div>
 						<div class="flex items-center gap-2">
 							<button class="text-sm font-semibold transition-colors hover:text-primary hover:underline" onclick={() => handleEleveClick(incident.eleveId)}>
@@ -129,7 +131,7 @@
 			<div class="mt-3 border-t border-sidebar-border">
 				<div class="flex items-center justify-between pt-3">
 					<div class="flex items-center gap-1">
-						<form method="POST" action="?/reaction" class="inline">
+						<form method="POST" action="?/reaction" class="inline" use:loadingForm>
 							<input type="hidden" name="incidentId" value={incident.id} />
 							<input type="hidden" name="emoji" value="❤️" />
 							<Button type="submit" variant="ghost" size="sm" class="gap-1.5 text-xs">
@@ -146,7 +148,7 @@
 						</Button>
 					</div>
 					{#if isAuthor}
-						<form method="POST" action="?/delete" class="inline">
+						<form method="POST" action="?/delete" class="inline" use:loadingForm>
 							<input type="hidden" name="incidentId" value={incident.id} />
 							<Button type="submit" variant="ghost" size="sm" class="gap-1.5 text-xs text-red-500 hover:text-red-600">
 								<Trash2 class="size-3.5" />
@@ -159,7 +161,7 @@
 
 		{#if showComments}
 			<div class="border-t border-sidebar-border bg-muted/20 p-4">
-				<form method="POST" action="?/comment" class="mb-3 flex items-center gap-2">
+				<form method="POST" action="?/comment" class="mb-3 flex items-center gap-2" use:loadingForm>
 					<input type="hidden" name="incidentId" value={incident.id} />
 					<input type="text" name="text" bind:value={commentText} placeholder="Ajouter un commentaire..." class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none" />
 					<Button type="submit" size="sm" disabled={!commentText.trim()}>

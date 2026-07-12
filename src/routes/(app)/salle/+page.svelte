@@ -8,6 +8,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import type { PageProps } from './$types';
 	import Salle from '$lib/components/user/classe/Salle.svelte';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Building2, Plus } from '@lucide/svelte/icons';
 
@@ -67,7 +68,7 @@
 							Nouvelle salle
 						</Dialog.Trigger>
 						<Dialog.Content class="sm:max-w-106.25">
-							<form method="POST" action="?/create" class="contents">
+							<form method="POST" action="?/create" class="contents" use:loadingForm>
 								<Dialog.Header>
 									<Dialog.Title>Ajouter une salle</Dialog.Title>
 									<Dialog.Description

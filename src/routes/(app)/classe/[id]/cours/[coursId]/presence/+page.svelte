@@ -4,6 +4,7 @@
 	import { ArrowLeft, Check, X } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -38,7 +39,7 @@
 	}
 </script>
 
-<div class="min-h-screen bg-sidebar text-sidebar-foreground">
+<div class="min-h-full bg-sidebar text-sidebar-foreground">
 	<header
 		class="flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 backdrop-blur-sm"
 	>
@@ -64,7 +65,7 @@
 				<div class="flex flex-col items-center gap-4">
 					<Avatar.Root class="h-24 w-24">
 						<Avatar.Image
-							src={currentEleve.photoUrl || 'https://github.com/shadcn.png'}
+							src={currentEleve.imageUrl || currentEleve.photoUrl || 'https://github.com/shadcn.png'}
 							alt={`${currentEleve.prenom} ${currentEleve.nom}`}
 						/>
 						<Avatar.Fallback class="text-2xl font-bold">
@@ -84,7 +85,7 @@
 					</div>
 				</div>
 
-				<form method="POST" action="?/markPresence" class="space-y-3">
+				<form method="POST" action="?/markPresence" class="space-y-3" use:loadingForm>
 					<input type="hidden" name="eleveId" value={currentEleve.id} />
 					<input type="hidden" name="status" value="present" />
 					<Button
@@ -97,7 +98,7 @@
 					</Button>
 				</form>
 
-				<form method="POST" action="?/markPresence">
+				<form method="POST" action="?/markPresence" use:loadingForm>
 					<input type="hidden" name="eleveId" value={currentEleve.id} />
 					<input type="hidden" name="status" value="absent" />
 					<Button

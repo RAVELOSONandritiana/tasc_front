@@ -65,8 +65,9 @@
 				errors = {};
 				return async ({ result }: { result: ActionResult }) => {
 					editingMatiereSubmitting = false;
+					const data = result.data as { matiere?: { nom: string; couleur?: string }; error?: string } | undefined;
 					if (result.type === 'success') {
-						const matiereData = (result.data as any)?.matiere;
+						const matiereData = data?.matiere;
 						if (matiereData && currentMatiereId) {
 							onSave?.(currentMatiereId, matiereData.nom, matiereData.couleur || DEFAULT_MATIERE_COLOR);
 						}
@@ -75,7 +76,7 @@
 							open = false;
 						}, 600);
 					} else if (result.type === 'failure') {
-						const error = (result.data as any)?.error || 'Erreur lors de la mise a jour';
+						const error = data?.error || 'Erreur lors de la mise a jour';
 						errors = { _form: error };
 					}
 				};

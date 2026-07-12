@@ -16,6 +16,7 @@ export type Personne = {
 	commune?: string;
 	phone: string;
 	email: string;
+	imageUrl?: string | null;
 	compte?: {
 		id: string;
 		role: string;
@@ -50,5 +51,19 @@ export type Eleve = {
 	prenom: string;
 	dateNaissance: string;
 	classe: string;
+	email?: string | null;
+	telephone?: string | null;
+	adresse?: string | null;
+	imageUrl?: string | null;
+	personneId?: string;
+	nomPere?: string | null;
+	prenomPere?: string | null;
+	telephonePere?: string | null;
+	nomMere?: string | null;
+	prenomMere?: string | null;
+	telephoneMere?: string | null;
+	nomTuteur?: string | null;
+	prenomTuteur?: string | null;
+	telephoneTuteur?: string | null;
 	stats?: EleveStats;
 };

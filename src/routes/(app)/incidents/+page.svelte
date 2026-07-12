@@ -7,6 +7,7 @@
 	import { AlertCircle, Shield, X } from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 	import IncidentPost from '$lib/components/user/incidents/IncidentPost.svelte';
+	import { loadingForm } from '$lib/actions/loadingForm';
 
 	const { data }: PageProps = $props();
 
@@ -89,7 +90,7 @@
 				<Dialog.Title>Nouvelle note</Dialog.Title>
 				<Dialog.Description>Signaler un événement concernant un élève.</Dialog.Description>
 			</Dialog.Header>
-			<form method="POST" action="?/create">
+			<form method="POST" action="?/create" use:loadingForm>
 				<div class="grid gap-4 py-4">
 					<div class="grid gap-2">
 						<Label for="type">Type</Label>

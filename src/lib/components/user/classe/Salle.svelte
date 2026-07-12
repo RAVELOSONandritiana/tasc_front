@@ -9,6 +9,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import { enhance } from '$app/forms';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
 
@@ -169,7 +170,7 @@
 			<Dialog.Title>Modifier la salle</Dialog.Title>
 			<Dialog.Description>Mettre à jour les informations de la salle.</Dialog.Description>
 		</Dialog.Header>
-		<form method="POST" action="?/update">
+		<form method="POST" action="?/update" use:loadingForm>
 			<input type="hidden" name="id" value={salle.id} />
 			<div class="grid gap-4 pb-4">
 				<div class="grid gap-3">

@@ -2,11 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import Avatar from '$lib/components/ui/avatar/avatar.svelte';
-	import AvatarFallback from '$lib/components/ui/avatar/avatar-fallback.svelte';
-	import AvatarImage from '$lib/components/ui/avatar/avatar-image.svelte';
 	import {
-		User,
 		Mail,
 		Phone,
 		Shield,
@@ -21,11 +17,13 @@
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
+	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
 
 	const { data }: PageProps = $props();
 	const prof = data.professeur;
 
 	const initial = prof.name.charAt(0) + prof.lastname.charAt(0);
+	let photo = $state<string | null>(prof.imageUrl ?? null);
 
 	const stats = prof.stats;
 </script>
@@ -39,11 +37,12 @@
 
 		<Card class="p-6">
 			<div class="flex items-center gap-4">
-				<Avatar class="h-20 w-20">
-					<AvatarFallback class="bg-primary/10 text-xl font-bold text-primary">
-						{initial}
-					</AvatarFallback>
-				</Avatar>
+				<ProfileImage
+					personneId={prof.personneId}
+					imageUrl={photo}
+					initials={initial}
+					onChange={(url) => (photo = url)}
+				/>
 				<div>
 					<h2 class="text-2xl font-semibold">{prof.name} {prof.lastname}</h2>
 					<Badge variant="outline" class="text-xs">Enseignant</Badge>

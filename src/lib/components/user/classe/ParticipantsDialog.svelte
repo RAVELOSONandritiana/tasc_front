@@ -64,9 +64,7 @@
 
 	$effect(() => {
 		if (open && cours) {
-			participantsSelectionnes = cours.participants?.length
-				? [...cours.participants]
-				: [...tousLesIds];
+			participantsSelectionnes = cours.participants ? [...cours.participants] : [];
 			searchQuery = '';
 			submitting = false;
 			success = false;
@@ -104,8 +102,9 @@
 				errors = {};
 				return async ({ result }: { result: ActionResult }) => {
 					submitting = false;
+					const data = result.data as { cours?: { id: string; participants?: string[] }; error?: string } | undefined;
 					if (result.type === 'success') {
-						const coursData = (result.data as any)?.cours;
+						const coursData = data?.cours;
 						if (coursData && cours) {
 							onSave?.(cours.id, coursData.participants || []);
 						}
@@ -114,7 +113,7 @@
 							open = false;
 						}, 600);
 					} else if (result.type === 'failure') {
-						const error = (result.data as any)?.error || 'Erreur lors de la mise à jour';
+						const error = data?.error || 'Erreur lors de la mise à jour';
 						errors = { _form: error };
 					}
 				};
@@ -165,10 +164,10 @@
 							{#each elevesFiltres as eleve (eleve.id)}
 								<Table.Row>
 									<Table.Cell>
-										<Checkbox
-											checked={participantsSelectionnes.includes(eleve.id)}
-											onclick={() => toggleParticipantSelection(eleve.id)}
-										/>
+									<Checkbox
+										checked={participantsSelectionnes.includes(eleve.id)}
+										onCheckedChange={() => toggleParticipantSelection(eleve.id)}
+									/>
 									</Table.Cell>
 									<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
 									<Table.Cell>{eleve.prenom}</Table.Cell>
@@ -185,8 +184,8 @@
 					</Table.Root>
 				</div>
 				<p class="text-xs text-muted-foreground">
-					Cochez uniquement les élèves qui participent à ce cours. Une liste vide équivaut à
-					« tous les élèves ».
+					Cochez les élèves qui participent à ce cours. La liste enregistrée est exactement
+					celle affichée : une liste vide correspond à « aucun participant ».
 				</p>
 			</div>
 

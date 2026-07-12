@@ -37,6 +37,22 @@ export const load: PageServerLoad = async ({ params }) => {
 		prenom: prismaEleve.personne.lastname,
 		dateNaissance: prismaEleve.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
 		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
+		email: prismaEleve.personne.email,
+		telephone: prismaEleve.personne.phone || null,
+		adresse: [prismaEleve.personne.domicile, prismaEleve.personne.fokontany, prismaEleve.personne.commune]
+			.filter(Boolean)
+			.join(', ') || null,
+		personneId: prismaEleve.personne.id,
+		imageUrl: prismaEleve.personne.imageUrl,
+		nomPere: prismaEleve.nomPere,
+		prenomPere: prismaEleve.prenomPere,
+		telephonePere: prismaEleve.telephonePere,
+		nomMere: prismaEleve.nomMere,
+		prenomMere: prismaEleve.prenomMere,
+		telephoneMere: prismaEleve.telephoneMere,
+		nomTuteur: prismaEleve.nomTuteur,
+		prenomTuteur: prismaEleve.prenomTuteur,
+		telephoneTuteur: prismaEleve.telephoneTuteur,
 		stats
 	};
 	return { eleve, incidents };

@@ -7,7 +7,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import type { EleveCours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
-	import { enhance } from '$app/forms';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Trash, Plus, UserCheck, X } from '@lucide/svelte';
 
@@ -80,7 +80,7 @@
 	}
 </script>
 
-<div class="flex h-screen flex-col bg-sidebar text-sidebar-foreground">
+<div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
 	<div
 		class="sticky top-16 z-50 flex justify-between border-b border-sidebar-border bg-sidebar p-4"
 	>
@@ -181,8 +181,9 @@
 					<Dialog.Footer class="gap-2">
 						<form
 							method="POST"
-							action="?/addExisting"
-							use:enhance={() => {
+						action="?/addExisting"
+						use:loadingForm={{
+							handler: () => {
 								return async ({ result }: { result: ActionResult }) => {
 									if (result.type === 'success' && result.data?.eleve) {
 										const eleve = result.data.eleve as {
@@ -201,7 +202,8 @@
 										alert(result.data?.error || "Erreur lors de l'ajout de l'élève");
 									}
 								};
-							}}
+							}
+						}}
 						>
 							<input type="hidden" name="eleveId" value={selectedExistingId} />
 							<Button
@@ -279,14 +281,16 @@
 							<Table.Cell class="text-center">
 								<form
 									method="POST"
-									action="?/delete"
-									use:enhance={() => {
+								action="?/delete"
+								use:loadingForm={{
+									handler: () => {
 										return async ({ result }: { result: ActionResult }) => {
 											if (result.type === 'success') {
 												removeEleve(eleve.id);
 											}
 										};
-									}}
+									}
+								}}
 								>
 									<input type="hidden" name="id" value={eleve.id} />
 									<Button type="submit" variant="destructive" size="icon" class="size-8">

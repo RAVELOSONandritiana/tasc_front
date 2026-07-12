@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Badge } from '$lib/components/ui/badge';
-	import * as Avatar from '$lib/components/ui/avatar';
+	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import {
 		User,
@@ -15,7 +15,6 @@
 		Phone,
 		Shield,
 		Calendar,
-		Camera,
 		Save,
 		X,
 		MapPin,
@@ -43,6 +42,7 @@
 	let editPhone = $state(data.profil.phone);
 	let editAdresse = $state(data.profil.adresse ?? '');
 	let editBio = $state(data.profil.bio ?? '');
+	let photo = $state<string | null>(data.profil.imageUrl ?? null);
 
 	function startEdit() {
 		editNom = data.profil.nom;
@@ -172,17 +172,12 @@
 				<div class="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 					<div class="flex items-end gap-4">
 						<div class="relative">
-							<Avatar.Root class="size-20 ring-4 ring-background">
-								<Avatar.Image src="https://github.com/vanessa.png" alt="Avatar" />
-								<Avatar.Fallback class="text-lg font-bold"
-									>{data.profil.prenom[0]}{data.profil.nom[0]}</Avatar.Fallback
-								>
-							</Avatar.Root>
-							<button
-								class="absolute bottom-1 left-1/2 flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110"
-							>
-								<Camera class="size-3.5" />
-							</button>
+							<ProfileImage
+								personneId={data.profil.personneId}
+								imageUrl={photo}
+								initials={`${data.profil.prenom[0] ?? ''}${data.profil.nom[0] ?? ''}`}
+								sizeClass="size-20"
+							/>
 						</div>
 						<div class="pb-1">
 							<h2 class="text-xl font-bold">{data.profil.prenom} {data.profil.nom}</h2>
@@ -437,7 +432,7 @@
 				<Shield class="size-4 text-primary" />
 				Mot de passe
 			</h3>
-			<form method="POST" action="?/changePassword" use:enhance>
+			<form method="POST" action="?/changePassword" use:loadingForm>
 				<div class="grid gap-4 md:grid-cols-3">
 					<div class="grid gap-2">
 						<Label for="currentPassword">Mot de passe actuel</Label>

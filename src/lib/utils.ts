@@ -6,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatClasseNom(niveau: number | undefined | null, nom: string | undefined | null): string {
+	if (niveau === null || niveau === undefined) return 'Non affecté';
 	const label = niveau === 0 ? '2nd' : niveau === 1 ? '1ere' : 'Tle';
 	return `${label} ${nom || ''}`.trim();
 }

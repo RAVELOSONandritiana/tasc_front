@@ -75,7 +75,7 @@
 	}
 
 	function formaterParticipants(cours: Cours): string {
-		if (!cours.participants?.length) return 'Tous les élèves';
+		if (!cours.participants?.length) return 'Aucun élève';
 		return cours.participants.join(', ');
 	}
 
@@ -129,6 +129,12 @@
 			const record = await pb.collection('tasc_statics').create(formdata);
 			if (record && record.file) {
 				const url = pb.files.getURL(record, record.file);
+				// Mise a jour immediate (optimiste) comme pour les classes : la carte
+				// se rafraichit sans attendre la reponse du serveur.
+				const oldImageUrl = listeCours.find((c) => c.id === selectedCoursForImage!.id)?.url;
+				listeCours = listeCours.map((c) =>
+					c.id === selectedCoursForImage!.id ? { ...c, url } : c
+				);
 				try {
 					const fd = new FormData();
 					fd.append('coursId', selectedCoursForImage.id);
@@ -139,13 +145,8 @@
 						credentials: 'same-origin'
 					});
 					const result = await res.json().catch(() => null);
-					if (result?.success && result.url) {
-						listeCours = listeCours.map((c) =>
-							c.id === selectedCoursForImage!.id ? { ...c, url: result.url } : c
-						);
-					}
-					const oldImageUrl = selectedCoursForImage.url;
-					if (oldImageUrl && oldImageUrl !== url) {
+					const payload = (result && 'data' in result ? result.data : result) ?? {};
+					if (payload?.success && oldImageUrl && oldImageUrl !== url) {
 						const segments = oldImageUrl.split('/');
 						const recordId = segments[segments.length - 2];
 						if (recordId) {
@@ -173,7 +174,7 @@
 	);
 </script>
 
-<div class="flex h-screen flex-col bg-sidebar text-sidebar-foreground">
+<div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
 	<div class="sticky top-16 z-50 flex flex-col gap-4 border-b border-sidebar-border bg-sidebar p-4">
 		<CoursePageHeader
 			classe={data.classe}

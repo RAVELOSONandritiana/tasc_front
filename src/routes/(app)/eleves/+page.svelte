@@ -24,6 +24,10 @@
 			return matchSearch && matchClasse;
 		})
 	);
+
+	function supprimerEleve(id: string) {
+		listEleve = listEleve.filter((e) => e.id !== id);
+	}
 </script>
 
 <main class="flex h-screen flex-col bg-background text-foreground">
@@ -103,7 +107,7 @@
 							class="animate-slide-up opacity-0"
 							style="animation-delay: {Math.min(i * 50, 400)}ms"
 						>
-							<EleveCard {eleve} />
+							<EleveCard {eleve} onDelete={supprimerEleve} />
 						</div>
 					{/each}
 				</div>

@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getAnneeScolaires, prisma } from '$lib/server/prisma';
+import { getAnneeScolaires, createAnneeScolaire, setActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 import type { StatutCompte, RoleCompte } from '@prisma/client';
 import { fail, redirect } from '@sveltejs/kit';
 
@@ -104,12 +104,7 @@ export const actions: Actions = {
 		if (!nom?.trim()) return fail(400, { error: 'Nom requis' });
 
 		try {
-			await prisma.anneeScolaire.create({
-				data: {
-					nom: nom.trim(),
-					active: false
-				}
-			});
+			await createAnneeScolaire(nom.trim());
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors de la création' });
 		}
@@ -123,16 +118,7 @@ export const actions: Actions = {
 		if (!id) return fail(400, { error: 'ID requis' });
 
 		try {
-			await prisma.$transaction(async (tx) => {
-				await tx.anneeScolaire.updateMany({
-					where: { active: true },
-					data: { active: false }
-				});
-				await tx.anneeScolaire.update({
-					where: { id },
-					data: { active: true }
-				});
-			});
+			await setActiveAnneeScolaire(id);
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors de l\'activation' });
 		}

@@ -1,10 +1,13 @@
-import type { Personne, Surveillant } from '$lib/types/Personne.type';
+import type { Surveillant } from '$lib/types/Personne.type';
 import type { Actions, PageServerLoad } from './$types';
 import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPersonne, deleteSurveillant } from '$lib/server/prisma';
+import type { Prisma } from '@prisma/client';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
-function mapSurveillant(prismaSurv: any): Surveillant {
+type SurveillantWithPersonne = Prisma.SurveillantGetPayload<{ include: { personne: true } }>;
+
+function mapSurveillant(prismaSurv: SurveillantWithPersonne): Surveillant {
 	return {
 		id: prismaSurv.id,
 		name: prismaSurv.personne.name,

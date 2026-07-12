@@ -74,7 +74,7 @@
 			class="h-2 w-full"
 			style="background-color: {matiere?.couleur || defaultMatiereColor}"
 		></div>
-		<div class="flex flex-col gap-1.5 bg-white/5 p-2">
+		<div class="flex flex-1 flex-col gap-1.5 bg-white/5 p-2">
 			<div class="flex items-center gap-2">
 				<span
 					class="text-xs font-semibold tracking-wider text-muted-foreground uppercase">COURS -</span
@@ -94,7 +94,7 @@
 					{cours.professeur}
 				</p>
 			{/if}
-			<div class="flex w-full items-center justify-between gap-2">
+			<div class="mt-auto flex w-full items-center justify-between gap-2">
 				<Button
 					variant="outline"
 					size="sm"

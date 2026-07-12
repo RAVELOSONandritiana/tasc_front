@@ -1,9 +1,16 @@
-import type { PageServerLoad } from './$types';
-import { getEleves } from '$lib/server/prisma';
+import type { PageServerLoad, Actions } from './$types';
+import { getEleves, getActiveAnneeScolaire, deleteEleve } from '$lib/server/prisma';
+import { fail } from '@sveltejs/kit';
+import { logActivity } from '$lib/server/activity';
+import type { Prisma } from '@prisma/client';
 import type { Eleve } from '$lib/types/Personne.type';
 import { formatClasseNom } from '$lib/utils';
 
-function mapEleve(prismaEleve: any): Eleve {
+type EleveWithInscriptions = Prisma.EleveGetPayload<{
+	include: { personne: true; inscriptions: { include: { classe: true } } };
+}>;
+
+function mapEleve(prismaEleve: EleveWithInscriptions): Eleve {
 	const inscription = prismaEleve.inscriptions?.[0];
 	return {
 		id: prismaEleve.id,
@@ -11,6 +18,7 @@ function mapEleve(prismaEleve: any): Eleve {
 		prenom: prismaEleve.personne.lastname,
 		dateNaissance: prismaEleve.personne.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
 		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
+		imageUrl: prismaEleve.personne.imageUrl || null,
 		stats: {
 			retards: 0,
 			absences: 0,
@@ -23,7 +31,24 @@ function mapEleve(prismaEleve: any): Eleve {
 }
 
 export const load: PageServerLoad = async () => {
-	const eleves = await getEleves();
+	const annee = await getActiveAnneeScolaire();
+	const eleves = annee ? await getEleves(annee.id) : [];
 	const list_eleve: Eleve[] = eleves.map(mapEleve);
 	return { list_eleve };
+};
+
+export const actions: Actions = {
+	delete: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		if (!id) return fail(400, { error: 'ID requis' });
+		try {
+			await deleteEleve(id);
+			logActivity(locals.user, 'suppression_eleve', 'Suppression de l\'élève').catch(() => {});
+			return { success: true };
+		} catch (e) {
+			const message = e instanceof Error ? e.message : 'Erreur lors de la suppression';
+			return fail(500, { error: message });
+		}
+	}
 };

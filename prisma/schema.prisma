@@ -19,21 +19,26 @@ model AnneeScolaire {
   emploisDuTemps EmploiDuTemps[]
   examens        Examen[]
   inscriptions   Inscription[]
+  incidents      Incident[]
+  matieres       Matiere[]
 
   @@map("annees_scolaires")
 }
 
 /// Catalogue des matieres enseignees.
 model Matiere {
-  id        String   @id @default(uuid())
-  nom       String   @unique
+  id        String         @id @default(uuid())
+  nom       String
   couleur   String?
   icone     String?
   imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  anneeId   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
   cours     Cours[]
 
+  @@unique([nom, anneeId])
   @@map("matieres")
 }
 
@@ -66,17 +71,17 @@ model Inscription {
   actif           Boolean       @default(true)
   dateInscription DateTime      @default(now())
   eleveId         String
-  classeId        String
+  classeId        String?
   anneeId         String
   absences        Absence[]
   incidents       Incident[]
   anneeScolaire   AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
-  classe          Classe        @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  classe          Classe?       @relation(fields: [classeId], references: [id], onDelete: Cascade)
   eleve           Eleve         @relation(fields: [eleveId], references: [id], onDelete: Cascade)
   notes           Note[]
   retards         Retard[]
 
-  @@unique([eleveId, classeId, anneeId])
+  @@unique([eleveId, anneeId])
   @@map("inscriptions")
 }
 
@@ -151,6 +156,7 @@ model Personne {
   commune     String?
   phone       String
   email       String       @unique
+  imageUrl    String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   compte      Compte?
@@ -375,12 +381,14 @@ model Incident {
 	auteur        String
 	date          DateTime     @default(now())
 	eleveId       String
+	anneeId       String
 	inscriptionId String?
 	createdAt     DateTime     @default(now())
 	updatedAt     DateTime     @updatedAt
 	compteId      String?
 	comments      Comment[]
 	eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+	anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
 	inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
 	reactions     Reaction[]
 

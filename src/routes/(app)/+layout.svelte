@@ -4,7 +4,9 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import Profil from '$lib/components/user/Profil.svelte';
 	import LoadingBar from '$lib/components/ui/loading-bar/loading-bar.svelte';
+	import YearSwitcher from '$lib/components/YearSwitcher.svelte';
 	import { enhance } from '$app/forms';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import {
 		LayoutDashboard,
 		UserSquare2,
@@ -88,7 +90,7 @@
 				</Sidebar.Group>
 			</Sidebar.Content>
 	<Sidebar.Footer class="border-t border-sidebar-border p-4">
-		<form method="POST" action="/signout?/logout">
+		<form method="POST" action="/signout?/logout" use:loadingForm>
 				<Button
 					type="submit"
 					variant="outline"
@@ -105,11 +107,14 @@
 			<header
 				class="relative sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm"
 			>
-				<div class="flex items-center space-x-2">
+				<div class="flex items-center gap-3">
 					<Sidebar.Trigger />
+					{#if data.annees?.length}
+						<YearSwitcher annees={data.annees} activeId={data.anneeActiveId} />
+					{/if}
 				</div>
 				<div class="flex items-center justify-center">
-					<Profil />
+					<Profil imageUrl={data.user?.imageUrl} nom={data.user?.nom} prenom={data.user?.prenom} />
 				</div>
 			</header>
 			<div class="flex flex-1 flex-col">

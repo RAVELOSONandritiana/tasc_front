@@ -4,6 +4,7 @@
 	import type { SeanceEDT } from '$lib/types/Materiel.type';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { goto } from '$app/navigation';
 
@@ -37,7 +38,7 @@
 			Ajouter une séance
 		</Dialog.Trigger>
 		<Dialog.Content class="sm:max-w-100">
-			<form method="POST" action="?/createSeance">
+			<form method="POST" action="?/createSeance" use:loadingForm>
 				<Dialog.Header>
 					<Dialog.Title>Ajouter une séance pour {jour}</Dialog.Title>
 					<Dialog.Description>Planifiez un cours dans l'emploi du temps</Dialog.Description>

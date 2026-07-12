@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { createEleve } from '$lib/server/prisma';
+import { createEleve, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
 
 export const actions: Actions = {
@@ -43,34 +43,61 @@ export const actions: Actions = {
 		if (telephoneEleve && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneEleve)) errors.telephoneEleve = 'Format invalide';
 		if (emailEleve && !/^[\w.-]+@[\w.-]+\.\w+$/.test(emailEleve)) errors.emailEleve = 'Format invalide';
 		if (cin && !/^[0-9]{12}$/.test(cin.replace(/\s/g, ''))) errors.cin = '12 chiffres requis';
-		if (!nomPere) errors.nomPere = 'Le nom du père est obligatoire';
-		if (!prenomPere) errors.prenomPere = 'Le prénom du père est obligatoire';
+
+		const pereComplet = Boolean(nomPere && prenomPere);
+		const mereComplet = Boolean(nomMere && prenomMere);
+		const tuteurComplet = Boolean(nomTuteur && prenomTuteur);
+
+		if (nomPere && !prenomPere) errors.prenomPere = 'Le prénom du père est obligatoire';
+		if (!nomPere && prenomPere) errors.nomPere = 'Le nom du père est obligatoire';
 		if (telephonePere && !/^(\+261|0)[0-9]{9,10}$/.test(telephonePere)) errors.telephonePere = 'Format invalide';
-		if (!nomMere) errors.nomMere = 'Le nom de la mère est obligatoire';
-		if (!prenomMere) errors.prenomMere = 'Le prénom de la mère est obligatoire';
+
+		if (nomMere && !prenomMere) errors.prenomMere = 'Le prénom de la mère est obligatoire';
+		if (!nomMere && prenomMere) errors.nomMere = 'Le nom de la mère est obligatoire';
 		if (telephoneMere && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneMere)) errors.telephoneMere = 'Format invalide';
+
+		if (nomTuteur && !prenomTuteur) errors.prenomTuteur = 'Le prénom du tuteur est obligatoire';
+		if (!nomTuteur && prenomTuteur) errors.nomTuteur = 'Le nom du tuteur est obligatoire';
 		if (telephoneTuteur && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneTuteur)) errors.telephoneTuteur = 'Format invalide';
+
+		if (!pereComplet && !mereComplet && !tuteurComplet) {
+			errors.responsable =
+				'Au moins un responsable (père, mère ou tuteur) avec nom et prénom est obligatoire';
+		}
 
 		if (Object.keys(errors).length > 0) {
 			return fail(400, { errors });
 		}
 
 		try {
-			await createEleve({
-				name: nom,
-				lastname: prenom,
-				email: emailEleve || `${Date.now()}@tmp.com`,
-				phone: telephoneEleve || '',
-				domicile: domicile.toUpperCase(),
-				fokontany: fokontany.toUpperCase(),
-				commune: communeResidence.toUpperCase(),
-				region: regionResidence.toUpperCase() || undefined,
-				province: provinceResidence || undefined,
-				dateNaissance,
-				lieuNaissance: lieuNaissance.toUpperCase() || undefined,
-				regionNaissance: regionNaissance.toUpperCase() || undefined,
-				provinceNaissance: provinceNaissance || undefined
-			});
+			const annee = await getActiveAnneeScolaire();
+			await createEleve(
+				{
+					name: nom,
+					lastname: prenom,
+					email: emailEleve || `${Date.now()}@tmp.com`,
+					phone: telephoneEleve || '',
+					domicile: domicile.toUpperCase(),
+					fokontany: fokontany.toUpperCase(),
+					commune: communeResidence.toUpperCase(),
+					region: regionResidence.toUpperCase() || undefined,
+					province: provinceResidence || undefined,
+					dateNaissance,
+					lieuNaissance: lieuNaissance.toUpperCase() || undefined,
+					regionNaissance: regionNaissance.toUpperCase() || undefined,
+					provinceNaissance: provinceNaissance || undefined,
+					nomPere: nomPere || null,
+					prenomPere: prenomPere || null,
+					telephonePere: telephonePere || null,
+					nomMere: nomMere || null,
+					prenomMere: prenomMere || null,
+					telephoneMere: telephoneMere || null,
+					nomTuteur: nomTuteur || null,
+					prenomTuteur: prenomTuteur || null,
+					telephoneTuteur: telephoneTuteur || null
+				},
+				annee?.id
+			);
 		} catch (e: unknown) {
 			return fail(500, { errors: { _form: 'Erreur lors de la création' , error: e} });
 		}

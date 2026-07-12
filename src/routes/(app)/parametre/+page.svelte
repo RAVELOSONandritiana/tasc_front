@@ -10,6 +10,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock } from '@lucide/svelte/icons';
+	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -105,7 +106,7 @@
 									</Table.Cell>
 									<Table.Cell class="text-right">
 										{#if compte.statut === 'en_attente'}
-											<form method="POST" action="?/validerCompte" class="inline">
+											<form method="POST" action="?/validerCompte" class="inline" use:loadingForm>
 												<input type="hidden" name="id" value={compte.id} />
 												<Button size="sm" variant="default" class="h-7 px-2 text-xs gap-1" type="submit">
 													<Check class="size-3" />
@@ -113,7 +114,7 @@
 												</Button>
 											</form>
 										{:else if compte.statut === 'actif'}
-											<form method="POST" action="?/bloquerCompte" class="inline">
+											<form method="POST" action="?/bloquerCompte" class="inline" use:loadingForm>
 												<input type="hidden" name="id" value={compte.id} />
 												<Button size="sm" variant="destructive" class="h-7 px-2 text-xs gap-1" type="submit">
 													<Ban class="size-3" />
@@ -121,7 +122,7 @@
 												</Button>
 											</form>
 										{:else}
-											<form method="POST" action="?/debloquerCompte" class="inline">
+											<form method="POST" action="?/debloquerCompte" class="inline" use:loadingForm>
 												<input type="hidden" name="id" value={compte.id} />
 												<Button size="sm" variant="secondary" class="h-7 px-2 text-xs gap-1" type="submit">
 													<Lock class="size-3" />
@@ -179,7 +180,7 @@
 									</Table.Cell>
 									<Table.Cell class="text-right">
 										{#if !annee.active}
-											<form method="POST" action="?/activerAnnee" class="inline">
+											<form method="POST" action="?/activerAnnee" class="inline" use:loadingForm>
 												<input type="hidden" name="id" value={annee.id} />
 												<Button size="sm" variant="outline" class="h-7 px-2 text-xs" type="submit">
 													Sélectionner
@@ -201,15 +202,17 @@
 					<AlertDialog.Content>
 						<AlertDialog.Header>
 							<AlertDialog.Title>Nouvelle année scolaire</AlertDialog.Title>
-							<div class="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-								<div class="flex items-center gap-2">
-									<AlertCircleIcon class="size-4 text-destructive" />
-									<span class="text-xs font-medium">L'ancienne année scolaire sera désactivée</span>
-								</div>
-								<p class="mt-1 text-xs text-muted-foreground">
-									La création d'une nouvelle année scolaire effacera les classes et élèves existants.
-								</p>
-							</div>
+					<div class="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+						<div class="flex items-center gap-2">
+							<AlertCircleIcon class="size-4 text-blue-500" />
+							<span class="text-xs font-medium">Environnement isolé</span>
+						</div>
+						<p class="mt-1 text-xs text-muted-foreground">
+							La nouvelle année est créée à part et reste inactive. Elle démarre sans classes, élèves ni
+							matières : seul le personnel et les employés sont conservés. Sélectionnez-la ensuite pour
+							l'activer.
+						</p>
+					</div>
 							<div class="mt-4 grid gap-3">
 								<Label>Nom de l'année scolaire</Label>
 								<Input placeholder="Ex: 2026-2027" name="nom" bind:value={nouvelleAnnee} form="form-creer-annee" />
@@ -217,7 +220,7 @@
 						</AlertDialog.Header>
 						<AlertDialog.Footer>
 							<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-							<form id="form-creer-annee" method="POST" action="?/creerAnnee" class="inline">
+							<form id="form-creer-annee" method="POST" action="?/creerAnnee" class="inline" use:loadingForm>
 								<input type="hidden" name="nom" value={nouvelleAnnee} />
 								<AlertDialog.Action type="submit">Créer</AlertDialog.Action>
 							</form>

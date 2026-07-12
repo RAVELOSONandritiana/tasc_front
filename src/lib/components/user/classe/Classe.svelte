@@ -199,8 +199,9 @@
 						editErrors = {};
 						return async ({ result }: { result: ActionResult }) => {
 							editSubmitting = false;
+							const data = result.data as { classe?: typeof cl } | undefined;
 							if (result.type === 'success') {
-								const updatedClasse = (result.data as any)?.classe;
+								const updatedClasse = data?.classe;
 								if (updatedClasse) {
 									c.nom = updatedClasse.nom;
 									c.niveau = updatedClasse.niveau;

@@ -66,8 +66,9 @@
 				errors = {};
 				return async ({ result }: { result: ActionResult }) => {
 					submitting = false;
+					const data = result.data as { cours?: Cours; error?: string } | undefined;
 					if (result.type === 'success') {
-						const coursData = (result.data as any)?.cours;
+						const coursData = data?.cours;
 						if (coursData && cours) {
 							onSave?.(cours.id, coursData.coefficient, coursData.matiereId || cours.matiereId, matiereNom, matiereCouleur);
 						}
@@ -76,7 +77,7 @@
 							open = false;
 						}, 600);
 					} else if (result.type === 'failure') {
-						const error = (result.data as any)?.error || 'Erreur lors de la mise a jour';
+						const error = data?.error || 'Erreur lors de la mise a jour';
 						errors = { _form: error };
 					}
 				};

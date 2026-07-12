@@ -79,8 +79,9 @@
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouvel élève</h1>
 			<p class="text-sm text-muted-foreground">
-				Tous les champs sont obligatoires sauf les téléphones des parents, les informations du
-				tuteur et le contact de l'élève.
+				Tous les champs sont obligatoires sauf les téléphones des parents et le contact de
+				l'élève. Au moins un responsable (père, mère ou tuteur) avec nom et prénom est
+				obligatoire.
 			</p>
 		</div>
 
@@ -367,6 +368,11 @@
 						>Informations Responsable *</Accordion.Trigger
 					>
 					<Accordion.Content>
+						{#if errors.responsable}
+							<div class="mb-4 rounded-md border border-destructive bg-destructive/10 p-3">
+								<p class="text-sm text-destructive">{errors.responsable}</p>
+							</div>
+						{/if}
 						<div class="space-y-4 rounded-md border p-4">
 							<div class="grid grid-cols-1 gap-4 rounded-md border p-4 md:grid-cols-2">
 								<div class="grid gap-2">

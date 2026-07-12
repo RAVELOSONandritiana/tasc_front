@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getIncidents, getEleves, prisma } from '$lib/server/prisma';
+import { getIncidents, getEleves, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 import type { Incident, IncidentType } from '$lib/types/Incident.type';
 import type { Prisma } from '@prisma/client';
 import { fail, redirect } from '@sveltejs/kit';
@@ -35,17 +35,21 @@ type EleveInfo = {
 	prenom: string;
 	classe: string;
 	dateNaissance: string;
+	imageUrl: string | null;
 };
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const incidents = await getIncidents();
-	const elevesRaw = await getEleves();
+	const annee = await getActiveAnneeScolaire();
+	const anneeId = annee?.id;
+	const incidents = anneeId ? await getIncidents(anneeId) : [];
+	const elevesRaw = anneeId ? await getEleves(anneeId) : [];
 	const eleves: EleveInfo[] = elevesRaw.map(e => ({
 		id: e.id,
 		nom: e.personne.lastname,
 		prenom: e.personne.name,
 		classe: formatClasseNom(e.inscriptions?.find(i => i.actif)?.classe?.niveau, e.inscriptions?.find(i => i.actif)?.classe?.nom),
-		dateNaissance: e.dateNaissance?.toISOString().split('T')[0] || ''
+		dateNaissance: e.dateNaissance?.toISOString().split('T')[0] || '',
+		imageUrl: e.personne.imageUrl || null
 	}));
 	return { incidents: incidents.map(mapIncident), eleves, currentUserId: locals.user?.userId };
 };
@@ -70,10 +74,12 @@ export const actions: Actions = {
 		}
 
 		try {
+			const annee = await getActiveAnneeScolaire();
 			await prisma.$transaction(async (tx) => {
 				await tx.incident.create({
 					data: {
 						eleveId,
+						anneeId: annee?.id || '',
 						type: type as typeof validTypes[number],
 						message: message.trim(),
 						auteur: author,

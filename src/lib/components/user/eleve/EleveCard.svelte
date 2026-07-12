@@ -1,68 +1,110 @@
 <script lang="ts">
-	import CardUI from '$lib/components/ui/card-ui.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Calendar, Shield, Users } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button';
+	import CardUI from '$lib/components/ui/card-ui.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { enhance } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
 	import type { Eleve } from '$lib/types/Personne.type';
+	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
 
-	const { eleve }: { eleve: Eleve } = $props();
+	let {
+		eleve,
+		onDelete
+	}: {
+		eleve: Eleve;
+		onDelete?: (id: string) => void;
+	} = $props();
 
-	const stats = $derived.by(() => {
-		if (!eleve.stats) return null;
-		return {
-			retards: eleve.stats.retards,
-			absences: eleve.stats.absences,
-			incidents: eleve.stats.incidents
-		};
-	});
+	let submittingDelete = $state(false);
+	let imageError = $state(false);
+
+	const initials = $derived(
+		`${eleve.prenom?.[0] || ''}${eleve.nom?.[0] || ''}`.toUpperCase() || '?'
+	);
 </script>
 
-<CardUI
-	class="group flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md"
->
-	<div class="flex-1 p-4">
-		<div class="flex items-center gap-3">
-			<Avatar class="size-10 transition-transform duration-200 group-hover:scale-105">
-				<AvatarFallback class="text-sm font-bold text-primary"
-					>{eleve.prenom[0]}{eleve.nom[0]}</AvatarFallback
+<CardUI class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
+	<form
+		method="POST"
+		action="?/delete"
+		use:enhance={() => {
+			submittingDelete = true;
+			return async ({ result }: { result: ActionResult }) => {
+				submittingDelete = false;
+				if (result.type === 'success') {
+					onDelete?.(eleve.id);
+				} else if (result.type === 'failure') {
+					alert(result.data?.error || 'Suppression impossible');
+				}
+			};
+		}}
+	>
+		<input type="hidden" name="id" value={eleve.id} />
+		<Button
+			size="icon"
+			variant="destructive"
+			class="absolute right-4 top-4 z-10 size-8 rounded-full shadow-sm"
+			type="submit"
+			title="Supprimer"
+			disabled={submittingDelete}
+		>
+			{#if submittingDelete}
+				<Spinner class="size-4" />
+			{:else}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><path d="M3 6h18" /><path
+						d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+					/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg
 				>
-			</Avatar>
-			<div class="min-w-0 flex-1">
-				<h3 class="truncate text-sm font-semibold">{eleve.prenom} {eleve.nom}</h3>
-				<Badge variant="secondary" class="mt-0.5 text-[10px]">{eleve.classe}</Badge>
-			</div>
-		</div>
+			{/if}
+		</Button>
+	</form>
 
-		{#if stats}
-			<div class="mt-3 grid grid-cols-3 gap-2 text-center">
-				<div>
-					<p class="text-xs text-muted-foreground">Retards</p>
-					<p class="font-bold text-amber-500">{stats.retards}</p>
-				</div>
-				<div>
-					<p class="text-xs text-muted-foreground">Absences</p>
-					<p class="font-bold text-red-500">{stats.absences}</p>
-				</div>
-				<div>
-					<p class="text-xs text-muted-foreground">Incidents</p>
-					<p class="font-bold {stats.incidents > 0 ? 'text-red-500' : 'text-emerald-500'}">
-						{stats.incidents}
-					</p>
-				</div>
+	<div class="h-50 w-full overflow-hidden">
+		{#if eleve.imageUrl && !imageError}
+			<!-- svelte-ignore a11y_img_redundant_alt -->
+			<img
+				src={eleve.imageUrl}
+				alt="{eleve.prenom} {eleve.nom}"
+				class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
+				onerror={() => (imageError = true)}
+			/>
+		{:else}
+			<div class="flex h-full w-full items-center justify-center bg-muted/30">
+				<PersonAvatar
+					imageUrl={null}
+					name={eleve.nom}
+					lastname={eleve.prenom}
+					initials={initials}
+					sizeClass="size-16"
+				/>
 			</div>
 		{/if}
 	</div>
-
-	<div class="border-t border-sidebar-border bg-sidebar/40 px-4 py-3">
-		<Button
-			variant="default"
-			size="sm"
-			class="h-7 w-full justify-center text-xs"
-			onclick={() => goto(`/eleves/${eleve.id}`)}
-		>
-			Voir profil
-		</Button>
+	<div class="h-2 w-full bg-primary"></div>
+	<div class="flex flex-col gap-4 bg-white/5 p-4">
+		<div class="flex items-center gap-2">
+			<span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ELEVE -</span>
+			<span class="text-sm font-bold">{eleve.prenom} {eleve.nom}</span>
+		</div>
+		<span class="text-xs text-muted-foreground">Classe - {eleve.classe}</span>
+		<div class="flex w-full items-center justify-between gap-2">
+			<Button
+				variant="outline"
+				size="sm"
+				class="h-8 flex-1 rounded-lg px-3 text-xs"
+				onclick={() => goto(`/eleves/${eleve.id}`)}>Voir profil</Button
+			>
+		</div>
 	</div>
 </CardUI>

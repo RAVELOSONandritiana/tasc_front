@@ -1,13 +1,16 @@
 import type { PageServerLoad } from './$types';
-import { getEleves, getProfesseurs, getSurveillants, getClasses, getIncidents, getNotifications, prisma } from '$lib/server/prisma';
+import { getEleves, getProfesseurs, getSurveillants, getClasses, getIncidents, getNotifications, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 
 export const load: PageServerLoad = async () => {
+	const annee = await getActiveAnneeScolaire();
+	const anneeId = annee?.id;
+
 	const [eleves, profs, surveillants, classes, incidents, notifications] = await Promise.all([
-		getEleves(),
+		anneeId ? getEleves(anneeId) : Promise.resolve([]),
 		getProfesseurs(),
 		getSurveillants(),
-		getClasses(),
-		getIncidents(),
+		anneeId ? getClasses(anneeId) : Promise.resolve([]),
+		anneeId ? getIncidents(anneeId) : Promise.resolve([]),
 		getNotifications()
 	]);
 
@@ -73,7 +76,7 @@ export const load: PageServerLoad = async () => {
 	}
 
 	const inscriptions = await prisma.inscription.findMany({
-		where: { actif: true },
+		where: anneeId ? { anneeId, actif: true } : { actif: true },
 		include: {
 			classe: { select: { id: true, nom: true, niveau: true, serie: true } },
 			absences: { where: { date: { gte: weekAgo } } },
