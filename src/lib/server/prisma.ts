@@ -306,9 +306,21 @@ export async function getClasseById(id: string) {
 	});
 }
 
-export async function getIncidents(anneeId?: string) {
+export async function getIncidents(anneeId?: string, start?: Date, end?: Date) {
+	const dateFilter =
+		start || end
+			? {
+					date: {
+						...(start ? { gte: start } : {}),
+						...(end ? { lte: end } : {})
+					}
+				}
+			: undefined;
 	return prisma.incident.findMany({
-		where: anneeId ? { anneeId } : undefined,
+		where: {
+			...(anneeId ? { anneeId } : {}),
+			...(dateFilter || {})
+		},
 		include: {
 			eleve: {
 				include: {

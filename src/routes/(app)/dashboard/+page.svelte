@@ -15,6 +15,7 @@
 		UserX,
 		Activity
 	} from '@lucide/svelte/icons';
+	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -22,6 +23,21 @@
 	const stats = $derived(data.stats);
 	const classes = $derived(data.classes);
 	const chartData = $derived(data.chartData);
+
+	let startDate = $state(data.rangeStart);
+	let endDate = $state(data.rangeEnd);
+
+	function applyRange() {
+		const params = new URLSearchParams();
+		if (startDate) params.set('start', startDate);
+		if (endDate) params.set('end', endDate);
+		goto(`?${params.toString()}`, { invalidateAll: true, keepFocus: true, noScroll: true });
+	}
+
+	$effect(() => {
+		startDate = data.rangeStart;
+		endDate = data.rangeEnd;
+	});
 
 	const incidentsByType = $derived(chartData?.incidentsByType || []);
 	const usersByRole = $derived(chartData?.usersByRole || []);
@@ -75,7 +91,7 @@
 			const stepX = 360 / Math.max(incidentsTrend.length - 1, 1);
 			const x = 30 + i * stepX;
 			const y = 30 + 160 - (d.count / maxTrend) * 140;
-			return { x, y, date: d.date, count: d.count };
+			return { x, y, date: d.date, count: d.count, showLabel: d.showLabel };
 		})
 	);
 
@@ -110,6 +126,50 @@
 	</div>
 
 	<div class="p-4 md:p-6 space-y-6">
+		<div class="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-sidebar-border bg-muted/30 p-4">
+			<div>
+				<p class="text-sm font-medium">Période d'analyse</p>
+				<p class="text-xs text-muted-foreground">
+					Données du {startDate} au {endDate}
+				</p>
+			</div>
+			<div class="flex flex-wrap items-end gap-2">
+				<label class="flex flex-col text-xs text-muted-foreground">
+					Du
+					<input
+						type="date"
+						bind:value={startDate}
+						min={data.anneeStart}
+						max={endDate || undefined}
+						onchange={applyRange}
+						class="mt-1 rounded-md border border-sidebar-border bg-background px-2 py-1 text-xs text-foreground"
+					/>
+				</label>
+				<label class="flex flex-col text-xs text-muted-foreground">
+					Au
+					<input
+						type="date"
+						bind:value={endDate}
+						min={startDate || undefined}
+						max={data.todayISO}
+						onchange={applyRange}
+						class="mt-1 rounded-md border border-sidebar-border bg-background px-2 py-1 text-xs text-foreground"
+					/>
+				</label>
+				<button
+					type="button"
+					onclick={() => {
+						startDate = data.anneeStart;
+						endDate = data.todayISO;
+						applyRange();
+					}}
+					class="mt-1 rounded-md border border-sidebar-border bg-background px-3 py-1 text-xs text-foreground hover:bg-muted transition-colors"
+				>
+					Réinitialiser
+				</button>
+			</div>
+		</div>
+
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
 				<div class="flex items-center gap-3">
@@ -295,15 +355,17 @@
 					<div class="h-64 w-full">
 						<svg viewBox="0 0 400 260" class="h-full w-full">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
-								Évolution sur les derniers jours
+								Évolution sur la période sélectionnée
 							</text>
 							<path d={trendArea} fill="rgb(59 130 246 / 0.1)" stroke="none" />
 							<path d={trendPath} fill="none" stroke="rgb(59 130 246 / 0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 							{#each trendPoints as p}
 								<circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="white" stroke-width="2" />
-								<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
-									{p.date}
-								</text>
+								{#if p.showLabel}
+									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
+										{p.date}
+									</text>
+								{/if}
 							{/each}
 						</svg>
 					</div>
