@@ -4,7 +4,7 @@
 	import { Printer, School } from '@lucide/svelte/icons';
 	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
-	import { formatClasseNom } from '$lib/utils';
+	import { formatClasseNom, formatExamenNom } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -130,7 +130,9 @@
 	});
 
 	function getNomExamens(examenIds: string[]): string {
-		const noms = examenIds.map((id) => getExamen(id)?.nom).filter((nom): nom is string => Boolean(nom));
+		const noms = examenIds
+			.map((id) => formatExamenNom(getExamen(id)))
+			.filter((nom): nom is string => Boolean(nom));
 		return noms.length > 0 ? noms.join(', ') : '—';
 	}
 
@@ -192,8 +194,8 @@
 								class="rounded border-sidebar-border text-primary focus:ring-primary size-4"
 							/>
 							<div class="flex flex-col">
-								<span class="text-sm font-medium text-foreground">{examen.nom}</span>
-								<span class="text-xs text-muted-foreground">{examen.date} {examen.periode ? `(${examen.periode})` : ''}</span>
+								<span class="text-sm font-medium text-foreground">{formatExamenNom(examen)}</span>
+								<span class="text-xs text-muted-foreground">{examen.date}</span>
 							</div>
 						</label>
 					{/each}

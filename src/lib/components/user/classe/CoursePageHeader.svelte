@@ -3,6 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Plus, Calendar } from '@lucide/svelte/icons';
 	import type { Classe } from '$lib/types/Materiel.type';
+	import { formatExamenNom } from '$lib/utils';
 
 	let {
 		classe,
@@ -11,7 +12,7 @@
 		openCreateExamen = $bindable(false)
 	}: {
 		classe: Classe | undefined;
-		listeExamens: { id: string; nom: string; date: string }[];
+		listeExamens: { id: string; nom: string; date: string; periode?: string }[];
 		openCreateCours?: boolean;
 		openCreateExamen?: boolean;
 	} = $props();
@@ -50,7 +51,7 @@
 		<div class="flex flex-wrap gap-2">
 			{#each listeExamens as examen (examen.id)}
 				<span class="rounded-md bg-sidebar-accent/30 px-3 py-1 text-sm">
-					{examen.nom} - {examen.date}
+					{formatExamenNom(examen)} - {examen.date}
 				</span>
 			{/each}
 		</div>

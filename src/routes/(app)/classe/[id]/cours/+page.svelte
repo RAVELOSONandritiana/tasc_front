@@ -179,7 +179,7 @@
 	<div class="sticky top-16 z-50 border-b border-sidebar-border bg-sidebar p-4">
 		<CoursePageHeader
 			classe={data.classe}
-			listeExamens={listeExamens.map((e) => ({ id: e.id, nom: e.nom, date: e.date }))}
+			listeExamens={listeExamens.map((e) => ({ id: e.id, nom: e.nom, date: e.date, periode: e.periode }))}
 			bind:openCreateCours={openCoursDialog}
 			bind:openCreateExamen={openExamenDialog}
 		/>

@@ -11,6 +11,7 @@
 	import { page } from '$app/stores';
 	import type { PageProps } from './$types';
 	import { invalidateAll } from '$app/navigation';
+	import { formatExamenNom } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -115,7 +116,7 @@
 			</p>
 			{#if examenSelectionne}
 				<p class="mt-1 text-xs text-muted-foreground">
-					Examen : {examenSelectionne.nom} • {examenSelectionne.date}
+					Examen : {formatExamenNom(examenSelectionne)} • {examenSelectionne.date}
 				</p>
 			{/if}
 		</div>
@@ -134,7 +135,7 @@
 			<div class="flex justify-center gap-2">
 				{#each listeExamens as examen (examen.id)}
 					<a href="/classe/{classeId}/cours/{coursId}?examen={examen.id}">
-						<Button size="sm" variant="outline">{examen.nom}</Button>
+						<Button size="sm" variant="outline">{formatExamenNom(examen)}</Button>
 					</a>
 				{/each}
 			</div>
@@ -142,7 +143,7 @@
 	{:else}
 		<CardUI>
 			<div class="p-4">
-				<h2 class="mb-4 font-semibold">Notes des élèves pour {examenSelectionne.nom}</h2>
+				<h2 class="mb-4 font-semibold">Notes des élèves pour {formatExamenNom(examenSelectionne)}</h2>
 				<div class="overflow-x-auto">
 					<Table.Root>
 						<Table.Header>

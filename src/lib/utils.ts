@@ -11,6 +11,13 @@ export function formatClasseNom(niveau: number | undefined | null, nom: string |
 	return `${label} ${nom || ''}`.trim();
 }
 
+export function formatExamenNom(examen: { nom?: string | null; periode?: string | null } | null | undefined): string {
+	if (!examen) return '';
+	const periode = examen.periode?.trim();
+	const nom = examen.nom?.trim() || '';
+	return periode ? `${periode} ${nom}`.trim() : nom;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WithoutChild<T> = T extends { child?: any } ? Omit<T, 'child'> : T;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -9,6 +9,7 @@
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Trash2, CheckCircle2 } from '@lucide/svelte';
 	import type { Cours, EleveCours, Examen, Note } from '$lib/types/Materiel.type';
+	import { formatExamenNom } from '$lib/utils';
 
 	let {
 		open = $bindable(false),
@@ -275,7 +276,7 @@
 								<NativeSelect.Root name="examenId" class="w-full" bind:value={selectedExamenId}>
 									<option value="">Sans examen</option>
 									{#each listeExamens as examen (examen.id)}
-										<NativeSelect.Option value={examen.id}>{examen.nom}</NativeSelect.Option>
+										<NativeSelect.Option value={examen.id}>{formatExamenNom(examen)}</NativeSelect.Option>
 									{/each}
 								</NativeSelect.Root>
 							</div>
