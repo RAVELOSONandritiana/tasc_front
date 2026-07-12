@@ -21,6 +21,7 @@ model AnneeScolaire {
   inscriptions   Inscription[]
   incidents      Incident[]
   matieres       Matiere[]
+  seancesCours   SeanceCours[]
 
   @@map("annees_scolaires")
 }
@@ -80,6 +81,7 @@ model Inscription {
   eleve           Eleve         @relation(fields: [eleveId], references: [id], onDelete: Cascade)
   notes           Note[]
   retards         Retard[]
+  presences       PresenceEleve[]
 
   @@unique([eleveId, anneeId])
   @@map("inscriptions")
@@ -103,6 +105,7 @@ model Cours {
   professeur    Professeur    @relation(fields: [professeurId], references: [id])
   notes         Note[]
   seances       SeanceEDT[]
+  seancesCours  SeanceCours[]
 
   @@map("cours")
 }
@@ -183,6 +186,7 @@ model Professeur {
   updatedAt        DateTime @updatedAt
   classesTitulaire Classe[] @relation("TitulaireClasse")
   cours            Cours[]
+  seancesCours     SeanceCours[]
   personne         Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
 
   @@map("professeurs")
@@ -244,6 +248,7 @@ model Eleve {
   inscriptions    Inscription[]
   notes           Note[]
   retards         Retard[]
+  presences       PresenceEleve[]
 
   @@map("eleves")
 }
@@ -339,6 +344,45 @@ model SeanceEDT {
   salle      Salle?        @relation(fields: [salleId], references: [id])
 
   @@map("seances_edt")
+}
+
+/// Séance de cours en direct (prise de présence).
+model SeanceCours {
+  id           String       @id @default(uuid())
+  coursId      String
+  professeurId String
+  anneeId      String
+  statut       StatutSeance @default(EN_COURS)
+  dateDebut    DateTime     @default(now())
+  dateFin      DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  cours        Cours        @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  professeur   Professeur   @relation(fields: [professeurId], references: [id])
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+  presences    PresenceEleve[]
+
+  @@index([coursId, statut])
+  @@map("seances_cours")
+}
+
+/// Présence d'un élève lors d'une séance de cours.
+model PresenceEleve {
+  id            String         @id @default(uuid())
+  seanceId      String
+  eleveId       String
+  inscriptionId String?
+  statut        StatutPresence @default(PRESENT)
+  heureMarquage DateTime       @default(now())
+  commentaire   String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  seance        SeanceCours    @relation(fields: [seanceId], references: [id], onDelete: Cascade)
+  eleve         Eleve          @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  inscription   Inscription?   @relation(fields: [inscriptionId], references: [id])
+
+  @@unique([seanceId, eleveId])
+  @@map("presences_eleve")
 }
 
 /// Absence d'un eleve.
@@ -463,4 +507,15 @@ enum TypeIncident {
   ERREUR
   NOTE
   ABSENT
+}
+
+enum StatutSeance {
+  EN_COURS
+  TERMINE
+}
+
+enum StatutPresence {
+  PRESENT
+  ABSENT
+  RETARD
 }

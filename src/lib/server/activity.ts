@@ -18,6 +18,8 @@ export type ActivityAction =
 	| 'suppression_surveillant'
 	| 'creation_enseignant'
 	| 'suppression_enseignant'
+	| 'debut_seance'
+	| 'fin_seance'
 	| 'creation_eleve'
 	| 'suppression_eleve'
 	| 'changement_mot_de_passe';

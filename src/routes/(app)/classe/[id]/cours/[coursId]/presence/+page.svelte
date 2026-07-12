@@ -1,41 +1,74 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
-	import { ArrowLeft, Check, X } from '@lucide/svelte/icons';
-	import { goto } from '$app/navigation';
+	import { ArrowLeft, Check, X, Clock, Play, Square, Users } from '@lucide/svelte/icons';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
 
-	let currentIndex = $state(0);
-	let absenceNotes = $state<Record<string, 'present' | 'absent' | 'retard' | 'optional'>>({});
+	type Statut = 'PRESENT' | 'ABSENT' | 'RETARD';
 
-	let currentEleve = $derived(data.eleves[currentIndex]);
+	let presences = $state<Record<string, Statut>>({});
+	let enCours = $state(false);
 
-	function markPresent() {
-		absenceNotes[currentEleve.id] = 'present';
-		if (currentIndex < data.eleves.length - 1) currentIndex++;
+	$effect(() => {
+		if (data.seance) {
+			const map = data.presencesMap || {};
+			const init: Record<string, Statut> = {};
+			data.eleves.forEach((e) => {
+				init[e.id] = map[e.id] || 'PRESENT';
+			});
+			presences = init;
+		}
+	});
+
+	const presents = $derived(data.eleves.filter((e) => presences[e.id] === 'PRESENT').length);
+	const retards = $derived(data.eleves.filter((e) => presences[e.id] === 'RETARD').length);
+	const absents = $derived(data.eleves.filter((e) => presences[e.id] === 'ABSENT').length);
+
+	async function demarrer() {
+		enCours = true;
+		const fd = new FormData();
+		try {
+			await fetch(
+				`/classe/${data.classeId}/cours/${data.coursId}/presence?/startSeance`,
+				{ method: 'POST', body: fd }
+			);
+			await invalidateAll();
+		} finally {
+			enCours = false;
+		}
 	}
 
-	function markAbsent() {
-		absenceNotes[currentEleve.id] = 'absent';
-		if (currentIndex < data.eleves.length - 1) currentIndex++;
+	async function mark(eleveId: string, statut: Statut) {
+		if (!data.seance) return;
+		presences[eleveId] = statut;
+		const fd = new FormData();
+		fd.append('seanceId', data.seance.id);
+		fd.append('eleveId', eleveId);
+		fd.append('statut', statut);
+		await fetch(`/classe/${data.classeId}/cours/${data.coursId}/presence?/markPresence`, {
+			method: 'POST',
+			body: fd
+		});
 	}
 
-	function markRetard() {
-		absenceNotes[currentEleve.id] = 'retard';
-		if (currentIndex < data.eleves.length - 1) currentIndex++;
+	async function stop() {
+		const fd = new FormData();
+		await fetch(`/classe/${data.classeId}/cours/${data.coursId}/presence?/stopSeance`, {
+			method: 'POST',
+			body: fd
+		});
+		goto(`/classe/${data.classeId}/cours`);
 	}
 
-	function markOptional() {
-		absenceNotes[currentEleve.id] = 'optional';
-		if (currentIndex < data.eleves.length - 1) currentIndex++;
-	}
-
-	function goToEleve(index: number) {
-		currentIndex = index;
+	function statutClasse(s: Statut | undefined) {
+		if (s === 'PRESENT') return 'bg-emerald-500/15 border-emerald-500/40';
+		if (s === 'RETARD') return 'bg-amber-500/15 border-amber-500/40';
+		if (s === 'ABSENT') return 'bg-red-500/15 border-red-500/40';
+		return 'bg-muted/30 border-transparent';
 	}
 </script>
 
@@ -44,7 +77,7 @@
 		class="flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 backdrop-blur-sm"
 	>
 		<div class="flex items-center gap-2">
-			<Button variant="ghost" size="sm" onclick={() => goto(`/classe/${$page.params.id}/cours`)}>
+			<Button variant="ghost" size="sm" onclick={() => goto(`/classe/${data.classeId}/cours`)}>
 				<ArrowLeft class="size-4" />
 			</Button>
 			<div>
@@ -54,96 +87,147 @@
 				</p>
 			</div>
 		</div>
-		<div class="text-sm text-muted-foreground">
-			{currentIndex + 1} / {data.eleves.length}
-		</div>
+		{#if data.seance}
+			<span class="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-500">
+				<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span> En cours
+			</span>
+		{/if}
 	</header>
 
-	<div class="flex flex-1 items-center justify-center p-4">
-		{#if currentEleve}
-			<div class="w-full max-w-md space-y-6">
-				<div class="flex flex-col items-center gap-4">
-					<Avatar.Root class="h-24 w-24">
-						<Avatar.Image
-							src={currentEleve.imageUrl || currentEleve.photoUrl || 'https://github.com/shadcn.png'}
-							alt={`${currentEleve.prenom} ${currentEleve.nom}`}
-						/>
-						<Avatar.Fallback class="text-2xl font-bold">
-							{currentEleve.prenom[0]}{currentEleve.nom[0]}
-						</Avatar.Fallback>
-					</Avatar.Root>
-					<div class="text-center">
-						<h2 class="text-xl font-bold">{currentEleve.prenom} {currentEleve.nom}</h2>
-						<p class="text-sm text-muted-foreground">
-							{currentEleve.dateNaissance
-								? new Date(currentEleve.dateNaissance).toLocaleDateString()
-								: ''}
-						</p>
-						<p class="mt-1 text-xs text-muted-foreground">
-							{currentEleve.actif ? 'Actif' : 'Inactif'}
-						</p>
-					</div>
+	{#if !data.seance}
+		<div class="flex flex-1 items-center justify-center p-4">
+			<div class="w-full max-w-md space-y-6 rounded-2xl border border-sidebar-border bg-card/60 p-8 text-center">
+				<div class="mx-auto flex size-16 items-center justify-center rounded-full bg-primary/10">
+					<Play class="size-7 text-primary" />
 				</div>
-
-				<form method="POST" action="?/markPresence" class="space-y-3" use:loadingForm>
-					<input type="hidden" name="eleveId" value={currentEleve.id} />
-					<input type="hidden" name="status" value="present" />
-					<Button
-						variant="default"
-						class="w-full flex-1"
-						type="submit"
-						onclick={() => (absenceNotes[currentEleve.id] = 'present')}
-					>
-						<Check class="mr-1 size-4" /> Présent
-					</Button>
-				</form>
-
-				<form method="POST" action="?/markPresence" use:loadingForm>
-					<input type="hidden" name="eleveId" value={currentEleve.id} />
-					<input type="hidden" name="status" value="absent" />
-					<Button
-						variant="destructive"
-						class="w-full flex-1"
-						type="submit"
-						onclick={() => (absenceNotes[currentEleve.id] = 'absent')}
-					>
-						<X class="mr-1 size-4" /> Absent
-					</Button>
-				</form>
-
-				<Button variant="outline" class="w-full" onclick={markRetard}>Retard</Button>
-				<Button variant="secondary" class="w-full" onclick={markOptional}>Non obligatoire</Button>
-
-				<div class="flex justify-center gap-2">
-					{#each data.eleves as eleve, i (eleve.id)}
-						<button
-							type="button"
-							class="h-2 w-2 rounded-full transition-all {currentIndex === i
-								? 'w-4 bg-primary'
-								: 'bg-muted'}"
-							onclick={() => goToEleve(i)}
-							aria-label="Aller à l'élève {i + 1}"
-						></button>
-					{/each}
+				<div>
+					<h2 class="text-xl font-bold">{data.coursNom}</h2>
+					<p class="mt-1 text-sm text-muted-foreground">
+						Prof. {data.professeur} • {data.eleves.length} élève(s)
+					</p>
+				</div>
+				<p class="text-sm text-muted-foreground">
+					Démarrez la séance pour faire l'appel et suivre la présence des élèves en temps réel.
+				</p>
+				<Button class="w-full" onclick={demarrer} disabled={enCours}>
+					<Play class="mr-2 size-4" />
+					{enCours ? 'Démarrage…' : 'Démarrer le cours'}
+				</Button>
+			</div>
+		</div>
+	{:else}
+		<div class="space-y-4 p-4">
+			<div class="grid grid-cols-3 gap-3">
+				<div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
+					<p class="text-2xl font-bold text-emerald-500">{presents}</p>
+					<p class="text-xs text-muted-foreground">Présents</p>
+				</div>
+				<div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+					<p class="text-2xl font-bold text-amber-500">{retards}</p>
+					<p class="text-xs text-muted-foreground">Retards</p>
+				</div>
+				<div class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center">
+					<p class="text-2xl font-bold text-red-500">{absents}</p>
+					<p class="text-xs text-muted-foreground">Absents</p>
 				</div>
 			</div>
-		{:else}
-			<p class="text-muted-foreground">Aucun élève</p>
-		{/if}
-	</div>
 
-	<div class="border-t border-sidebar-border p-4">
-		<div class="flex justify-end gap-2">
-			<Button
-				variant="outline"
-				onclick={() =>
-					goto(`/classe/${$page.params.id}/cours/${$page.params.coursId}/presence/edit`)}
-			>
-				Modifier la présence
-			</Button>
-			<Button onclick={() => goto(`/classe/${$page.params.id}/cours`)}>
-				Terminer ({data.eleves.filter((e) => absenceNotes[e.id]).length} marqués)
-			</Button>
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				{#each data.eleves as eleve (eleve.id)}
+					{@const statut = presences[eleve.id] || 'PRESENT'}
+					<div class="flex flex-col gap-3 rounded-xl border p-3 {statutClasse(statut)}">
+						<div class="flex items-center gap-3">
+							<Avatar.Root class="size-12 shrink-0">
+								<Avatar.Image
+									src={eleve.imageUrl || eleve.photoUrl || ''}
+									alt={`${eleve.prenom} ${eleve.nom}`}
+								/>
+								<Avatar.Fallback class="text-sm font-bold">
+									{eleve.prenom[0]}{eleve.nom[0]}
+								</Avatar.Fallback>
+							</Avatar.Root>
+							<div class="min-w-0">
+								<p class="truncate font-medium">{eleve.prenom} {eleve.nom}</p>
+								<p class="text-xs text-muted-foreground">
+									{eleve.dateNaissance
+										? new Date(eleve.dateNaissance).toLocaleDateString('fr-FR')
+										: ''}
+								</p>
+							</div>
+						</div>
+						<div class="grid grid-cols-3 gap-1.5">
+							<button
+								type="button"
+								class="rounded-md px-2 py-1.5 text-xs font-medium transition-all {statut ===
+								'PRESENT'
+									? 'bg-emerald-500 text-white'
+									: 'bg-muted text-muted-foreground hover:bg-emerald-500/20'}"
+								onclick={() => mark(eleve.id, 'PRESENT')}
+							>
+								<Check class="mx-auto size-4" />
+							</button>
+							<button
+								type="button"
+								class="rounded-md px-2 py-1.5 text-xs font-medium transition-all {statut ===
+								'RETARD'
+									? 'bg-amber-500 text-white'
+									: 'bg-muted text-muted-foreground hover:bg-amber-500/20'}"
+								onclick={() => mark(eleve.id, 'RETARD')}
+							>
+								<Clock class="mx-auto size-4" />
+							</button>
+							<button
+								type="button"
+								class="rounded-md px-2 py-1.5 text-xs font-medium transition-all {statut ===
+								'ABSENT'
+									? 'bg-red-500 text-white'
+									: 'bg-muted text-muted-foreground hover:bg-red-500/20'}"
+								onclick={() => mark(eleve.id, 'ABSENT')}
+							>
+								<X class="mx-auto size-4" />
+							</button>
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			<div class="sticky bottom-0 flex justify-end border-t border-sidebar-border bg-sidebar/95 py-3 backdrop-blur">
+				<Button variant="destructive" onclick={stop}>
+					<Square class="mr-2 size-4" />
+					Terminer le cours
+				</Button>
+			</div>
 		</div>
-	</div>
+	{/if}
+
+	{#if data.historique.length > 0}
+		<div class="border-t border-sidebar-border p-4">
+			<h2 class="mb-3 flex items-center gap-2 font-semibold">
+				<Users class="size-4 text-primary" /> Historique des séances
+			</h2>
+			<div class="space-y-2">
+				{#each data.historique as s (s.id)}
+					<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sidebar-border p-3">
+						<div>
+							<p class="text-sm font-medium">
+								{new Date(s.dateDebut).toLocaleString('fr-FR', {
+									day: 'numeric',
+									month: 'short',
+									hour: '2-digit',
+									minute: '2-digit'
+								})}
+							</p>
+							<p class="text-xs text-muted-foreground">Prof. {s.professeur}</p>
+						</div>
+						<div class="flex items-center gap-3 text-xs">
+							<span class="text-emerald-500">{s.presents} prés.</span>
+							<span class="text-amber-500">{s.retards} ret.</span>
+							<span class="text-red-500">{s.absents} abs.</span>
+							<span class="text-muted-foreground">/ {s.total}</span>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
 </div>

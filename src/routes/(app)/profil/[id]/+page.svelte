@@ -86,6 +86,68 @@
 					</div>
 				</Card>
 			</div>
+
+			{#if data.presence}
+				<Card class="space-y-3 p-4">
+					<h3 class="font-semibold">Historique de présence</h3>
+					{#if data.presence.statutEleve.length > 0}
+						<div class="space-y-2">
+							{#each data.presence.statutEleve as p (p.id)}
+								<div class="flex items-center justify-between gap-2 rounded-lg border border-sidebar-border p-2.5">
+									<div class="min-w-0">
+										<p class="truncate text-sm font-medium">{p.cours}</p>
+										<p class="text-xs text-muted-foreground">
+											{new Date(p.date).toLocaleString('fr-FR', {
+												day: 'numeric',
+												month: 'short',
+												hour: '2-digit',
+												minute: '2-digit'
+											})}
+										</p>
+									</div>
+									<Badge
+										variant="outline"
+										class={p.statut === 'PRESENT'
+											? 'border-emerald-500/40 text-emerald-500'
+											: p.statut === 'RETARD'
+												? 'border-amber-500/40 text-amber-500'
+												: 'border-red-500/40 text-red-500'}>{p.statut === 'PRESENT'
+											? 'Présent'
+											: p.statut === 'RETARD'
+												? 'Retard'
+												: 'Absent'}</Badge
+									>
+								</div>
+							{/each}
+						</div>
+					{:else if data.presence.seancesDonnees.length > 0}
+						<div class="space-y-2">
+							{#each data.presence.seancesDonnees as s (s.id)}
+								<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sidebar-border p-2.5">
+									<div>
+										<p class="text-sm font-medium">{s.cours}</p>
+										<p class="text-xs text-muted-foreground">
+											{new Date(s.date).toLocaleString('fr-FR', {
+												day: 'numeric',
+												month: 'short',
+												hour: '2-digit',
+												minute: '2-digit'
+											})}
+										</p>
+									</div>
+									<div class="flex items-center gap-2 text-xs">
+										<span class="text-emerald-500">{s.presents} prés.</span>
+										<span class="text-amber-500">{s.retards} ret.</span>
+										<span class="text-red-500">{s.absents} abs.</span>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-muted-foreground">Aucun historique de présence.</p>
+					{/if}
+				</Card>
+			{/if}
 		</div>
 	</div>
 </main>
