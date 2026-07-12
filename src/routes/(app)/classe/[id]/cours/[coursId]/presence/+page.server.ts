@@ -124,7 +124,11 @@ export const actions: Actions = {
 		const annee = await getActiveAnneeScolaire();
 		if (!annee) return fail(400, { error: 'Aucune année scolaire active' });
 
-		const professeurId = await getProfesseurId(locals);
+		const cours = await prisma.cours.findUnique({
+			where: { id: coursId },
+			select: { professeurId: true }
+		});
+		const professeurId = cours?.professeurId ?? (await getProfesseurId(locals));
 		if (!professeurId) return fail(400, { error: 'Professeur introuvable' });
 
 		const existante = await prisma.seanceCours.findFirst({
