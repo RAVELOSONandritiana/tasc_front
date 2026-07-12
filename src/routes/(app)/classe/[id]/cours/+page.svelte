@@ -75,8 +75,9 @@
 	}
 
 	function formaterParticipants(cours: Cours): string {
-		if (!cours.participants?.length) return 'Aucun élève';
-		return cours.participants.join(', ');
+		const n = cours.participants?.length ?? 0;
+		if (n === 0) return 'Aucun participant';
+		return `${n} participant${n > 1 ? 's' : ''}`;
 	}
 
 	function ouvrirModifierCoefficient(cours: Cours) {
@@ -175,27 +176,28 @@
 </script>
 
 <div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 flex flex-col gap-4 border-b border-sidebar-border bg-sidebar p-4">
+	<div class="sticky top-16 z-50 border-b border-sidebar-border bg-sidebar p-4">
 		<CoursePageHeader
 			classe={data.classe}
 			listeExamens={listeExamens.map((e) => ({ id: e.id, nom: e.nom, date: e.date }))}
 			bind:openCreateCours={openCoursDialog}
 			bind:openCreateExamen={openExamenDialog}
 		/>
+	</div>
 
-		<div>
-			{#if listeCours.length === 0}
-				<div class="flex flex-col items-center justify-center py-12 text-center">
-					<BookOpen class="mb-4 size-12 text-muted-foreground" />
-					<p class="text-lg font-medium text-muted-foreground">Aucun cours configuré</p>
-					<p class="text-sm text-muted-foreground">
-						Commencez par ajouter des matières et des cours à cette classe.
-					</p>
-				</div>
-			{:else}
-				<div class="grid grid-cols-3 gap-3">
-					{#each coursFiltres as cours (cours.id)}
-						{@const matiere = matiereMap[cours.matiereId || '']}
+	<div class="flex-1 p-4">
+		{#if listeCours.length === 0}
+			<div class="flex flex-col items-center justify-center py-12 text-center">
+				<BookOpen class="mb-4 size-12 text-muted-foreground" />
+				<p class="text-lg font-medium text-muted-foreground">Aucun cours configuré</p>
+				<p class="text-sm text-muted-foreground">
+					Commencez par ajouter des matières et des cours à cette classe.
+				</p>
+			</div>
+		{:else}
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				{#each coursFiltres as cours (cours.id)}
+					{@const matiere = matiereMap[cours.matiereId || '']}
 					<CourseCard
 						{cours}
 						{matiere}
@@ -209,10 +211,9 @@
 							openImageDialog = true;
 						}}
 					/>
-					{/each}
-				</div>
-			{/if}
-		</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<CreateCourseDialog
