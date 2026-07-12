@@ -8,6 +8,7 @@
 	import NotesDialog from '$lib/components/user/classe/NotesDialog.svelte';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import { page } from '$app/stores';
+	import { deserialize } from '$app/forms';
 	import { BookOpen } from '@lucide/svelte/icons';
 	import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
@@ -55,11 +56,16 @@
 		notesLoading = true;
 		try {
 			const res = await fetch(
-				`/classe/${$page.params.id}/cours?/getNotes&coursId=${coursId}`
+				`/classe/${$page.params.id}/cours?/getNotes&coursId=${encodeURIComponent(coursId)}`,
+				{
+					method: 'POST',
+					headers: { 'x-sveltekit-action': 'true' },
+					body: new FormData()
+				}
 			);
-			const result = await res.json();
-			if (result.success) {
-				notesCours = result.notes || [];
+			const result = deserialize(await res.text());
+			if (result.type === 'success' && (result.data as any)?.success) {
+				notesCours = (result.data as any).notes || [];
 			}
 		} catch (e) {
 			console.error('Failed to load notes:', e);

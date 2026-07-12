@@ -350,6 +350,23 @@ export const actions: Actions = {
 				select: { id: true }
 			});
 
+			// Une seule note par élève et par examen : on ne peut pas en ajouter une
+			// deuxième, seule la modification est possible.
+			if (examenId) {
+				const noteExamen = await prisma.note.findFirst({
+					where: { eleveId, coursId, examenId }
+				});
+				if (noteExamen) {
+					const note = await updateNote(noteExamen.id, { valeur, libelle });
+					logActivity(
+						locals.user,
+						'modification_note' as any,
+						`Note modifiée : ${valeur}/20`
+					).catch(() => {});
+					return { success: true, note, updated: true };
+				}
+			}
+
 			const noteExistante = await prisma.note.findFirst({
 				where: {
 					eleveId,
@@ -426,6 +443,17 @@ export const actions: Actions = {
 
 			let creees = 0;
 			for (const ins of inscriptions) {
+				// Une seule note par élève et par examen : on met à jour si elle existe déjà.
+				if (examenId) {
+					const noteExamen = await prisma.note.findFirst({
+						where: { eleveId: ins.eleveId, coursId, examenId }
+					});
+					if (noteExamen) {
+						await updateNote(noteExamen.id, { valeur, libelle });
+						creees++;
+						continue;
+					}
+				}
 				const existante = await prisma.note.findFirst({
 					where: {
 						eleveId: ins.eleveId,
