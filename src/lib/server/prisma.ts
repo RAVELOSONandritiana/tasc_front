@@ -195,6 +195,7 @@ export async function getAllPersonnesForSurveillant() {
 }
 
 export async function createSurveillantFromPersonne(personneId: string, matricule: string, poste: string) {
+	const motDePasseDefaut = await import('./auth').then((m) => m.hashPassword('123456'));
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
 			where: { id: personneId },
@@ -210,7 +211,7 @@ export async function createSurveillantFromPersonne(personneId: string, matricul
 			compte = await tx.compte.create({
 				data: {
 					matricule,
-					password: '123456',
+					password: motDePasseDefaut,
 					role: 'SURVEILLANT',
 					statut: 'EN_ATTENTE',
 					personneId
@@ -219,7 +220,12 @@ export async function createSurveillantFromPersonne(personneId: string, matricul
 		} else {
 			compte = await tx.compte.update({
 				where: { id: compte.id },
-				data: { matricule, role: 'SURVEILLANT', statut: 'EN_ATTENTE' }
+				data: {
+					matricule,
+					password: motDePasseDefaut,
+					role: 'SURVEILLANT',
+					statut: 'EN_ATTENTE'
+				}
 			});
 		}
 
@@ -443,7 +449,7 @@ export async function createPersonnel(data: {
 		const compte = await tx.compte.create({
 			data: {
 				matricule,
-				password: '123456',
+				password: await import('./auth').then((m) => m.hashPassword('123456')),
 				role: 'PERSONNEL',
 				statut: 'EN_ATTENTE',
 				personneId: personne.id
@@ -455,6 +461,7 @@ export async function createPersonnel(data: {
 }
 
 export async function createProfesseurFromPersonne(personneId: string, matricule: string, matiere: string[]) {
+	const motDePasseDefaut = await import('./auth').then((m) => m.hashPassword('123456'));
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
 			where: { id: personneId },
@@ -473,7 +480,7 @@ export async function createProfesseurFromPersonne(personneId: string, matricule
 			compte = await tx.compte.create({
 				data: {
 					matricule,
-					password: '123456',
+					password: motDePasseDefaut,
 					role: 'ENSEIGNANT',
 					statut: 'EN_ATTENTE',
 					personneId
@@ -482,7 +489,12 @@ export async function createProfesseurFromPersonne(personneId: string, matricule
 		} else {
 			compte = await tx.compte.update({
 				where: { id: compte.id },
-				data: { matricule, role: 'ENSEIGNANT', statut: 'EN_ATTENTE' }
+				data: {
+					matricule,
+					password: motDePasseDefaut,
+					role: 'ENSEIGNANT',
+					statut: 'EN_ATTENTE'
+				}
 			});
 		}
 
