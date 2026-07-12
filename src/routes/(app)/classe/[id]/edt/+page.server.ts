@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const classeId = params.id;
 
 	const classe = await prisma.classe.findUnique({
@@ -76,8 +76,16 @@ export const load: PageServerLoad = async ({ params }) => {
 		matiereId: c.matiereId,
 		matiereNom: c.matiere?.nom || 'Matière',
 		coefficient: c.coefficient,
-		professeur: c.professeur ? `${c.professeur.personne.name} ${c.professeur.personne.lastname}` : ''
+		professeur: c.professeur ? `${c.professeur.personne.name} ${c.professeur.personne.lastname}` : '',
+		professeurId: c.professeurId || null
 	}));
+
+	const currentProfesseurId = locals.user
+		? ((await prisma.compte.findUnique({
+				where: { id: locals.user.userId },
+				include: { personne: { include: { professeur: true } } }
+			}))?.personne?.professeur?.id ?? null)
+		: null;
 
 	return {
 		classe,
@@ -91,7 +99,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		})),
 		jours,
 		heures,
-		cours
+		cours,
+		currentProfesseurId
 	};
 };
 

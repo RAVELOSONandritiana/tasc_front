@@ -131,7 +131,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 					where: { id: locals.user.userId },
 					include: { personne: { include: { professeur: true } } }
 				}))?.personne?.professeur?.id ?? null)
-			: null
+			: null,
+		userRole: locals.user?.role ?? null
 	};
 };
 
@@ -206,7 +207,7 @@ export const actions: Actions = {
 		}
 	},
 
-	updateCoefficient: async ({ request }) => {
+	updateCoefficient: async ({ request, locals }) => {
 		const data = await request.formData();
 		const coursId = data.get('coursId') as string;
 		const coefficient = parseInt((data.get('coefficient') as string) || '1', 10);
@@ -230,13 +231,19 @@ export const actions: Actions = {
 				});
 			}
 
+			await logActivity(
+				locals.user,
+				'modification_cours' as any,
+				`Modification du coefficient du cours ${coursId}`
+			).catch(() => {});
+
 			return { success: true, cours };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
 		}
 	},
 
-	updateParticipants: async ({ request }) => {
+	updateParticipants: async ({ request, locals }) => {
 		const data = await request.formData();
 		const coursId = data.get('coursId') as string;
 		const participants = data.getAll('participants') as string[];
@@ -247,6 +254,11 @@ export const actions: Actions = {
 
 		try {
 			const cours = await updateCours(coursId, { participants });
+			await logActivity(
+				locals.user,
+				'modification_cours' as any,
+				`Modification des participants du cours ${coursId}`
+			).catch(() => {});
 			return { success: true, cours };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });

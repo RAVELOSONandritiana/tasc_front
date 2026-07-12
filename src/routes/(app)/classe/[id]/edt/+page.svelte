@@ -37,6 +37,7 @@
 						heures={data.heures}
 						classeId={data.classe.id}
 						cours={data.cours}
+						currentProfesseurId={data.currentProfesseurId}
 					/>
 					</div>
 				</div>

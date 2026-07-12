@@ -8,6 +8,7 @@
 		cours,
 		matiere,
 		estTitulaire = true,
+		peutModifierParticipants = true,
 		onEditCoefficient,
 		onEditParticipants,
 		onOpenNotes,
@@ -18,6 +19,7 @@
 		cours: Cours;
 		matiere?: { id: string; nom: string; couleur?: string };
 		estTitulaire?: boolean;
+		peutModifierParticipants?: boolean;
 		onEditCoefficient: (cours: Cours) => void;
 		onEditParticipants: (cours: Cours) => void;
 		onOpenNotes: (cours: Cours) => void;
@@ -97,15 +99,17 @@
 				</p>
 			{/if}
 			<div class="mt-auto flex w-full items-center justify-between gap-2">
-				<Button
-					variant="outline"
-					size="sm"
-					class="h-8 flex-1 rounded-lg px-3 text-xs"
-					onclick={() => onEditParticipants(cours)}
-				>
-					<Users class="mr-1 size-3" />
-					Participants
-				</Button>
+			<Button
+				variant="outline"
+				size="sm"
+				class="h-8 flex-1 rounded-lg px-3 text-xs"
+				onclick={() => onEditParticipants(cours)}
+				disabled={!peutModifierParticipants}
+				title={peutModifierParticipants ? undefined : 'Réservé aux surveillants'}
+			>
+				<Users class="mr-1 size-3" />
+				Participants
+			</Button>
 				<Button
 					size="sm"
 					variant="default"

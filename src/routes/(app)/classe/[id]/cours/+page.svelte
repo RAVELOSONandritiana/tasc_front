@@ -206,10 +206,13 @@
 					{@const matiere = matiereMap[cours.matiereId || '']}
 					{@const estTitulaire =
 						!!data.currentProfesseurId && cours.professeurId === data.currentProfesseurId}
+					{@const peutModifierParticipants =
+						data.userRole === 'SURVEILLANT' || data.userRole === 'ADMINISTRATEUR'}
 					<CourseCard
 						{cours}
 						{matiere}
 						{estTitulaire}
+						{peutModifierParticipants}
 						defaultMatiereColor={DEFAULT_MATIERE_COLOR}
 						formatParticipants={formaterParticipants}
 						onEditCoefficient={ouvrirModifierCoefficient}

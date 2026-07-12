@@ -8,14 +8,31 @@
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { goto } from '$app/navigation';
 
-	const { jour, seances, salles, heures, classeId, cours = [] }: {
+	const { jour, seances, salles, heures, classeId, cours = [], currentProfesseurId = null }: {
 		jour: string;
 		seances: SeanceEDT[];
 		salles: { id: string; num: number; name: string; place: number }[];
 		heures: string[];
 		classeId: string;
-		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string }[];
+		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string; professeurId?: string | null }[];
+		currentProfesseurId?: string | null;
 	} = $props();
+
+	const professeurParCours = $derived(
+		(cours ?? []).reduce(
+			(acc, c) => {
+				acc[c.id] = c.professeurId ?? null;
+				return acc;
+			},
+			{} as Record<string, string | null>
+		)
+	);
+
+	function estTitulaire(coursId: string): boolean {
+		return (
+			!!currentProfesseurId && professeurParCours[coursId] === currentProfesseurId
+		);
+	}
 
 	let dialogOpen = $state(false);
 	let nouvelleSeance = $state({
@@ -115,14 +132,20 @@
 								</p>
 							{/if}
 						</div>
-						<Button
-							variant="default"
-							size="sm"
-							class="h-6 px-2"
-							onclick={() => goto(`/classe/${classeId}/cours/${seance.coursId}/presence`)}
-						>
-							<Play class="size-3" />
-						</Button>
+					<Button
+						variant="default"
+						size="sm"
+						class="h-6 px-2"
+						disabled={!estTitulaire(seance.coursId)}
+						title={estTitulaire(seance.coursId) ? undefined : 'Réservé au professeur titulaire du cours'}
+						onclick={() => {
+							if (estTitulaire(seance.coursId)) {
+								goto(`/classe/${classeId}/cours/${seance.coursId}/presence`);
+							}
+						}}
+					>
+						<Play class="size-3" />
+					</Button>
 					</div>
 				</div>
 			{/each}
