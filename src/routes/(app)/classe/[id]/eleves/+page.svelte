@@ -241,8 +241,6 @@
 						<Table.Head>Nom</Table.Head>
 						<Table.Head>Prénom</Table.Head>
 						<Table.Head>Date naissance</Table.Head>
-						<Table.Head class="text-center">Notes</Table.Head>
-						<Table.Head class="text-center">Moyenne</Table.Head>
 						<Table.Head class="text-center">Incidents</Table.Head>
 						<Table.Head class="text-center">Absences</Table.Head>
 						<Table.Head class="text-center">Retards</Table.Head>
@@ -257,16 +255,6 @@
 							<Table.Cell>
 								{eleve.dateNaissance
 									? new Date(eleve.dateNaissance).toLocaleDateString()
-									: '—'}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.notes?.length || 0}
-							</Table.Cell>
-							<Table.Cell class="text-center">
-								{eleve.notes && eleve.notes.length > 0
-									? (
-											eleve.notes.reduce((sum, n) => sum + n.valeur, 0) / eleve.notes.length
-										).toFixed(1)
 									: '—'}
 							</Table.Cell>
 							<Table.Cell class="text-center">
