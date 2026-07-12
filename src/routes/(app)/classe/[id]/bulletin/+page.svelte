@@ -106,6 +106,22 @@
 		return 0;
 	}
 
+	function getMention(m: number): string {
+		if (m >= 16) return 'Très Bien';
+		if (m >= 14) return 'Bien';
+		if (m >= 12) return 'Assez Bien';
+		if (m >= 10) return 'Passable';
+		return '';
+	}
+
+	function getAppreciation(m: number): string {
+		if (m >= 16) return 'Excellent travail.';
+		if (m >= 14) return 'Très bon travail.';
+		if (m >= 12) return 'Bon travail.';
+		if (m >= 10) return 'Travail satisfaisant.';
+		return 'Travail insuffisant, doit progresser.';
+	}
+
 	// Update list local data if data properties change
 	$effect(() => {
 		listeCours = [...data.listeCours];
@@ -306,8 +322,8 @@
 					<th class="border border-gray-800 px-4 py-2 text-left">Matière</th>
 					<th class="border border-gray-800 px-4 py-2 text-center w-24">Coefficient</th>
 					<th class="border border-gray-800 px-4 py-2 text-center w-40">Notes</th>
-					<th class="border border-gray-800 px-4 py-2 text-center w-32">Note × Coeff.</th>
-					<th class="border border-gray-800 px-4 py-2 text-left">Enseignant & Appréciations</th>
+					<th class="border border-gray-800 px-4 py-2 text-center w-32">Total</th>
+					<th class="border border-gray-800 px-4 py-2 text-left">Appréciations</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -340,14 +356,11 @@
 						<td class="border border-gray-800 px-4 py-2.5 text-xs text-gray-700 font-sans">
 							<span class="font-medium text-black block">{cours.professeur || '—'}</span>
 							{#if notesM.length > 0}
-								{#if moyM >= 16} Excellent travail.
-								{:else if moyM >= 14} Très bon travail.
-								{:else if moyM >= 12} Bon travail.
-								{:else if moyM >= 10} Travail satisfaisant.
-								{:else} Travail insuffisant, doit progresser.
-								{/if}
+								<span class="mt-0.5 block font-semibold text-gray-900">
+									{getMention(moyM)}{#if getMention(moyM) && getAppreciation(moyM)} — {/if}{getAppreciation(moyM)}
+								</span>
 							{:else}
-								Absent(e) - noté 0.
+								<span class="mt-0.5 block italic text-gray-500">Absent(e) - noté 0.</span>
 							{/if}
 						</td>
 					</tr>
@@ -366,6 +379,17 @@
 				<div class="font-bold text-base text-right">
 					{#if rangG > 0}
 						{rangG} {rangG === 1 ? 'er' : 'e'} sur {elevesClasse.length}
+					{:else}
+						—
+					{/if}
+				</div>
+
+				<div class="font-bold text-gray-700">Mention :</div>
+				<div class="font-bold text-base text-right">
+					{#if moyenneG >= 10}
+						{getMention(moyenneG)}
+					{:else if moyenneG > 0}
+						Aucune
 					{:else}
 						—
 					{/if}
