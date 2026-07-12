@@ -46,12 +46,28 @@
 	const incidentsTrend = $derived(chartData?.incidentsTrend || []);
 	const teacherAbsences = $derived(chartData?.teacherAbsences || 0);
 	const classSizes = $derived(chartData?.classSizes || []);
+	const additionalStats = $derived(data.additionalStats || {});
+	const absenceJustification = $derived(chartData?.absenceJustification || []);
+	const notesDistribution = $derived(chartData?.notesDistribution || []);
+	const avgNotesByClass = $derived(chartData?.avgNotesByClass || []);
+	const incidentsByClass = $derived(chartData?.incidentsByClass || []);
+	const evolution = $derived(chartData?.evolution || []);
 
 	const maxIncidentCount = $derived(Math.max(...incidentsByType.map((d) => d.count), 1));
 	const totalUsers = $derived(usersByRole.reduce((sum, d) => sum + d.count, 0));
 	const maxClassSize = $derived(Math.max(...classSizes.map((d) => d.count), 1));
 	const maxDelays = $derived(Math.max(...delaysByClass.map((d) => d.count), 1));
 	const maxTrend = $derived(Math.max(...incidentsTrend.map((d) => d.count), 1));
+	const maxNotesDist = $derived(Math.max(...notesDistribution.map((d) => d.count), 1));
+	const maxAvg = $derived(Math.max(...avgNotesByClass.map((d) => d.avg), 1));
+	const maxIncByClass = $derived(Math.max(...incidentsByClass.map((d) => d.count), 1));
+	const maxAbsJust = $derived(Math.max(...absenceJustification.map((d) => d.count), 1));
+	const maxEvol = $derived(
+		Math.max(
+			...evolution.map((d) => Math.max(d.absences, d.retards, d.incidents)),
+			1
+		)
+	);
 
 	const classBarData = $derived(
 		classSizes.map((item, i) => {
@@ -108,6 +124,56 @@
 	const incidentColors = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b'];
 	const delayColors = ['#f59e0b', '#f97316', '#ef4444'];
 	const classColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+	const notesDistBarData = $derived(
+		notesDistribution.map((item, i) => {
+			const barHeight = Math.max((item.count / maxNotesDist) * 115, 2);
+			const gap = 320 / notesDistribution.length;
+			const barW = Math.min(gap * 0.7, 50);
+			const x = 40 + i * gap + (gap - barW) / 2;
+			const y = 180 - barHeight;
+			return { item, barHeight, x, y, barW };
+		})
+	);
+
+	const avgNotesBarData = $derived(
+		avgNotesByClass.map((item, i) => {
+			const barHeight = Math.max((item.avg / 20) * 115, 2);
+			const gap = 460 / Math.max(avgNotesByClass.length, 1);
+			const barW = Math.min(gap * 0.7, 50);
+			const x = 40 + i * gap + (gap - barW) / 2;
+			const y = 180 - barHeight;
+			return { item, barHeight, x, y, barW, color: item.avg < 10 ? '#ef4444' : item.avg < 12 ? '#f59e0b' : '#10b981' };
+		})
+	);
+
+	const incByClassBarData = $derived(
+		incidentsByClass.map((item, i) => {
+			const barHeight = Math.max((item.count / maxIncByClass) * 115, 2);
+			const gap = 460 / Math.max(incidentsByClass.length, 1);
+			const barW = Math.min(gap * 0.7, 50);
+			const x = 40 + i * gap + (gap - barW) / 2;
+			const y = 180 - barHeight;
+			return { item, barHeight, x, y, barW, color: classColors[i % classColors.length] };
+		})
+	);
+
+	function buildLine(series: 'absences' | 'retards' | 'incidents') {
+		return evolution.map((d, i) => {
+			const stepX = 360 / Math.max(evolution.length - 1, 1);
+			const x = 30 + i * stepX;
+			const y = 30 + 160 - (d[series] / maxEvol) * 140;
+			return { x, y, date: d.date, count: d[series], showLabel: d.showLabel };
+		});
+	}
+
+	const absLine = $derived(buildLine('absences'));
+	const retLine = $derived(buildLine('retards'));
+	const incLine = $derived(buildLine('incidents'));
+
+	const absPath = $derived(absLine.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
+	const retPath = $derived(retLine.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
+	const incPath = $derived(incLine.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
 </script>
 
 <div class="min-h-screen bg-background text-foreground">
@@ -215,6 +281,56 @@
 					<div>
 						<p class="text-2xl font-bold">{stats.incidents}</p>
 						<p class="text-xs text-muted-foreground">Incidents</p>
+					</div>
+				</div>
+			</Card>
+		</div>
+
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
+				<div class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-red-500/10">
+						<UserX class="size-6 text-red-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{additionalStats.totalAbsences ?? 0}</p>
+						<p class="text-xs text-muted-foreground">Absences (période)</p>
+					</div>
+				</div>
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
+				<div class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
+						<Clock class="size-6 text-amber-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{additionalStats.totalRetards ?? 0}</p>
+						<p class="text-xs text-muted-foreground">Retards (période)</p>
+					</div>
+				</div>
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
+				<div class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-blue-500/10">
+						<BookOpen class="size-6 text-blue-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{additionalStats.avgNotesGeneral ?? 0}</p>
+						<p class="text-xs text-muted-foreground">Moyenne générale (/20)</p>
+					</div>
+				</div>
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
+				<div class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-orange-500/10">
+						<AlertCircle class="size-6 text-orange-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{additionalStats.unjustifiedAbsences ?? 0}</p>
+						<p class="text-xs text-muted-foreground">Absences non justifiées</p>
 					</div>
 				</div>
 			</Card>
@@ -413,20 +529,174 @@
 			<Card class="animate-slide-up opacity-0 p-5">
 				<div class="flex items-center gap-2 mb-4">
 					<UserX class="size-5 text-primary" />
-					<h2 class="font-semibold">Absences des enseignants</h2>
+					<h2 class="font-semibold">Absences (période)</h2>
 				</div>
 				<div class="h-64 w-full flex items-center justify-center">
 					<div class="text-center">
 						<p class="text-5xl font-bold text-red-500">{teacherAbsences}</p>
 						<p class="text-sm text-muted-foreground mt-2">
-							{teacherAbsences === 1 ? 'enseignant absent' : 'enseignants absents'}
+							{teacherAbsences === 1 ? 'absence enregistrée' : 'absences enregistrées'}
 						</p>
 						<div class="mt-4 flex items-center justify-center gap-2">
-							<div class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-							<span class="text-xs text-muted-foreground">Aujourd'hui</span>
+							<div class="h-2 w-2 rounded-full bg-red-500"></div>
+							<span class="text-xs text-muted-foreground">du {data.rangeStart} au {data.rangeEnd}</span>
 						</div>
 					</div>
 				</div>
+			</Card>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<PieChart class="size-5 text-primary" />
+					<h2 class="font-semibold">Répartition des absences</h2>
+				</div>
+				{#if absenceJustification.length === 0}
+					<p class="text-sm text-muted-foreground">Aucune donnée</p>
+				{:else}
+					{@const total = absenceJustification.reduce((sum, d) => sum + d.count, 0)}
+					{@const radius = 70}
+					{@const cx = 100}
+					{@const cy = 110}
+					{@const circumference = 2 * Math.PI * radius}
+					<div class="h-64 w-full">
+						<svg viewBox="0 0 200 220" class="h-full w-full">
+							{#each absenceJustification as item, i}
+								{@const percent = total > 0 ? item.count / total : 0}
+								{@const dashArray = `${percent * circumference} ${circumference}`}
+								{@const dashOffset = -(absenceJustification.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
+								{@const labelAngle = (absenceJustification.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0) + percent / 2) * 2 * Math.PI - Math.PI / 2}
+								{@const labelX = cx + (radius + 30) * Math.cos(labelAngle)}
+								{@const labelY = cy + (radius + 30) * Math.sin(labelAngle)}
+								<circle
+									cx={cx}
+									cy={cy}
+									r={radius}
+									fill="transparent"
+									stroke={item.color}
+									stroke-width="35"
+									stroke-dasharray={dashArray}
+									stroke-dashoffset={dashOffset}
+									class="hover:opacity-80 transition-opacity"
+								/>
+								<text x={labelX} y={labelY} text-anchor="middle" class="fill-foreground text-[10px] font-medium">
+									{item.label}: {item.count}
+								</text>
+							{/each}
+							<circle cx={cx} cy={cy} r={radius - 15} fill="var(--color-background)" />
+							<text x={cx} y={cy - 2} text-anchor="middle" class="fill-foreground text-lg font-bold">
+								{total}
+							</text>
+							<text x={cx} y={cy + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">
+								total
+							</text>
+						</svg>
+					</div>
+				{/if}
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<BarChart3 class="size-5 text-primary" />
+					<h2 class="font-semibold">Distribution des notes</h2>
+				</div>
+				{#if notesDistribution.length === 0}
+					<p class="text-sm text-muted-foreground">Aucune donnée</p>
+				{:else}
+					<div class="h-64 w-full">
+						<svg viewBox="0 0 400 260" class="h-full w-full">
+							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
+								Répartition sur 20
+							</text>
+							{#each notesDistBarData as { item, barHeight, x, y, barW }}
+								<rect x={x} y={y} width={barW} height={barHeight} fill="#3b82f6" rx="4" opacity="0.8" class="hover:opacity-100 transition-opacity" />
+								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">{item.count}</text>
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">{item.range}</text>
+							{/each}
+						</svg>
+					</div>
+				{/if}
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<BookOpen class="size-5 text-primary" />
+					<h2 class="font-semibold">Notes moyennes par classe</h2>
+				</div>
+				{#if avgNotesByClass.length === 0}
+					<p class="text-sm text-muted-foreground">Aucune note</p>
+				{:else}
+					<div class="h-64 w-full overflow-x-auto">
+						<svg viewBox="0 0 500 260" class="h-full w-full min-w-[360px]">
+							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
+								Moyenne (/20)
+							</text>
+							{#each avgNotesBarData as { item, barHeight, x, y, barW, color }}
+								<rect x={x} y={y} width={barW} height={barHeight} fill={color} rx="4" opacity="0.8" class="hover:opacity-100 transition-opacity" />
+								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">{item.avg}</text>
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">{item.className}</text>
+							{/each}
+						</svg>
+					</div>
+				{/if}
+			</Card>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<AlertCircle class="size-5 text-primary" />
+					<h2 class="font-semibold">Incidents par classe</h2>
+				</div>
+				{#if incidentsByClass.length === 0}
+					<p class="text-sm text-muted-foreground">Aucun incident</p>
+				{:else}
+					<div class="h-64 w-full overflow-x-auto">
+						<svg viewBox="0 0 500 260" class="h-full w-full min-w-[360px]">
+							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
+								Nombre d'incidents
+							</text>
+							{#each incByClassBarData as { item, barHeight, x, y, barW, color }}
+								<rect x={x} y={y} width={barW} height={barHeight} fill={color} rx="4" opacity="0.8" class="hover:opacity-100 transition-opacity" />
+								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">{item.count}</text>
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">{item.className}</text>
+							{/each}
+						</svg>
+					</div>
+				{/if}
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<TrendingUp class="size-5 text-primary" />
+					<h2 class="font-semibold">Évolution absences & retards</h2>
+				</div>
+				{#if evolution.length === 0}
+					<p class="text-sm text-muted-foreground">Aucune donnée</p>
+				{:else}
+					<div class="h-64 w-full">
+						<svg viewBox="0 0 400 260" class="h-full w-full">
+							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
+								Sur la période sélectionnée
+							</text>
+							<path d={incPath} fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
+							<path d={absPath} fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							<path d={retPath} fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							{#each absLine as p}
+								<circle cx={p.x} cy={p.y} r="3" fill="#ef4444" stroke="white" stroke-width="1.5" />
+								{#if p.showLabel}
+									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">{p.date}</text>
+								{/if}
+							{/each}
+						</svg>
+					</div>
+					<div class="mt-2 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+						<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-red-500"></span>Absences</span>
+						<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-500"></span>Retards</span>
+						<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Incidents</span>
+					</div>
+				{/if}
 			</Card>
 		</div>
 
