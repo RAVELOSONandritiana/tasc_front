@@ -4,60 +4,39 @@
 	import { Bell, Sun, Moon, X, Check } from '@lucide/svelte/icons';
 	import * as Drawer from '$lib/components/ui/drawer';
 	import { browser } from '$app/environment';
+	import { onDestroy } from 'svelte';
 	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
+
+	type NotificationItem = {
+		id: string;
+		title: string;
+		description: string;
+		time: string;
+		read: boolean;
+		actionType?: string | null;
+		matricule?: string | null;
+		createdAt?: string;
+	};
 
 	let {
 		imageUrl = null,
 		nom = '',
-		prenom = ''
+		prenom = '',
+		notifications: initialNotifications = []
 	}: {
 		imageUrl?: string | null;
 		nom?: string;
 		prenom?: string;
+		notifications?: NotificationItem[];
 	} = $props();
 
 	let checked = $state(true);
 	let notificationOpen = $state(false);
+	let resettingId = $state<string | null>(null);
 
-	let notifications = $state([
-		{
-			id: 1,
-			title: 'Nouveau message',
-			description: 'Vous avez reçu un nouveau message',
-			time: '2 min',
-			read: false
-		},
-		{
-			id: 2,
-			title: 'Rappel de réunion',
-			description: 'Réunion dans 30 minutes',
-			time: '30 min',
-			read: false
-		},
-		{
-			id: 3,
-			title: 'Nouveau devoir',
-			description: 'Un devoir a été assigné',
-			time: '1 heure',
-			read: true
-		},
-		{
-			id: 4,
-			title: 'Absence signalée',
-			description: 'Un élève a été marqué absent',
-			time: '2 heures',
-			read: true
-		},
-		{
-			id: 5,
-			title: 'Mise à jour système',
-			description: 'Maintenance prévue ce soir',
-			time: '3 heures',
-			read: true
-		}
-	]);
+	let notifications = $state<NotificationItem[]>([...initialNotifications]);
 
-	let selectedNotification = $state<number | null>(null);
+	let selectedNotification = $state<string | null>(null);
 
 	const THEME_KEY = 'theme-mode';
 
@@ -89,25 +68,92 @@
 		persistTheme(checked);
 	});
 
-	function deleteNotification(id: number) {
-		notifications = notifications.filter((n) => n.id !== id);
-		if (selectedNotification === id) selectedNotification = null;
+	// --- Real-time notifications via Server-Sent Events ---
+	let eventSource: EventSource | null = null;
+
+	if (browser) {
+		eventSource = new EventSource('/api/notifications/stream');
+		eventSource.addEventListener('notification', (event) => {
+			try {
+				const notif = JSON.parse((event as MessageEvent).data) as NotificationItem;
+				const index = notifications.findIndex((n) => n.id === notif.id);
+				if (index !== -1) {
+					// Mise à jour d'une notification existante (ex: après réinitialisation).
+					notifications[index] = notif;
+				} else {
+					notifications = [notif, ...notifications];
+				}
+			} catch {
+				// ignore malformed payloads
+			}
+		});
 	}
 
-	function markAsRead(id: number) {
-		const index = notifications.findIndex((n) => n.id === id);
-		if (index !== -1) {
-			notifications[index].read = true;
+	onDestroy(() => {
+		eventSource?.close();
+	});
+
+	async function deleteNotification(id: string) {
+		notifications = notifications.filter((n) => n.id !== id);
+		if (selectedNotification === id) selectedNotification = null;
+		if (browser) {
+			await fetch(`/api/notifications?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(
+				() => {}
+			);
 		}
 	}
 
-	function markAllAsRead() {
-		notifications = notifications.map((n) => ({ ...n, read: true }));
+	async function markAsRead(id: string) {
+		const index = notifications.findIndex((n) => n.id === id);
+		if (index !== -1 && !notifications[index].read) {
+			notifications[index].read = true;
+			if (browser) {
+				await fetch('/api/notifications', {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ id })
+				}).catch(() => {});
+			}
+		}
 	}
 
-	function selectNotification(id: number) {
+	async function markAllAsRead() {
+		notifications = notifications.map((n) => ({ ...n, read: true }));
+		if (browser) {
+			await fetch('/api/notifications', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ all: true })
+			}).catch(() => {});
+		}
+	}
+
+	function selectNotification(id: string) {
 		selectedNotification = id;
 		markAsRead(id);
+	}
+
+	async function resetPassword(id: string) {
+		if (!browser || resettingId) return;
+		resettingId = id;
+		try {
+			const res = await fetch('/api/notifications', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ id })
+			});
+			const result = await res.json().catch(() => null);
+			if (result?.success && result.notification) {
+				const index = notifications.findIndex((n) => n.id === id);
+				if (index !== -1) {
+					notifications[index] = result.notification;
+				}
+			}
+		} catch {
+			// ignore network errors
+		} finally {
+			resettingId = null;
+		}
 	}
 
 	function closeDrawer() {
@@ -222,6 +268,21 @@
 									<p class="text-sm font-medium">{notification.title}</p>
 									<p class="text-xs text-muted-foreground">{notification.description}</p>
 									<p class="mt-1 text-xs text-muted-foreground">{notification.time}</p>
+									{#if notification.actionType === 'PASSWORD_RESET'}
+										<button
+											type="button"
+											class="mt-2 inline-flex items-center rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+											disabled={resettingId === notification.id}
+											onclick={(e) => {
+												e.stopPropagation();
+												resetPassword(notification.id);
+											}}
+										>
+											{resettingId === notification.id
+												? 'Réinitialisation...'
+												: 'Réinitialiser le mot de passe'}
+										</button>
+									{/if}
 								</div>
 								<div class="flex items-center gap-1">
 									{#if !notification.read}

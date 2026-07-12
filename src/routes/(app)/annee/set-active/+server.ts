@@ -7,8 +7,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Non autorisé' }, { status: 401 });
 	}
 
-	const formData = await request.formData();
-	const id = formData.get('id') as string;
+	const body = await request.json();
+	const id = body.id as string;
 
 	if (!id) {
 		return json({ error: 'id requis' }, { status: 400 });

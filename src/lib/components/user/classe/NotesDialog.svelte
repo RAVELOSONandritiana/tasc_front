@@ -6,6 +6,7 @@
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import { Trash2, CheckCircle2 } from '@lucide/svelte';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 	import type { Cours, EleveCours, Examen, Note } from '$lib/types/Materiel.type';
 	import { formatExamenNom } from '$lib/utils';
 
@@ -32,6 +33,9 @@
 	let selectedExamenId = $state('');
 	let libelleSaisi = $state('');
 	let batchNotes = $state<Record<string, string>>({});
+	let noteToDelete = $state<string | null>(null);
+	let noteConfirmOpen = $state(false);
+	let deletingNote = $state(false);
 
 	$effect(() => {
 		if (open) {
@@ -89,6 +93,18 @@
 			console.error('Suppression note échouée', e);
 		}
 	}
+
+	async function confirmerSuppressionNote() {
+		if (!noteToDelete) return;
+		deletingNote = true;
+		try {
+			await supprimerNote(noteToDelete);
+		} finally {
+			deletingNote = false;
+			noteToDelete = null;
+			noteConfirmOpen = false;
+		}
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -102,7 +118,9 @@
 
 		<div class="space-y-4 py-4">
 			{#if success}
-				<div class="flex items-center gap-2 rounded-md border border-emerald-500 bg-emerald-500/10 p-3">
+				<div
+					class="flex items-center gap-2 rounded-md border border-emerald-500 bg-emerald-500/10 p-3"
+				>
 					<CheckCircle2 class="size-4 text-emerald-500" />
 					<p class="text-sm font-medium text-emerald-500">Notes enregistrées avec succès</p>
 				</div>
@@ -147,7 +165,9 @@
 							<NativeSelect.Root class="w-full" bind:value={selectedExamenId}>
 								<option value="">Sans examen</option>
 								{#each listeExamens as examen (examen.id)}
-									<NativeSelect.Option value={examen.id}>{formatExamenNom(examen)}</NativeSelect.Option>
+									<NativeSelect.Option value={examen.id}
+										>{formatExamenNom(examen)}</NativeSelect.Option
+									>
 								{/each}
 							</NativeSelect.Root>
 						{:else}
@@ -156,7 +176,11 @@
 					</div>
 					<div class="grid gap-2">
 						<Label for="libelle">Libellé</Label>
-						<Input placeholder="Devoir, Interrogation..." bind:value={libelleSaisi} class="w-full" />
+						<Input
+							placeholder="Devoir, Interrogation..."
+							bind:value={libelleSaisi}
+							class="w-full"
+						/>
 					</div>
 				</div>
 
@@ -176,7 +200,8 @@
 								{@const noteEx = noteParEleve.get(eleve.id)}
 								<div class="flex items-center gap-2 rounded-md p-1.5 hover:bg-muted/40">
 									<span class="min-w-0 flex-1 truncate text-sm">
-										{eleve.nom} {eleve.prenom}
+										{eleve.nom}
+										{eleve.prenom}
 									</span>
 									<Input
 										type="number"
@@ -195,7 +220,10 @@
 											size="icon-sm"
 											class="size-7 text-destructive hover:bg-destructive/10"
 											title="Supprimer la note"
-											onclick={() => supprimerNote(noteEx.id)}
+											onclick={() => {
+												noteToDelete = noteEx.id;
+												noteConfirmOpen = true;
+											}}
 										>
 											<Trash2 class="size-3.5" />
 										</Button>
@@ -220,4 +248,12 @@
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
+
+	<ConfirmDeleteDialog
+		bind:open={noteConfirmOpen}
+		title="Supprimer la note"
+		description="Êtes-vous sûr de vouloir supprimer cette note ? Cette action est irréversible."
+		loading={deletingNote}
+		onConfirm={confirmerSuppressionNote}
+	/>
 </Dialog.Root>

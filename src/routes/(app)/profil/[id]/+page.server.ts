@@ -79,6 +79,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		}))
 	};
 
+	const stats = await buildStats();
+
 	return {
 		user: {
 			id: compte.id,
@@ -93,8 +95,45 @@ export const load: PageServerLoad = async ({ params }) => {
 			fokontany: compte.personne.fokontany || '',
 			dateCreation: compte.dateCreation.toISOString().split('T')[0],
 			bio: compte.profil?.bio || '',
-			adresse: compte.profil?.adresse || compte.personne.domicile || ''
+			adresse: compte.profil?.adresse || compte.personne.domicile || '',
+			photoUrl: compte.personne.imageUrl || null,
+			stats
 		},
 		presence
 	};
+
+	async function buildStats() {
+		const result: Record<string, number> = {};
+		if (personne?.eleve) {
+			result.coursTermines = personne.eleve.coursTermines;
+		}
+		if (personne?.professeur) {
+			const profId = personne.professeur.id;
+			const coursIds = (
+				await prisma.cours.findMany({ where: { professeurId: profId }, select: { id: true } })
+			).map((c) => c.id);
+			result.coursCount = coursIds.length;
+
+			let efficacite = 0;
+			if (coursIds.length > 0) {
+				const notes = await prisma.note.findMany({
+					where: { coursId: { in: coursIds } },
+					select: { eleveId: true, valeur: true }
+				});
+				const sums: Record<string, { s: number; n: number }> = {};
+				for (const note of notes) {
+					const v = Number(note.valeur);
+					if (Number.isNaN(v)) continue;
+					if (!sums[note.eleveId]) sums[note.eleveId] = { s: 0, n: 0 };
+					sums[note.eleveId].s += v;
+					sums[note.eleveId].n += 1;
+				}
+				for (const id in sums) {
+					if (sums[id].s / sums[id].n >= 10) efficacite += 1;
+				}
+			}
+			result.efficacite = efficacite;
+		}
+		return result;
+	}
 };

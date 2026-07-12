@@ -17,7 +17,7 @@
 			<AlertDialog.Description>{message}</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
-			<AlertDialog.Action>Compris</AlertDialog.Action>
+			<AlertDialog.Action onclick={() => (open = false)}>Compris</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>

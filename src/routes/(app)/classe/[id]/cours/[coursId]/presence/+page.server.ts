@@ -189,6 +189,22 @@ export const actions: Actions = {
 			() => {}
 		);
 
+		// Marque la salle liée à ce cours (via l'emploi du temps) comme occupée.
+		try {
+			const seanceEDT = await prisma.seanceEDT.findFirst({
+				where: { coursId, salleId: { not: null } },
+				select: { salleId: true }
+			});
+			if (seanceEDT?.salleId) {
+				await prisma.salle.update({
+					where: { id: seanceEDT.salleId },
+					data: { occupe: true }
+				});
+			}
+		} catch (e) {
+			console.error('Erreur mise à jour occupation salle (start):', e);
+		}
+
 		return { seanceId: seance.id, success: true };
 	},
 
@@ -232,7 +248,7 @@ export const actions: Actions = {
 
 		const cours = await prisma.cours.findUnique({
 			where: { id: coursId },
-			select: { professeurId: true }
+			select: { professeurId: true, participants: true }
 		});
 		if (cours?.professeurId && cours.professeurId !== profConnecteId) {
 			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le terminer' });
@@ -247,7 +263,17 @@ export const actions: Actions = {
 			return fail(400, { error: 'Aucune séance en cours' });
 		}
 
+		const participants = cours?.participants || [];
+
 		await prisma.$transaction(async (tx) => {
+			// Incrémente le nombre de cours terminés pour chaque élève participant.
+			for (const eleveId of participants) {
+				await tx.eleve.update({
+					where: { id: eleveId },
+					data: { coursTermines: { increment: 1 } }
+				});
+			}
+
 			for (const p of seance.presences) {
 				if (p.statut === 'ABSENT') {
 					await tx.absence.create({
@@ -278,6 +304,22 @@ export const actions: Actions = {
 		await logActivity(locals.user ?? null, 'fin_seance', `Fin du cours ${coursId}`, undefined, undefined).catch(
 			() => {}
 		);
+
+		// Libère la salle liée à ce cours (via l'emploi du temps).
+		try {
+			const seanceEDT = await prisma.seanceEDT.findFirst({
+				where: { coursId, salleId: { not: null } },
+				select: { salleId: true }
+			});
+			if (seanceEDT?.salleId) {
+				await prisma.salle.update({
+					where: { id: seanceEDT.salleId },
+					data: { occupe: false }
+				});
+			}
+		} catch (e) {
+			console.error('Erreur mise à jour occupation salle (stop):', e);
+		}
 
 		return { success: true };
 	}

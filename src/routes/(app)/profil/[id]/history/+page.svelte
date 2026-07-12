@@ -58,6 +58,26 @@
 
 	const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
 
+	// Génère une liste compacte de pages avec des ellipses pour éviter
+	// d'afficher des centaines de boutons quand il y a beaucoup de pages.
+	// Ex: 1 … 4 5 6 … 1000
+	function getPageItems(current: number, total: number): (number | 'ellipsis')[] {
+		const delta = 1; // pages autour de la page courante
+		const range: number[] = [];
+		const left = Math.max(2, current - delta);
+		const right = Math.min(total - 1, current + delta);
+
+		range.push(1);
+		if (left > 2) range.push(-1); // marqueur ellipsis gauche
+		for (let i = left; i <= right; i++) range.push(i);
+		if (right < total - 1) range.push(-2); // marqueur ellipsis droite
+		if (total > 1) range.push(total);
+
+		return range.map((n) => (n < 0 ? 'ellipsis' : n));
+	}
+
+	const pageItems = $derived(getPageItems(page, totalPages));
+
 	function getUrlParam(key: string, fallback: string) {
 		return new URLSearchParams(window.location.search).get(key) || fallback;
 	}
@@ -219,8 +239,11 @@
 										aria-disabled={page <= 1}
 									/>
 								</Pagination.Item>
-								{#each Array.from({ length: totalPages }, (_, i) => i + 1) as p}
-									<Pagination.Item>
+							{#each pageItems as p}
+								<Pagination.Item>
+									{#if p === 'ellipsis'}
+										<Pagination.Ellipsis />
+									{:else}
 										<Button
 											variant={p === page ? 'outline' : 'ghost'}
 											size="icon"
@@ -229,8 +252,9 @@
 										>
 											{p}
 										</Button>
-									</Pagination.Item>
-								{/each}
+									{/if}
+								</Pagination.Item>
+							{/each}
 								<Pagination.Item>
 									<Pagination.Next
 										onclick={() => navigateToPage(Math.min(totalPages, page + 1))}

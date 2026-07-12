@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import * as Avatar from '$lib/components/ui/avatar';
 	import {
 		Users,
 		GraduationCap,
@@ -15,7 +14,6 @@
 		Clock,
 		UserX,
 		Activity,
-		Check
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
@@ -23,7 +21,6 @@
 	const { data }: PageProps = $props();
 
 	const stats = $derived(data.stats);
-	const classes = $derived(data.classes);
 	const chartData = $derived(data.chartData);
 	let startDate = $state(data.rangeStart);
 	let endDate = $state(data.rangeEnd);
@@ -41,7 +38,6 @@
 	});
 
 	const incidentsByType = $derived(chartData?.incidentsByType || []);
-	const usersByRole = $derived(chartData?.usersByRole || []);
 	const attendanceData = $derived(chartData?.attendanceData || []);
 	const delaysByClass = $derived(chartData?.delaysByClass || []);
 	const incidentsTrend = $derived(chartData?.incidentsTrend || []);
@@ -55,14 +51,11 @@
 	const evolution = $derived(chartData?.evolution || []);
 
 	const maxIncidentCount = $derived(Math.max(...incidentsByType.map((d) => d.count), 1));
-	const totalUsers = $derived(usersByRole.reduce((sum, d) => sum + d.count, 0));
 	const maxClassSize = $derived(Math.max(...classSizes.map((d) => d.count), 1));
 	const maxDelays = $derived(Math.max(...delaysByClass.map((d) => d.count), 1));
 	const maxTrend = $derived(Math.max(...incidentsTrend.map((d) => d.count), 1));
 	const maxNotesDist = $derived(Math.max(...notesDistribution.map((d) => d.count), 1));
-	const maxAvg = $derived(Math.max(...avgNotesByClass.map((d) => d.avg), 1));
 	const maxIncByClass = $derived(Math.max(...incidentsByClass.map((d) => d.count), 1));
-	const maxAbsJust = $derived(Math.max(...absenceJustification.map((d) => d.count), 1));
 	const maxEvol = $derived(
 		Math.max(
 			...evolution.map((d) => Math.max(d.absences, d.retards, d.incidents)),
@@ -119,8 +112,6 @@
 	const trendArea = $derived(
 		`${trendPath} L ${trendPoints[trendPoints.length - 1]?.x ?? 0} ${190} L ${trendPoints[0]?.x ?? 0} ${190} Z`
 	);
-
-	const pieColors = ['#3b82f6', '#10b981', '#f59e0b'];
 	const donutColors = ['#10b981', '#ef4444'];
 	const incidentColors = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b'];
 	const delayColors = ['#f59e0b', '#f97316', '#ef4444'];
@@ -237,7 +228,7 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+		<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
 				<div class="flex items-center gap-3">
 					<div class="flex size-12 items-center justify-center rounded-lg bg-blue-500/10">
@@ -351,7 +342,7 @@
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre d'élèves par classe
 							</text>
-							{#each classBarData as { item, barHeight, x, y, barW, color }}
+							{#each classBarData as { item, barHeight, x, y, barW, color } (item.className)}
 								<rect
 									x={x}
 									y={y}
@@ -389,7 +380,7 @@
 				{@const circumference = 2 * Math.PI * radius}
 				<div class="h-64 w-full">
 					<svg viewBox="0 0 200 220" class="h-full w-full">
-						{#each attendanceData as item, i}
+						{#each attendanceData as item, i (item.label) }
 							{@const percent = total > 0 ? item.count / total : 0}
 							{@const dashArray = `${percent * circumference} ${circumference}`}
 							{@const dashOffset = -(attendanceData.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
@@ -438,7 +429,7 @@
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Distribution des incidents
 							</text>
-							{#each incidentBarData as { item, barHeight, x, y, barW, color }}
+							{#each incidentBarData as { item, barHeight, x, y, barW, color } (item.type)}
 								<rect
 									x={x}
 									y={y}
@@ -476,7 +467,7 @@
 							</text>
 							<path d={trendArea} fill="rgb(59 130 246 / 0.1)" stroke="none" />
 							<path d={trendPath} fill="none" stroke="rgb(59 130 246 / 0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							{#each trendPoints as p}
+							{#each trendPoints as p (p.date)}
 								<circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="white" stroke-width="2" />
 								{#if p.showLabel}
 									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
@@ -504,7 +495,7 @@
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre de retards
 							</text>
-							{#each delayBarData as { item, barHeight, x, y, barW, color }}
+							{#each delayBarData as { item, barHeight, x, y, barW, color } (item.className)}
 								<rect
 									x={x}
 									y={y}
@@ -563,7 +554,7 @@
 					{@const circumference = 2 * Math.PI * radius}
 					<div class="h-64 w-full">
 						<svg viewBox="0 0 200 220" class="h-full w-full">
-							{#each absenceJustification as item, i}
+							{#each absenceJustification as item, i (item.label)}
 								{@const percent = total > 0 ? item.count / total : 0}
 								{@const dashArray = `${percent * circumference} ${circumference}`}
 								{@const dashOffset = -(absenceJustification.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
@@ -610,7 +601,7 @@
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Répartition sur 20
 							</text>
-							{#each notesDistBarData as { item, barHeight, x, y, barW }}
+							{#each notesDistBarData as { item, barHeight, x, y, barW } (item.range)}
 								<rect x={x} y={y} width={barW} height={barHeight} fill="#3b82f6" rx="4" opacity="0.8" class="hover:opacity-100 transition-opacity" />
 								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">{item.count}</text>
 								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">{item.range}</text>
@@ -633,7 +624,7 @@
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Moyenne (/20)
 							</text>
-							{#each avgNotesBarData as { item, barHeight, x, y, barW, color }}
+							{#each avgNotesBarData as { item, barHeight, x, y, barW, color } (item.className)}
 								<rect x={x} y={y} width={barW} height={barHeight} fill={color} rx="4" opacity="0.8" class="hover:opacity-100 transition-opacity" />
 								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">{item.avg}</text>
 								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">{item.className}</text>
@@ -658,7 +649,7 @@
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre d'incidents
 							</text>
-							{#each incByClassBarData as { item, barHeight, x, y, barW, color }}
+							{#each incByClassBarData as { item, barHeight, x, y, barW, color } (item.className)}
 								<rect x={x} y={y} width={barW} height={barHeight} fill={color} rx="4" opacity="0.8" class="hover:opacity-100 transition-opacity" />
 								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">{item.count}</text>
 								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">{item.className}</text>
@@ -684,7 +675,7 @@
 							<path d={incPath} fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
 							<path d={absPath} fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 							<path d={retPath} fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							{#each absLine as p}
+							{#each absLine as p (p.date)}
 								<circle cx={p.x} cy={p.y} r="3" fill="#ef4444" stroke="white" stroke-width="1.5" />
 								{#if p.showLabel}
 									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">{p.date}</text>

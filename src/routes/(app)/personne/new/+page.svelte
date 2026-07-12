@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 
 	interface PersonnelForm {
 		nom: string;
@@ -176,7 +177,8 @@
 										bind:value={form.lieuNaissance}
 										placeholder="Ex: Antananarivo"
 										class={errors.lieuNaissance ? 'border-destructive' : ''}
-										oninput={(e) => form.lieuNaissance = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.lieuNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.lieuNaissance}
 										<span class="text-xs text-destructive">{errors.lieuNaissance}</span>
@@ -189,7 +191,8 @@
 										name="communeNaissance"
 										bind:value={form.communeNaissance}
 										placeholder="Ex: Isoraka"
-										oninput={(e) => form.communeNaissance = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.communeNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 								</div>
 								<div class="grid gap-2">
@@ -199,7 +202,8 @@
 										name="regionNaissance"
 										bind:value={form.regionNaissance}
 										placeholder="Ex: Analamanga"
-										oninput={(e) => form.regionNaissance = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.regionNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.regionNaissance}
 										<span class="text-xs text-destructive">{errors.regionNaissance}</span>
@@ -207,20 +211,20 @@
 								</div>
 								<div class="grid gap-2">
 									<Label for="provinceNaissance">Province</Label>
-									<select
+									<NativeSelect.Root
 										id="provinceNaissance"
+										class="w-full"
 										name="provinceNaissance"
 										bind:value={form.provinceNaissance}
-										class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 									>
-										<option value="">Sélectionner</option>
-										<option value="antananarivo">Antananarivo</option>
-										<option value="antsiranana">Antsiranana</option>
-										<option value="fianarantsoa">Fianarantsoa</option>
-										<option value="mahajanga">Mahajanga</option>
-										<option value="toamasina">Toamasina</option>
-										<option value="toliara">Toliara</option>
-									</select>
+										<NativeSelect.Option value="">Sélectionner</NativeSelect.Option>
+										<NativeSelect.Option value="antananarivo">Antananarivo</NativeSelect.Option>
+										<NativeSelect.Option value="antsiranana">Antsiranana</NativeSelect.Option>
+										<NativeSelect.Option value="fianarantsoa">Fianarantsoa</NativeSelect.Option>
+										<NativeSelect.Option value="mahajanga">Mahajanga</NativeSelect.Option>
+										<NativeSelect.Option value="toamasina">Toamasina</NativeSelect.Option>
+										<NativeSelect.Option value="toliara">Toliara</NativeSelect.Option>
+									</NativeSelect.Root>
 								</div>
 							</div>
 						</div>
@@ -242,7 +246,8 @@
 										bind:value={form.domicile}
 										placeholder="Ex: Lot C234 Ambatonakanga"
 										class={errors.domicile ? 'border-destructive' : ''}
-										oninput={(e) => form.domicile = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.domicile = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.domicile}
 										<span class="text-xs text-destructive">{errors.domicile}</span>
@@ -256,7 +261,8 @@
 										bind:value={form.fokontany}
 										placeholder="Ex: Ambatonakanga"
 										class={errors.fokontany ? 'border-destructive' : ''}
-										oninput={(e) => form.fokontany = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.fokontany = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.fokontany}
 										<span class="text-xs text-destructive">{errors.fokontany}</span>
@@ -270,7 +276,8 @@
 										bind:value={form.communeResidence}
 										placeholder="Ex: Toamasina"
 										class={errors.communeResidence ? 'border-destructive' : ''}
-										oninput={(e) => form.communeResidence = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.communeResidence = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.communeResidence}
 										<span class="text-xs text-destructive">{errors.communeResidence}</span>
@@ -284,7 +291,8 @@
 										bind:value={form.regionResidence}
 										placeholder="Ex: Toamasina"
 										class={errors.regionResidence ? 'border-destructive' : ''}
-										oninput={(e) => form.regionResidence = (e.target as HTMLInputElement).value.toUpperCase()}
+										oninput={(e) =>
+											(form.regionResidence = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.regionResidence}
 										<span class="text-xs text-destructive">{errors.regionResidence}</span>
@@ -350,19 +358,21 @@
 				</Accordion.Item>
 			</Accordion.Root>
 
-		<div class="flex items-center justify-end gap-4 pt-4">
-			<Button type="button" variant="outline" onclick={resetForm} disabled={submitting}>Effacer</Button>
-			<Button type="submit" disabled={submitting || success}>
-				{#if submitting}
-					<Spinner class="mr-2 size-4" />
-					Création...
-				{:else if success}
-					Créé !
-				{:else}
-					Créer le personnel
-				{/if}
-			</Button>
-		</div>
+			<div class="flex items-center justify-end gap-4 pt-4">
+				<Button type="button" variant="outline" onclick={resetForm} disabled={submitting}
+					>Effacer</Button
+				>
+				<Button type="submit" disabled={submitting || success}>
+					{#if submitting}
+						<Spinner class="mr-2 size-4" />
+						Création...
+					{:else if success}
+						Créé !
+					{:else}
+						Créer le personnel
+					{/if}
+				</Button>
+			</div>
 		</form>
 	</div>
 </main>

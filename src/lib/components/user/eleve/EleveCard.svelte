@@ -7,6 +7,7 @@
 	import type { ActionResult } from '@sveltejs/kit';
 	import type { Eleve } from '$lib/types/Personne.type';
 	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	let {
 		eleve,
@@ -17,6 +18,8 @@
 	} = $props();
 
 	let submittingDelete = $state(false);
+	let confirmOpen = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
 	let imageError = $state(false);
 
 	const initials = $derived(
@@ -24,8 +27,11 @@
 	);
 </script>
 
-<CardUI class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
+<CardUI
+	class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md"
+>
 	<form
+		bind:this={deleteForm}
 		method="POST"
 		action="?/delete"
 		use:enhance={() => {
@@ -41,34 +47,37 @@
 		}}
 	>
 		<input type="hidden" name="id" value={eleve.id} />
-		<Button
-			size="icon"
-			variant="destructive"
-			class="absolute right-4 top-4 z-10 size-8 rounded-full shadow-sm"
-			type="submit"
-			title="Supprimer"
-			disabled={submittingDelete}
-		>
-			{#if submittingDelete}
-				<Spinner class="size-4" />
-			{:else}
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="16"
-					height="16"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					><path d="M3 6h18" /><path
-						d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
-					/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg
-				>
-			{/if}
-		</Button>
 	</form>
+	<Button
+		size="icon"
+		variant="destructive"
+		class="absolute top-4 right-4 z-10 size-8 rounded-full shadow-sm"
+		type="button"
+		title="Supprimer"
+		onclick={() => (confirmOpen = true)}
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+				d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+			/></svg
+		>
+	</Button>
+	<ConfirmDeleteDialog
+		bind:open={confirmOpen}
+		title="Supprimer l'élève"
+		description="Êtes-vous sûr de vouloir supprimer {eleve.prenom} {eleve.nom} ? Cette action est irréversible."
+		loading={submittingDelete}
+		onConfirm={() => deleteForm?.requestSubmit()}
+	/>
 
 	<div class="h-50 w-full overflow-hidden">
 		{#if eleve.imageUrl && !imageError}
@@ -85,7 +94,7 @@
 					imageUrl={null}
 					name={eleve.nom}
 					lastname={eleve.prenom}
-					initials={initials}
+					{initials}
 					sizeClass="size-16"
 				/>
 			</div>
@@ -94,7 +103,9 @@
 	<div class="h-2 w-full bg-primary"></div>
 	<div class="flex flex-col gap-4 bg-white/5 p-4">
 		<div class="flex items-center gap-2">
-			<span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ELEVE -</span>
+			<span class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+				>ELEVE -</span
+			>
 			<span class="text-sm font-bold">{eleve.prenom} {eleve.nom}</span>
 		</div>
 		<span class="text-xs text-muted-foreground">Classe - {eleve.classe}</span>

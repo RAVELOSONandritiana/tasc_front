@@ -9,14 +9,16 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
-	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock } from '@lucide/svelte/icons';
+	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock, KeyRound } from '@lucide/svelte/icons';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { PageProps } from './$types';
 
-	const { data }: PageProps = $props();
+	const { data, form }: PageProps = $props();
 
 	let searchCompte = $state('');
 	let nouvelleAnnee = $state('');
+
+	const demandesEnAttente = $derived(data.demandesReset.filter((d) => !d.done));
 
 	const comptesFiltres = $derived(
 		data.comptes.filter(
@@ -28,7 +30,7 @@
 	);
 </script>
 
-<div class="h-screen flex flex-col bg-background text-foreground">
+<div class="flex min-h-0 flex-1 flex-col bg-background text-foreground">
 	<div class="sticky top-0 z-10 bg-background p-4 md:p-6 border-b border-sidebar-border">
 		<div class="space-y-4">
 			<div class="animate-slide-down flex items-center gap-3">
@@ -136,6 +138,72 @@
 						</Table.Body>
 					</Table.Root>
 				</div>
+			</Card>
+
+			<Card class="animate-slide-up stagger-2 opacity-0 space-y-4 p-5">
+				<div class="flex items-center gap-2">
+					<KeyRound class="size-4 text-primary" />
+					<h2 class="font-semibold">Demandes de réinitialisation de mot de passe</h2>
+					{#if demandesEnAttente.length > 0}
+						<Badge variant="secondary" class="text-xs">{demandesEnAttente.length}</Badge>
+					{/if}
+				</div>
+				<p class="text-xs text-muted-foreground">
+					Lorsqu'un utilisateur clique sur « Mot de passe oublié » à la connexion, sa demande
+					apparaît ici. Cliquez sur « Réinitialiser » pour générer un nouveau mot de passe, puis
+					communiquez-le à l'utilisateur.
+				</p>
+
+				{#if form?.resetSuccess}
+					<div class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+						<p class="font-medium text-emerald-500">
+							Mot de passe réinitialisé pour le compte {form.matricule}
+						</p>
+						<p class="mt-1">
+							Nouveau mot de passe : <span class="font-mono font-bold">{form.nouveauMdp}</span>
+						</p>
+					</div>
+				{:else if form?.error}
+					<div class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+						{form.error}
+					</div>
+				{/if}
+
+				{#if data.demandesReset.length === 0}
+					<p class="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+						Aucune demande de réinitialisation.
+					</p>
+				{:else}
+					<div class="space-y-2">
+						{#each data.demandesReset as demande (demande.id)}
+							<div
+								class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 {demande.done
+									? 'bg-muted/40'
+									: 'bg-background'}"
+							>
+								<div class="min-w-0 flex-1">
+									<p class="text-sm font-medium">Matricule : {demande.matricule || '—'}</p>
+									<p class="text-xs text-muted-foreground">{demande.description}</p>
+									<p class="mt-1 text-xs text-muted-foreground">{demande.time}</p>
+								</div>
+								{#if demande.done}
+									<Badge variant="outline" class="gap-1 border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-500">
+										<Check class="size-3" />
+										Traité
+									</Badge>
+								{:else}
+									<form method="POST" action="?/traiterReset" use:loadingForm class="inline">
+										<input type="hidden" name="notifId" value={demande.id} />
+										<Button size="sm" type="submit" class="h-8 gap-1 text-xs">
+											<KeyRound class="size-3" />
+											Réinitialiser
+										</Button>
+									</form>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</Card>
 
 			<Card class="animate-slide-up stagger-2 opacity-0 p-5 space-y-4">

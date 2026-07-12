@@ -21,6 +21,15 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	});
 	const anneeActive = annees.find((a) => a.active) || null;
 
+	const notifications = await prisma.notification.findMany({
+		where:
+			compte.role === 'ADMINISTRATEUR'
+				? undefined
+				: { scope: { not: 'ADMIN' } },
+		orderBy: { createdAt: 'desc' },
+		take: 50
+	});
+
 	return {
 		user: {
 			userId: compte.id,
@@ -32,6 +41,16 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			statut: compte.statut
 		},
 		annees: annees.map((a) => ({ id: a.id, nom: a.nom, active: a.active })),
-		anneeActiveId: anneeActive?.id || ''
+		anneeActiveId: anneeActive?.id || '',
+		notifications: notifications.map((n) => ({
+			id: n.id,
+			title: n.title,
+			description: n.description,
+			time: n.time,
+			read: n.read,
+			actionType: n.actionType,
+			matricule: n.matricule,
+			createdAt: n.createdAt.toISOString()
+		}))
 	};
 };

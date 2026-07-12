@@ -10,6 +10,7 @@
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Trash, Plus, UserCheck, X } from '@lucide/svelte';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	const { data }: PageProps = $props();
 
@@ -50,6 +51,11 @@
 		selectedExistingId = e.id;
 		searchQuery = `${e.nom} ${e.prenom}`;
 	}
+
+	let confirmOpen = $state(false);
+	let submittingDelete = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
+	let eleveToDelete = $state<{ id: string; nom: string; prenom: string } | null>(null);
 
 	function removeEleve(id: string) {
 		elevesInscrits = elevesInscrits.filter((e) => e.id !== id);
@@ -120,9 +126,7 @@
 								/>
 
 								{#if resultats.length > 0 && !selectedExistingId}
-									<div
-										class="mt-2 max-h-64 space-y-2 overflow-y-auto rounded-md border p-2"
-									>
+									<div class="mt-2 max-h-64 space-y-2 overflow-y-auto rounded-md border p-2">
 										{#each resultats as e (e.id)}
 											<button
 												type="button"
@@ -131,9 +135,7 @@
 											>
 												<p class="text-sm font-medium">{e.nom} {e.prenom}</p>
 												<p class="text-xs text-muted-foreground">
-													{e.dateNaissance
-														? new Date(e.dateNaissance).toLocaleDateString()
-														: ''}
+													{e.dateNaissance ? new Date(e.dateNaissance).toLocaleDateString() : ''}
 												</p>
 											</button>
 										{/each}
@@ -153,7 +155,8 @@
 												</span>
 											</div>
 											<span class="text-sm font-medium">
-												{eleveSelectionne.nom} {eleveSelectionne.prenom}
+												{eleveSelectionne.nom}
+												{eleveSelectionne.prenom}
 											</span>
 										</div>
 										<button
@@ -172,55 +175,44 @@
 						</div>
 
 						{#if searchQuery.trim().length > 0 && resultats.length === 0 && !selectedExistingId}
-							<p class="text-sm text-muted-foreground">
-								Aucun élève correspondant trouvé.
-							</p>
+							<p class="text-sm text-muted-foreground">Aucun élève correspondant trouvé.</p>
 						{/if}
 					</div>
 
 					<Dialog.Footer class="gap-2">
 						<form
 							method="POST"
-						action="?/addExisting"
-						use:loadingForm={{
-							handler: () => {
-								return async ({ result }: { result: ActionResult }) => {
-									if (result.type === 'success' && result.data?.eleve) {
-										const eleve = result.data.eleve as {
-											id: string;
-											nom: string;
-											prenom: string;
-											dateNaissance: string;
-											actif: boolean;
-										};
-										inscrireLocalement(eleve);
-										selectedExistingId = '';
-										searchQuery = '';
-										openAddDialog = false;
-										resetAddDialog();
-									} else if (result.type === 'failure') {
-										alert(result.data?.error || "Erreur lors de l'ajout de l'élève");
-									}
-								};
-							}
-						}}
+							action="?/addExisting"
+							use:loadingForm={{
+								handler: () => {
+									return async ({ result }: { result: ActionResult }) => {
+										if (result.type === 'success' && result.data?.eleve) {
+											const eleve = result.data.eleve as {
+												id: string;
+												nom: string;
+												prenom: string;
+												dateNaissance: string;
+												actif: boolean;
+											};
+											inscrireLocalement(eleve);
+											selectedExistingId = '';
+											searchQuery = '';
+											openAddDialog = false;
+											resetAddDialog();
+										} else if (result.type === 'failure') {
+											alert(result.data?.error || "Erreur lors de l'ajout de l'élève");
+										}
+									};
+								}
+							}}
 						>
 							<input type="hidden" name="eleveId" value={selectedExistingId} />
-							<Button
-								type="submit"
-								variant="outline"
-								size="sm"
-								disabled={!selectedExistingId}
-							>
+							<Button type="submit" variant="outline" size="sm" disabled={!selectedExistingId}>
 								<UserCheck class="mr-2 size-4" />
 								Ajouter
 							</Button>
 						</form>
-						<Button
-							variant="outline"
-							size="sm"
-							onclick={() => (openAddDialog = false)}
-						>
+						<Button variant="outline" size="sm" onclick={() => (openAddDialog = false)}>
 							Annuler
 						</Button>
 					</Dialog.Footer>
@@ -253,9 +245,7 @@
 							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
 							<Table.Cell>{eleve.prenom}</Table.Cell>
 							<Table.Cell>
-								{eleve.dateNaissance
-									? new Date(eleve.dateNaissance).toLocaleDateString()
-									: '—'}
+								{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
 							</Table.Cell>
 							<Table.Cell class="text-center">
 								{eleve.incidents?.length || 0}
@@ -267,24 +257,19 @@
 								{eleve.retards?.length || 0}
 							</Table.Cell>
 							<Table.Cell class="text-center">
-								<form
-									method="POST"
-								action="?/delete"
-								use:loadingForm={{
-									handler: () => {
-										return async ({ result }: { result: ActionResult }) => {
-											if (result.type === 'success') {
-												removeEleve(eleve.id);
-											}
-										};
-									}
-								}}
+								<Button
+									type="button"
+									variant="destructive"
+									size="icon"
+									class="size-8"
+									title="Supprimer"
+									onclick={() => {
+										eleveToDelete = eleve;
+										confirmOpen = true;
+									}}
 								>
-									<input type="hidden" name="id" value={eleve.id} />
-									<Button type="submit" variant="destructive" size="icon" class="size-8">
-										<Trash class="size-4" />
-									</Button>
-								</form>
+									<Trash class="size-4" />
+								</Button>
 							</Table.Cell>
 						</Table.Row>
 					{/each}
@@ -292,4 +277,36 @@
 			</Table.Root>
 		</div>
 	</div>
+
+	<form
+		bind:this={deleteForm}
+		method="POST"
+		action="?/delete"
+		use:loadingForm={{
+			handler: () => {
+				submittingDelete = true;
+				return async ({ result }: { result: ActionResult }) => {
+					submittingDelete = false;
+					if (result.type === 'success' && eleveToDelete) {
+						removeEleve(eleveToDelete.id);
+						confirmOpen = false;
+					} else if (result.type === 'failure') {
+						alert(result.data?.error || 'Suppression impossible');
+					}
+				};
+			}
+		}}
+	>
+		<input type="hidden" name="id" value={eleveToDelete?.id || ''} />
+	</form>
+
+	<ConfirmDeleteDialog
+		bind:open={confirmOpen}
+		title="Retirer l'élève de la classe"
+		description={eleveToDelete
+			? `Êtes-vous sûr de vouloir retirer ${eleveToDelete.prenom} ${eleveToDelete.nom} de cette classe ? Cette action est irréversible.`
+			: ''}
+		loading={submittingDelete}
+		onConfirm={() => deleteForm?.requestSubmit()}
+	/>
 </div>

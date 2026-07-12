@@ -12,6 +12,7 @@
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	const { salle, deleteAction = '' }: { salle: Salle; deleteAction?: string } = $props();
 
@@ -23,6 +24,8 @@
 	let files = $state<FileList | null>(null);
 	let submittingDelete = $state(false);
 	let imageError = $state(false);
+	let confirmOpen = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
 
 	const statutLabel = $derived(salle.occupe !== false ? 'Occupée' : 'Libre');
 	const statutClass = $derived(
@@ -63,7 +66,10 @@
 					const segments = oldImageUrl.split('/');
 					const recordId = segments[segments.length - 2];
 					if (recordId) {
-						await pb.collection('tasc_statics').delete(recordId).catch(() => {});
+						await pb
+							.collection('tasc_statics')
+							.delete(recordId)
+							.catch(() => {});
 					}
 				}
 			}
@@ -75,7 +81,9 @@
 	}
 </script>
 
-<CardUI class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
+<CardUI
+	class="relative flex h-full flex-col overflow-hidden transition-all duration-200 hover:shadow-md"
+>
 	<div class="relative h-40 w-full overflow-hidden">
 		{#if salle.imageUrl && !imageError}
 			<!-- svelte-ignore a11y_img_redundant_alt -->
@@ -114,48 +122,73 @@
 				<Pencil class="size-4" />
 			</button>
 			{#if deleteAction}
-				<form method="POST" action={deleteAction} use:enhance={() => {
-					submittingDelete = true;
-					return async ({ result }: { result: ActionResult }) => {
-						submittingDelete = false;
-						if (result.type === 'success') {
-							window.location.reload();
-						} else if (result.type === 'failure') {
-							console.error('[Delete] Failure:', result.data);
-							alert(result.data?.error || 'Suppression impossible');
-						} else {
-							console.error('[Delete] Error:', result);
-							alert('Erreur lors de la suppression');
-						}
-					};
-				}}>
+				<form
+					bind:this={deleteForm}
+					method="POST"
+					action={deleteAction}
+					use:enhance={() => {
+						submittingDelete = true;
+						return async ({ result }: { result: ActionResult }) => {
+							submittingDelete = false;
+							if (result.type === 'success') {
+								window.location.reload();
+							} else if (result.type === 'failure') {
+								console.error('[Delete] Failure:', result.data);
+								alert(result.data?.error || 'Suppression impossible');
+							} else {
+								console.error('[Delete] Error:', result);
+								alert('Erreur lors de la suppression');
+							}
+						};
+					}}
+				>
 					<input type="hidden" name="id" value={salle.id} />
-					<Button
-						size="icon"
-						variant="destructive"
-						class="size-8 rounded-full bg-black/40 text-white hover:bg-black/60"
-						title="Supprimer"
-						type="submit"
-						disabled={submittingDelete}
-					>
-						{#if submittingDelete}
-							<Spinner class="size-4" />
-						{:else}
-							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-						{/if}
-					</Button>
 				</form>
+				<Button
+					size="icon"
+					variant="destructive"
+					class="size-8 rounded-full bg-black/40 text-white hover:bg-black/60"
+					title="Supprimer"
+					type="button"
+					onclick={() => (confirmOpen = true)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+							d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+						/></svg
+					>
+				</Button>
+				<ConfirmDeleteDialog
+					bind:open={confirmOpen}
+					title="Supprimer la salle"
+					description="Êtes-vous sûr de vouloir supprimer la salle {salle.num} ? Cette action est irréversible."
+					loading={submittingDelete}
+					onConfirm={() => deleteForm?.requestSubmit()}
+				/>
 			{/if}
 		</div>
 	</div>
 	<div class="flex h-2 w-full bg-emerald-600"></div>
 	<div class="flex flex-col gap-2 bg-white/5 p-3">
-		<div class="text-base font-bold uppercase tracking-wider text-foreground">Salle {salle.num}</div>
+		<div class="text-base font-bold tracking-wider text-foreground uppercase">
+			Salle {salle.num}
+		</div>
 		<div class="text-sm text-foreground">{salle.name}</div>
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-3 text-xs text-muted-foreground">
 				<span>{salle.place} places</span>
-				<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {statutClass}">
+				<span
+					class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {statutClass}"
+				>
 					{statutLabel}
 				</span>
 			</div>
@@ -175,12 +208,24 @@
 			<div class="grid gap-4 pb-4">
 				<div class="grid gap-3">
 					<Label for="edit-num-salle">Numéro de salle</Label>
-					<Input id="edit-num-salle" type="number" bind:value={editNum} placeholder="ex: 7" name="num" />
+					<Input
+						id="edit-num-salle"
+						type="number"
+						bind:value={editNum}
+						placeholder="ex: 7"
+						name="num"
+					/>
 				</div>
 
 				<div class="grid gap-3">
 					<Label for="edit-nom-salle">Nom de la salle</Label>
-					<Input id="edit-nom-salle" type="text" bind:value={editNom} placeholder="ex: Salle A" name="nom" />
+					<Input
+						id="edit-nom-salle"
+						type="text"
+						bind:value={editNom}
+						placeholder="ex: Salle A"
+						name="nom"
+					/>
 				</div>
 
 				<div class="grid gap-3">
@@ -196,7 +241,9 @@
 			</div>
 
 			<Dialog.Footer>
-				<Button variant="outline" size="sm" type="button" onclick={() => (editOpen = false)}>Annuler</Button>
+				<Button variant="outline" size="sm" type="button" onclick={() => (editOpen = false)}
+					>Annuler</Button
+				>
 				<Button type="submit" variant="default" size="sm">Confirmer</Button>
 			</Dialog.Footer>
 		</form>

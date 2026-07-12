@@ -6,6 +6,8 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
+	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import {
 		FileText,
 		Clock,
@@ -20,7 +22,9 @@
 	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 	import { loadingForm } from '$lib/actions/loadingForm';
-	import type { TypeRapport, AbsenceRetardItem } from '$lib/types/Rapport.type';
+	import type { ActionResult } from '@sveltejs/kit';
+	import type { TypeRapport, Rapport } from '$lib/types/Rapport.type';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	const { data }: PageProps = $props();
 
@@ -36,17 +40,25 @@
 	let message = $state('');
 	let searchQuery = $state('');
 	let selectedItems = $state<string[]>([]);
+	let confirmOpen = $state(false);
+	let submittingDelete = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
+	let rapportToDelete = $state<Rapport | null>(null);
 
 	const searchResults = $derived(
 		searchQuery.trim().length > 0 && !selectedEleveId
 			? eleves.filter((e) =>
-					`${e.prenom}${e.nom}${e.classe}${e.dateNaissance}`.toLowerCase().includes(searchQuery.toLowerCase())
+					`${e.prenom}${e.nom}${e.classe}${e.dateNaissance}`
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase())
 				)
 			: []
 	);
 
 	const itemsDisponibles = $derived(
-		(selectedType === 'ABSENCE' ? absenceItems : retardItems).filter((i) => i.eleveId === selectedEleveId)
+		(selectedType === 'ABSENCE' ? absenceItems : retardItems).filter(
+			(i) => i.eleveId === selectedEleveId
+		)
 	);
 
 	const counts = $derived({
@@ -175,16 +187,12 @@
 		</button>
 		<div class="ml-auto flex items-center gap-2">
 			<Label for="filtre-classe" class="text-xs text-muted-foreground">Classe</Label>
-			<select
-				id="filtre-classe"
-				bind:value={filtreClasse}
-				class="h-8 rounded-full border border-sidebar-border bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
-			>
-				<option value="TOUTES">Toutes les classes</option>
+			<NativeSelect.Root id="filtre-classe" class="w-fit" size="sm" bind:value={filtreClasse}>
+				<NativeSelect.Option value="TOUTES">Toutes les classes</NativeSelect.Option>
 				{#each classesDisponibles as c (c)}
-					<option value={c}>{c}</option>
+					<NativeSelect.Option value={c}>{c}</NativeSelect.Option>
 				{/each}
-			</select>
+			</NativeSelect.Root>
 		</div>
 	</div>
 
@@ -198,7 +206,7 @@
 				<p class="mb-6 max-w-xs text-center text-xs text-muted-foreground/70">
 					{canEdit
 						? 'Créez un rapport en sélectionnant un élève et ses absences ou retards.'
-						: 'Aucun rapport de retard ou d\'absence n\'a encore été enregistré.'}
+						: "Aucun rapport de retard ou d'absence n'a encore été enregistré."}
 				</p>
 				{#if canEdit}
 					<Button onclick={openNew} variant="outline" size="sm">Créer un rapport</Button>
@@ -232,23 +240,24 @@
 								<p class="truncate text-xs text-muted-foreground">{r.classe}</p>
 							</div>
 							{#if canEdit}
-								<form method="POST" action="?/delete" use:loadingForm class="shrink-0">
-									<input type="hidden" name="rapportId" value={r.id} />
-									<button
-										type="submit"
-										class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
-										aria-label="Supprimer"
-									>
-										<Trash2 class="size-4" />
-									</button>
-								</form>
+								<button
+									type="button"
+									class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
+									aria-label="Supprimer"
+									onclick={() => {
+										rapportToDelete = r;
+										confirmOpen = true;
+									}}
+								>
+									<Trash2 class="size-4" />
+								</button>
 							{/if}
 						</div>
 
 						<div
 							class="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2"
 						>
-							<span class="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-primary">
+							<span class="shrink-0 text-[11px] font-semibold tracking-wide text-primary uppercase">
 								Résumé
 							</span>
 							<span class="text-xs font-medium text-foreground/90">{resume.detail}</span>
@@ -268,7 +277,9 @@
 								<div class="flex items-center justify-between gap-2 text-xs">
 									<span class="flex items-center gap-1.5">
 										<span
-											class="size-1.5 rounded-full {l.type === 'RETARD' ? 'bg-amber-500' : 'bg-red-500'}"
+											class="size-1.5 rounded-full {l.type === 'RETARD'
+												? 'bg-amber-500'
+												: 'bg-red-500'}"
 										></span>
 										{formatDate(l.date)}
 									</span>
@@ -302,42 +313,33 @@
 					<div class="grid gap-4 py-4">
 						<div class="grid gap-2">
 							<Label>Type de rapport</Label>
-							<div class="grid grid-cols-2 gap-2">
-								<button
-									type="button"
-									onclick={() => {
-										selectedType = 'RETARD';
+							<ToggleGroup.Root
+								type="single"
+								variant="outline"
+								class="grid w-full grid-cols-2"
+								value={selectedType}
+								onValueChange={(v) => {
+									if (v) {
+										selectedType = v as TypeRapport;
 										selectedItems = [];
-									}}
-									class="flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors {selectedType ===
-									'RETARD'
-										? 'border-amber-500 bg-amber-500/15 text-amber-600'
-										: 'border-input text-muted-foreground hover:bg-muted'}"
-								>
+									}
+								}}
+							>
+								<ToggleGroup.Item value="RETARD" class="gap-2">
 									<Clock class="size-4" /> Retard
-								</button>
-								<button
-									type="button"
-									onclick={() => {
-										selectedType = 'ABSENCE';
-										selectedItems = [];
-									}}
-									class="flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors {selectedType ===
-									'ABSENCE'
-										? 'border-red-500 bg-red-500/15 text-red-600'
-										: 'border-input text-muted-foreground hover:bg-muted'}"
-								>
+								</ToggleGroup.Item>
+								<ToggleGroup.Item value="ABSENCE" class="gap-2">
 									<UserX class="size-4" /> Absence
-								</button>
-								<input type="hidden" name="type" value={selectedType} />
-							</div>
+								</ToggleGroup.Item>
+							</ToggleGroup.Root>
+							<input type="hidden" name="type" value={selectedType} />
 						</div>
 
 						<div class="grid gap-2">
 							<Label>Élève concerné</Label>
 							<div class="relative">
 								<Search
-									class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+									class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
 								/>
 								<Input placeholder="Rechercher un élève..." bind:value={searchQuery} class="pl-9" />
 							</div>
@@ -354,7 +356,9 @@
 										>
 											<Avatar.Root class="size-9 shrink-0">
 												<Avatar.Image src={e.imageUrl || ''} alt={`${e.prenom} ${e.nom}`} />
-												<Avatar.Fallback class="text-xs font-bold">{e.prenom[0]}{e.nom[0]}</Avatar.Fallback>
+												<Avatar.Fallback class="text-xs font-bold"
+													>{e.prenom[0]}{e.nom[0]}</Avatar.Fallback
+												>
 											</Avatar.Root>
 											<div class="min-w-0">
 												<p class="truncate text-sm font-medium">{e.prenom} {e.nom}</p>
@@ -366,10 +370,15 @@
 							{/if}
 							{#if selectedEleveId}
 								{@const selected = eleves.find((e) => e.id === selectedEleveId)}
-								<div class="flex items-center justify-between gap-2 rounded-md border bg-muted/30 p-3">
+								<div
+									class="flex items-center justify-between gap-2 rounded-md border bg-muted/30 p-3"
+								>
 									<div class="flex items-center gap-3">
 										<Avatar.Root class="size-10">
-											<Avatar.Image src={selected?.imageUrl || ''} alt={`${selected?.prenom} ${selected?.nom}`} />
+											<Avatar.Image
+												src={selected?.imageUrl || ''}
+												alt={`${selected?.prenom} ${selected?.nom}`}
+											/>
 											<Avatar.Fallback class="text-xs font-bold"
 												>{selected?.prenom[0]}{selected?.nom[0]}</Avatar.Fallback
 											>
@@ -379,7 +388,11 @@
 											<p class="text-xs text-muted-foreground">{selected?.classe}</p>
 										</div>
 									</div>
-									<button type="button" class="rounded-full p-1 hover:bg-muted" onclick={resetSelection}>
+									<button
+										type="button"
+										class="rounded-full p-1 hover:bg-muted"
+										onclick={resetSelection}
+									>
 										<X class="size-4 text-muted-foreground" />
 									</button>
 								</div>
@@ -393,7 +406,9 @@
 									{selectedType === 'RETARD' ? 'Retards' : 'Absences'} de l'élève à reporter
 								</Label>
 								{#if itemsDisponibles.length === 0}
-									<p class="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+									<p
+										class="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground"
+									>
 										Aucun{selectedType === 'RETARD' ? ' retard' : 'e absence'} enregistré pour cet élève.
 									</p>
 								{:else}
@@ -445,7 +460,9 @@
 						</div>
 					</div>
 					<Dialog.Footer>
-						<Button variant="outline" type="button" onclick={() => (dialogOpen = false)}>Annuler</Button>
+						<Button variant="outline" type="button" onclick={() => (dialogOpen = false)}
+							>Annuler</Button
+						>
 						<Button
 							type="submit"
 							disabled={!selectedEleveId || selectedItems.length === 0 || !message.trim()}
@@ -457,4 +474,35 @@
 			</Dialog.Content>
 		</Dialog.Root>
 	{/if}
+
+	<form
+		bind:this={deleteForm}
+		method="POST"
+		action="?/delete"
+		use:loadingForm={{
+			handler: () => {
+				submittingDelete = true;
+				return async ({ result }: { result: ActionResult }) => {
+					submittingDelete = false;
+					if (result.type === 'success') {
+						confirmOpen = false;
+					} else if (result.type === 'failure') {
+						alert(result.data?.error || 'Suppression impossible');
+					}
+				};
+			}
+		}}
+	>
+		<input type="hidden" name="rapportId" value={rapportToDelete?.id || ''} />
+	</form>
+
+	<ConfirmDeleteDialog
+		bind:open={confirmOpen}
+		title="Supprimer le rapport"
+		description={rapportToDelete
+			? `Êtes-vous sûr de vouloir supprimer le rapport de ${rapportToDelete.elevePrenom} ${rapportToDelete.eleveNom} ? Cette action est irréversible.`
+			: ''}
+		loading={submittingDelete}
+		onConfirm={() => deleteForm?.requestSubmit()}
+	/>
 </main>

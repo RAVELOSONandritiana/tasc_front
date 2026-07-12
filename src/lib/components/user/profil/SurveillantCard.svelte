@@ -22,7 +22,7 @@
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import DeleteErrorDialog from '$lib/components/user/DeleteErrorDialog.svelte';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	type SurveillantWithStats = Surveillant & { stats?: Surveillant['stats'] };
 
@@ -46,8 +46,8 @@
 	const roleLabel = $derived((tags && tags[0]) || 'Surveillant');
 	const stats = personne.stats;
 	let submittingDelete = $state(false);
-	let deleteError = $state('');
-	let showDeleteError = $state(false);
+	let confirmOpen = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
 </script>
 
 <CardUI
@@ -58,37 +58,45 @@
 			class="absolute inset-0 bg-gradient-to-br from-sidebar-accent/40 via-sidebar to-sidebar-accent/20"
 		></div>
 		<div class="absolute inset-0 bg-linear-to-b from-transparent to-sidebar/80"></div>
-	{#if deleteAction}
-		<form method="POST" action={deleteAction} use:enhance={() => {
-			submittingDelete = true;
-			return async ({ result }: { result: ActionResult }) => {
-				submittingDelete = false;
-				if (result.type === 'success') {
-					window.location.reload();
-				} else if (result.type === 'failure') {
-					alert(result.data?.error || 'Suppression impossible');
-				} else {
-					alert('Erreur lors de la suppression');
-				}
-			};
-		}}>
-			<input type="hidden" name="id" value={personId} />
+		{#if deleteAction}
+			<form
+				bind:this={deleteForm}
+				method="POST"
+				action={deleteAction}
+				use:enhance={() => {
+					submittingDelete = true;
+					return async ({ result }: { result: ActionResult }) => {
+						submittingDelete = false;
+						if (result.type === 'success') {
+							window.location.reload();
+						} else if (result.type === 'failure') {
+							alert(result.data?.error || 'Suppression impossible');
+						} else {
+							alert('Erreur lors de la suppression');
+						}
+					};
+				}}
+			>
+				<input type="hidden" name="id" value={personId} />
+			</form>
 			<Button
 				size="icon"
 				variant="destructive"
-				class="absolute right-4 top-4 size-8 rounded-full shadow-sm"
-				type="submit"
+				class="absolute top-4 right-4 size-8 rounded-full shadow-sm"
+				type="button"
 				title="Supprimer"
-				disabled={submittingDelete}
+				onclick={() => (confirmOpen = true)}
 			>
-				{#if submittingDelete}
-					<Spinner class="size-4" />
-				{:else}
-					<Trash class="size-4" />
-				{/if}
+				<Trash class="size-4" />
 			</Button>
-		</form>
-	{/if}
+			<ConfirmDeleteDialog
+				bind:open={confirmOpen}
+				title="Supprimer le surveillant"
+				description="Êtes-vous sûr de vouloir supprimer {personne.name} {personne.lastname} ? Cette action est irréversible."
+				loading={submittingDelete}
+				onConfirm={() => deleteForm?.requestSubmit()}
+			/>
+		{/if}
 	</div>
 	<div class="flex-1 px-8 pt-0 pb-5">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">

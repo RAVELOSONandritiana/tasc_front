@@ -116,7 +116,12 @@
 					{/if}
 				</div>
 				<div class="flex items-center justify-center">
-					<Profil imageUrl={data.user?.imageUrl} nom={data.user?.nom} prenom={data.user?.prenom} />
+					<Profil
+						imageUrl={data.user?.imageUrl}
+						nom={data.user?.nom}
+						prenom={data.user?.prenom}
+						notifications={data.notifications ?? []}
+					/>
 				</div>
 			</header>
 			<div class="flex flex-1 flex-col">

@@ -4,6 +4,7 @@ import type { Incident, IncidentType } from '$lib/types/Incident.type';
 import type { Prisma } from '@prisma/client';
 import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { createNotification } from '$lib/server/notifications';
 import { formatClasseNom } from '$lib/utils';
 
 function mapIncident(prismaIncident: Prisma.IncidentGetPayload<{
@@ -108,6 +109,30 @@ export const actions: Actions = {
 			return fail(500, { error: 'Erreur lors de la création' });
 		}
 
+		// Notification en temps réel pour tout le monde.
+		try {
+			const eleve = await prisma.eleve.findUnique({
+				where: { id: eleveId },
+				include: { personne: true }
+			});
+			const nomEleve = eleve
+				? `${eleve.personne.name} ${eleve.personne.lastname}`.trim()
+				: 'un élève';
+			const typeLabels: Record<string, string> = {
+				INFO: 'Information',
+				ERREUR: 'Erreur',
+				NOTE: 'Note positive',
+				ABSENT: 'Absence'
+			};
+			await createNotification({
+				title: `Nouvel incident : ${typeLabels[type] || type}`,
+				description: `${author} a signalé un incident concernant ${nomEleve}.`,
+				scope: 'ALL'
+			});
+		} catch (e) {
+			console.error('Notification incident error:', e);
+		}
+
 		logActivity(locals.user, 'creation_incident', `Création d'un incident de type ${type}`).catch(() => {});
 
 		throw redirect(303, '/incidents');
@@ -197,23 +222,35 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const incidentId = data.get('incidentId') as string;
 		const emoji = data.get('emoji') as string;
-		const user = locals.user?.prenom || 'Admin';
+		const userId = locals.user?.userId;
 
 		if (!incidentId || !emoji) {
 			return fail(400, { error: 'Champs requis manquants' });
 		}
 
+		if (!userId) {
+			return fail(401, { error: 'Non authentifié' });
+		}
+
 		try {
-			await prisma.reaction.create({
-				data: {
-					incidentId,
-					emoji,
-					user
-				}
+			const existing = await prisma.reaction.findFirst({
+				where: { incidentId, emoji, user: userId }
 			});
+
+			if (existing) {
+				await prisma.reaction.delete({ where: { id: existing.id } });
+			} else {
+				await prisma.reaction.create({
+					data: {
+						incidentId,
+						emoji,
+						user: userId
+					}
+				});
+			}
 		} catch (e: unknown) {
 			console.error('Reaction error:', e);
-			return fail(500, { error: 'Erreur lors de l\'ajout de la réaction' });
+			return fail(500, { error: 'Erreur lors de la réaction' });
 		}
 
 		logActivity(locals.user, 'creation_incident', 'Ajout d\'une réaction sur un incident').catch(() => {});

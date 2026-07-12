@@ -7,6 +7,7 @@
 	import * as Accordion from '$lib/components/ui/accordion/index.js';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import { Switch } from '@skeletonlabs/skeleton-svelte';
 
 	let submitting = $state(false);
@@ -79,9 +80,8 @@
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouvel élève</h1>
 			<p class="text-sm text-muted-foreground">
-				Tous les champs sont obligatoires sauf les téléphones des parents et le contact de
-				l'élève. Au moins un responsable (père, mère ou tuteur) avec nom et prénom est
-				obligatoire.
+				Tous les champs sont obligatoires sauf les téléphones des parents et le contact de l'élève.
+				Au moins un responsable (père, mère ou tuteur) avec nom et prénom est obligatoire.
 			</p>
 		</div>
 
@@ -185,7 +185,10 @@
 													bind:value={form.lieuNaissance}
 													placeholder="Ex: Antananarivo"
 													class={errors.lieuNaissance ? 'border-destructive' : ''}
-													oninput={(e) => (form.lieuNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
+													oninput={(e) =>
+														(form.lieuNaissance = (
+															e.target as HTMLInputElement
+														).value.toUpperCase())}
 												/>
 												{#if errors.lieuNaissance}
 													<span class="text-xs text-destructive">{errors.lieuNaissance}</span>
@@ -198,7 +201,10 @@
 													name="communeNaissance"
 													bind:value={form.communeNaissance}
 													placeholder="Ex: Isoraka"
-													oninput={(e) => (form.communeNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
+													oninput={(e) =>
+														(form.communeNaissance = (
+															e.target as HTMLInputElement
+														).value.toUpperCase())}
 												/>
 											</div>
 											<div class="grid gap-2">
@@ -208,29 +214,36 @@
 													name="regionNaissance"
 													bind:value={form.regionNaissance}
 													placeholder="Ex: Analamanga"
-													oninput={(e) => (form.regionNaissance = (e.target as HTMLInputElement).value.toUpperCase())}
+													oninput={(e) =>
+														(form.regionNaissance = (
+															e.target as HTMLInputElement
+														).value.toUpperCase())}
 												/>
 												{#if errors.regionNaissance}
 													<span class="text-xs text-destructive">{errors.regionNaissance}</span>
 												{/if}
 											</div>
-												<div class="grid gap-2">
-													<Label for="province-naiss">Province</Label>
-													<select
-														id="province-naiss"
-														name="provinceNaissance"
-														bind:value={form.provinceNaissance}
-														class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+											<div class="grid gap-2">
+												<Label for="province-naiss">Province</Label>
+												<NativeSelect.Root
+													id="province-naiss"
+													class="w-full"
+													name="provinceNaissance"
+													bind:value={form.provinceNaissance}
+												>
+													<NativeSelect.Option value="">Sélectionner</NativeSelect.Option>
+													<NativeSelect.Option value="antananarivo"
+														>Antananarivo</NativeSelect.Option
 													>
-														<option value="">Sélectionner</option>
-														<option value="antananarivo">Antananarivo</option>
-														<option value="antsiranana">Antsiranana</option>
-														<option value="fianarantsoa">Fianarantsoa</option>
-														<option value="mahajanga">Mahajanga</option>
-														<option value="toamasina">Toamasina</option>
-														<option value="toliara">Toliara</option>
-													</select>
-												</div>
+													<NativeSelect.Option value="antsiranana">Antsiranana</NativeSelect.Option>
+													<NativeSelect.Option value="fianarantsoa"
+														>Fianarantsoa</NativeSelect.Option
+													>
+													<NativeSelect.Option value="mahajanga">Mahajanga</NativeSelect.Option>
+													<NativeSelect.Option value="toamasina">Toamasina</NativeSelect.Option>
+													<NativeSelect.Option value="toliara">Toliara</NativeSelect.Option>
+												</NativeSelect.Root>
+											</div>
 										</div>
 									</div>
 								</Accordion.Content>
@@ -254,7 +267,8 @@
 										bind:value={form.domicile}
 										placeholder="Ex: Lot C234 Ambatonakanga"
 										class={errors.domicile ? 'border-destructive' : ''}
-										oninput={(e) => (form.domicile = (e.target as HTMLInputElement).value.toUpperCase())}
+										oninput={(e) =>
+											(form.domicile = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.domicile}
 										<span class="text-xs text-destructive">{errors.domicile}</span>
@@ -268,7 +282,8 @@
 										bind:value={form.fokontany}
 										placeholder="Ex: Ambatonakanga"
 										class={errors.fokontany ? 'border-destructive' : ''}
-										oninput={(e) => (form.fokontany = (e.target as HTMLInputElement).value.toUpperCase())}
+										oninput={(e) =>
+											(form.fokontany = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.fokontany}
 										<span class="text-xs text-destructive">{errors.fokontany}</span>
@@ -282,7 +297,8 @@
 										bind:value={form.communeResidence}
 										placeholder="Ex: Toamasina"
 										class={errors.communeResidence ? 'border-destructive' : ''}
-										oninput={(e) => (form.communeResidence = (e.target as HTMLInputElement).value.toUpperCase())}
+										oninput={(e) =>
+											(form.communeResidence = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.communeResidence}
 										<span class="text-xs text-destructive">{errors.communeResidence}</span>
@@ -296,7 +312,8 @@
 										bind:value={form.regionResidence}
 										placeholder="Ex: Toamasina"
 										class={errors.regionResidence ? 'border-destructive' : ''}
-										oninput={(e) => (form.regionResidence = (e.target as HTMLInputElement).value.toUpperCase())}
+										oninput={(e) =>
+											(form.regionResidence = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.regionResidence}
 										<span class="text-xs text-destructive">{errors.regionResidence}</span>
@@ -383,7 +400,8 @@
 										bind:value={form.nomPere}
 										placeholder="Entrer le nom"
 										class={errors.nomPere ? 'border-destructive' : ''}
-										oninput={(e) => (form.nomPere = (e.target as HTMLInputElement).value.toUpperCase())}
+										oninput={(e) =>
+											(form.nomPere = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.nomPere}
 										<span class="text-xs text-destructive">{errors.nomPere}</span>
@@ -427,7 +445,8 @@
 										bind:value={form.nomMere}
 										placeholder="Entrer le nom"
 										class={errors.nomMere ? 'border-destructive' : ''}
-										oninput={(e) => (form.nomMere = (e.target as HTMLInputElement).value.toUpperCase())}
+										oninput={(e) =>
+											(form.nomMere = (e.target as HTMLInputElement).value.toUpperCase())}
 									/>
 									{#if errors.nomMere}
 										<span class="text-xs text-destructive">{errors.nomMere}</span>
@@ -522,9 +541,13 @@
 				</Accordion.Item>
 			</Accordion.Root>
 
-		<div class="flex items-center justify-end gap-2">
-			
-				<Button type="button" variant="outline" onclick={resetForm} disabled={submitting || success}>
+			<div class="flex items-center justify-end gap-2">
+				<Button
+					type="button"
+					variant="outline"
+					onclick={resetForm}
+					disabled={submitting || success}
+				>
 					Effacer
 				</Button>
 				<Button type="submit" disabled={submitting || success}>

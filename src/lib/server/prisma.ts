@@ -13,6 +13,12 @@ export const prisma = new PrismaClient({
 	adapter: new PrismaPg(databaseUrl)
 });
 
+function sortByLower<T>(items: T[], getKey: (item: T) => string | null | undefined): T[] {
+	return items.sort((a, b) =>
+		(getKey(a) || '').toLowerCase().localeCompare((getKey(b) || '').toLowerCase(), 'fr')
+	);
+}
+
 export async function initDb() {
 	try {
 		const { ensureAdmin } = await import('./ensureAdmin');
@@ -23,7 +29,7 @@ export async function initDb() {
 }
 
 export async function getEleves(anneeId?: string) {
-	return prisma.eleve.findMany({
+	const eleves = await prisma.eleve.findMany({
 		where: {
 			...(anneeId ? { inscriptions: { some: { anneeId, actif: true } } } : {}),
 			personne: {
@@ -43,13 +49,9 @@ export async function getEleves(anneeId?: string) {
 					dateInscription: 'desc'
 				}
 			}
-		},
-		orderBy: {
-			personne: {
-				name: 'asc'
-			}
 		}
 	});
+	return sortByLower(eleves, (e) => e.personne?.name);
 }
 
 export async function getEleveById(id: string) {
@@ -71,7 +73,7 @@ export async function getEleveById(id: string) {
 }
 
 export async function getProfesseurs() {
-	return prisma.professeur.findMany({
+	const profs = await prisma.professeur.findMany({
 		include: {
 			personne: {
 				include: {
@@ -84,13 +86,9 @@ export async function getProfesseurs() {
 					}
 				}
 			}
-		},
-		orderBy: {
-			personne: {
-				name: 'asc'
-			}
 		}
 	});
+	return sortByLower(profs, (p) => p.personne?.name);
 }
 
 export async function getProfesseurById(id: string) {
@@ -113,7 +111,7 @@ export async function getProfesseurById(id: string) {
 }
 
 export async function getSurveillants() {
-	return prisma.surveillant.findMany({
+	const surveillants = await prisma.surveillant.findMany({
 		include: {
 			personne: {
 				include: {
@@ -126,13 +124,9 @@ export async function getSurveillants() {
 					}
 				}
 			}
-		},
-		orderBy: {
-			personne: {
-				name: 'asc'
-			}
 		}
 	});
+	return sortByLower(surveillants, (s) => s.personne?.name);
 }
 
 export async function getSurveillantById(id: string) {
@@ -155,7 +149,7 @@ export async function getSurveillantById(id: string) {
 }
 
 export async function getPersonnes() {
-	return prisma.personne.findMany({
+	const personnes = await prisma.personne.findMany({
 		where: {
 			eleve: null
 		},
@@ -167,15 +161,13 @@ export async function getPersonnes() {
 					matricule: true
 				}
 			}
-		},
-		orderBy: {
-			name: 'asc'
 		}
 	});
+	return sortByLower(personnes, (p) => p.name);
 }
 
 export async function getAllPersonnesForSurveillant() {
-	return prisma.personne.findMany({
+	const personnes = await prisma.personne.findMany({
 		where: {
 			surveillant: null
 		},
@@ -187,11 +179,9 @@ export async function getAllPersonnesForSurveillant() {
 					matricule: true
 				}
 			}
-		},
-		orderBy: {
-			name: 'asc'
 		}
 	});
+	return sortByLower(personnes, (p) => p.name);
 }
 
 export async function createSurveillantFromPersonne(personneId: string, matricule: string, poste: string) {
@@ -241,7 +231,7 @@ export async function createSurveillantFromPersonne(personneId: string, matricul
 }
 
 export async function getAllPersonnes() {
-	return prisma.personne.findMany({
+	const personnes = await prisma.personne.findMany({
 		where: {
 			eleve: null,
 			professeur: null
@@ -254,15 +244,13 @@ export async function getAllPersonnes() {
 					matricule: true
 				}
 			}
-		},
-		orderBy: {
-			name: 'asc'
 		}
 	});
+	return sortByLower(personnes, (p) => p.name);
 }
 
 export async function getClasses(anneeId?: string) {
-	return prisma.classe.findMany({
+	const classes = await prisma.classe.findMany({
 		where: anneeId ? { anneeId } : undefined,
 		select: {
 			id: true,
@@ -277,11 +265,9 @@ export async function getClasses(anneeId?: string) {
 					personne: true
 				}
 			}
-		},
-		orderBy: {
-			niveau: 'asc'
 		}
 	});
+	return sortByLower(classes, (c) => c.nom);
 }
 
 export async function getClasseById(id: string) {
@@ -337,7 +323,7 @@ export async function getIncidents(anneeId?: string, start?: Date, end?: Date) {
 }
 
 export async function getElevesByClasseId(classeId: string) {
-	return prisma.inscription.findMany({
+	const inscriptions = await prisma.inscription.findMany({
 		where: { classeId },
 		include: {
 			eleve: {
@@ -351,6 +337,7 @@ export async function getElevesByClasseId(classeId: string) {
 			retards: true
 		}
 	});
+	return sortByLower(inscriptions, (i) => i.eleve?.personne?.name);
 }
 
 export async function getAnneeScolaires() {
@@ -362,12 +349,10 @@ export async function getAnneeScolaires() {
 }
 
 export async function getMatieres(anneeId?: string) {
-	return prisma.matiere.findMany({
-		where: anneeId ? { anneeId } : undefined,
-		orderBy: {
-			nom: 'asc'
-		}
+	const matieres = await prisma.matiere.findMany({
+		where: anneeId ? { anneeId } : undefined
 	});
+	return sortByLower(matieres, (m) => m.nom);
 }
 
 export async function createMatiere(
@@ -405,7 +390,7 @@ export async function updateMatiereImage(id: string, imageUrl: string | null) {
 }
 
 export async function getCours(anneeId?: string) {
-	return prisma.cours.findMany({
+	const cours = await prisma.cours.findMany({
 		where: anneeId ? { anneeId } : undefined,
 		include: {
 			matiere: true,
@@ -417,6 +402,7 @@ export async function getCours(anneeId?: string) {
 			classe: true
 		}
 	});
+	return sortByLower(cours, (c) => c.matiere?.nom);
 }
 
 export async function getNotifications() {
@@ -700,11 +686,10 @@ export async function getElevesDisponiblesForClasse(classeId: string) {
 				surveillant: null
 			}
 		},
-		include: { personne: true },
-		orderBy: { personne: { name: 'asc' } }
+		include: { personne: true }
 	});
 
-	return eleves.map((eleve) => ({
+	return sortByLower(eleves, (e) => e.personne?.name).map((eleve) => ({
 		id: eleve.id,
 		nom: eleve.personne.name,
 		prenom: eleve.personne.lastname,

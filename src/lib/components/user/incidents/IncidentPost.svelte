@@ -16,6 +16,8 @@
 	} from '@lucide/svelte/icons';
 	import type { Incident, IncidentType } from '$lib/types/Incident.type';
 	import { loadingForm } from '$lib/actions/loadingForm';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	const { incident, eleves, currentUserId } = $props<{
 		incident: Incident;
@@ -58,7 +60,9 @@
 	}
 
 	function getEleveImage(id: string) {
-		const e = eleves.find((el: { id: string; nom: string; prenom: string; imageUrl?: string | null }) => el.id === id);
+		const e = eleves.find(
+			(el: { id: string; nom: string; prenom: string; imageUrl?: string | null }) => el.id === id
+		);
 		return e?.imageUrl || null;
 	}
 
@@ -72,7 +76,14 @@
 
 	const reactionCount = $derived(incident.reactions?.length || 0);
 	const commentCount = $derived(incident.comments?.length || 0);
-	const userReacted = $derived(incident.reactions?.some((r: { emoji: string; user: string }) => r.user === currentUserId) || false);
+	const userReacted = $derived(
+		incident.reactions?.some((r: { emoji: string; user: string }) => r.user === currentUserId) ||
+			false
+	);
+
+	let submittingDelete = $state(false);
+	let confirmOpen = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
 
 	function handleShare() {
 		const url = window.location.origin + '/incidents';
@@ -83,7 +94,9 @@
 </script>
 
 <div class="mx-auto w-full max-w-2xl">
-	<div class="rounded-xl border border-sidebar-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md">
+	<div
+		class="rounded-xl border border-sidebar-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md"
+	>
 		<div class="p-4">
 			<div class="flex items-start justify-between">
 				<div class="flex items-center gap-3">
@@ -95,7 +108,10 @@
 					/>
 					<div>
 						<div class="flex items-center gap-2">
-							<button class="text-sm font-semibold transition-colors hover:text-primary hover:underline" onclick={() => handleEleveClick(incident.eleveId)}>
+							<button
+								class="text-sm font-semibold transition-colors hover:text-primary hover:underline"
+								onclick={() => handleEleveClick(incident.eleveId)}
+							>
 								{getEleveName(incident.eleveId)}
 							</button>
 							<span class="text-xs text-muted-foreground">·</span>
@@ -116,7 +132,13 @@
 					{:else}
 						<UserX class="size-3" />
 					{/if}
-					{validType === 'note' ? 'Note' : validType === 'erreur' ? 'Erreur' : validType === 'info' ? 'Info' : 'Absent'}
+					{validType === 'note'
+						? 'Note'
+						: validType === 'erreur'
+							? 'Erreur'
+							: validType === 'info'
+								? 'Info'
+								: 'Absent'}
 				</Badge>
 			</div>
 
@@ -124,7 +146,13 @@
 
 			<div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
 				<span class="flex items-center gap-1 {typeInfo.color}">
-					{validType === 'note' ? 'Positive' : validType === 'erreur' ? 'Problème' : validType === 'info' ? 'Info' : 'Absent'}
+					{validType === 'note'
+						? 'Positive'
+						: validType === 'erreur'
+							? 'Problème'
+							: validType === 'info'
+								? 'Info'
+								: 'Absent'}
 				</span>
 			</div>
 
@@ -134,12 +162,22 @@
 						<form method="POST" action="?/reaction" class="inline" use:loadingForm>
 							<input type="hidden" name="incidentId" value={incident.id} />
 							<input type="hidden" name="emoji" value="❤️" />
-							<Button type="submit" variant="ghost" size="sm" class="gap-1.5 text-xs">
+							<Button
+								type="submit"
+								variant="ghost"
+								size="sm"
+								class="gap-1.5 text-xs {userReacted ? 'text-red-500' : ''}"
+							>
 								<Heart class="size-3.5 {userReacted ? 'fill-red-500 text-red-500' : ''}" />
 								<span>{reactionCount}</span>
 							</Button>
 						</form>
-						<Button variant="ghost" size="sm" class="gap-1.5 text-xs" onclick={handleToggleComments}>
+						<Button
+							variant="ghost"
+							size="sm"
+							class="gap-1.5 text-xs"
+							onclick={handleToggleComments}
+						>
 							<MessageCircle class="size-3.5" />
 							<span>{commentCount}</span>
 						</Button>
@@ -148,12 +186,38 @@
 						</Button>
 					</div>
 					{#if isAuthor}
-						<form method="POST" action="?/delete" class="inline" use:loadingForm>
+						<form
+							bind:this={deleteForm}
+							method="POST"
+							action="?/delete"
+							class="inline"
+							use:loadingForm
+						>
 							<input type="hidden" name="incidentId" value={incident.id} />
-							<Button type="submit" variant="ghost" size="sm" class="gap-1.5 text-xs text-red-500 hover:text-red-600">
-								<Trash2 class="size-3.5" />
-							</Button>
 						</form>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							class="gap-1.5 text-xs text-red-500 hover:text-red-600"
+							onclick={() => (confirmOpen = true)}
+						>
+							{#if submittingDelete}
+								<Spinner class="size-3.5" />
+							{:else}
+								<Trash2 class="size-3.5" />
+							{/if}
+						</Button>
+						<ConfirmDeleteDialog
+							bind:open={confirmOpen}
+							title="Supprimer l'incident"
+							description="Êtes-vous sûr de vouloir supprimer cet incident ? Cette action est irréversible."
+							loading={submittingDelete}
+							onConfirm={() => {
+								submittingDelete = true;
+								deleteForm?.requestSubmit();
+							}}
+						/>
 					{/if}
 				</div>
 			</div>
@@ -163,7 +227,13 @@
 			<div class="border-t border-sidebar-border bg-muted/20 p-4">
 				<form method="POST" action="?/comment" class="mb-3 flex items-center gap-2" use:loadingForm>
 					<input type="hidden" name="incidentId" value={incident.id} />
-					<input type="text" name="text" bind:value={commentText} placeholder="Ajouter un commentaire..." class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none" />
+					<input
+						type="text"
+						name="text"
+						bind:value={commentText}
+						placeholder="Ajouter un commentaire..."
+						class="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none"
+					/>
 					<Button type="submit" size="sm" disabled={!commentText.trim()}>
 						<Send class="size-3.5" />
 					</Button>

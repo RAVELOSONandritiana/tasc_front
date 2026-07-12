@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { CalendarDays } from '@lucide/svelte/icons';
 	import type { AnneeScolaire } from '@prisma/client';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 
 	let {
 		annees = [],
@@ -17,13 +18,13 @@
 		if (id === activeId || switching) return;
 		switching = true;
 		try {
-			const fd = new FormData();
-			fd.append('id', id);
-			await fetch('/annee/set-active', {
+			const res = await fetch('/annee/set-active', {
 				method: 'POST',
-				body: fd,
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id }),
 				credentials: 'same-origin'
 			});
+			if (!res.ok) throw new Error('Échec changement année');
 			await invalidateAll();
 		} catch (e) {
 			console.error('Échec changement année', e);
@@ -35,15 +36,17 @@
 
 <div class="flex items-center gap-2">
 	<CalendarDays class="size-4 text-muted-foreground" />
-	<select
-		class="rounded-md border border-input bg-background px-2 py-1 text-sm"
+	<NativeSelect.Root
+		class="w-fit"
 		value={activeId}
 		disabled={switching}
 		onchange={(e) => changer((e.currentTarget as HTMLSelectElement).value)}
 		title="Année scolaire active"
 	>
 		{#each annees as annee (annee.id)}
-			<option value={annee.id}>{annee.nom}{annee.active ? ' •' : ''}</option>
+			<NativeSelect.Option value={annee.id}
+				>{annee.nom}{annee.active ? ' •' : ''}</NativeSelect.Option
+			>
 		{/each}
-	</select>
+	</NativeSelect.Root>
 </div>
