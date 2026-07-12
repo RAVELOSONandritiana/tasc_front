@@ -13,6 +13,22 @@ import { logActivity } from '$lib/server/activity';
 export const load: PageServerLoad = async ({ params }) => {
 	const inscriptions = await getElevesByClasseId(params.id);
 
+	// Une absence/retard est justifiée uniquement si elle est liée à un rapport.
+	const allAbsenceIds = inscriptions.flatMap((i) => i.absences?.map((a) => a.id) ?? []);
+	const allRetardIds = inscriptions.flatMap((i) => i.retards?.map((r) => r.id) ?? []);
+	const lignesJustifiees = await prisma.rapportLigne.findMany({
+		where: {
+			OR: [{ absenceId: { in: allAbsenceIds } }, { retardId: { in: allRetardIds } }]
+		},
+		select: { absenceId: true, retardId: true }
+	});
+	const justifiedAbsenceIds = new Set(
+		lignesJustifiees.filter((l) => l.absenceId).map((l) => l.absenceId as string)
+	);
+	const justifiedRetardIds = new Set(
+		lignesJustifiees.filter((l) => l.retardId).map((l) => l.retardId as string)
+	);
+
 	const elevesInscrits: EleveCours[] = inscriptions.map((i) => ({
 		id: i.eleve.id,
 		nom: i.eleve.personne.name,
@@ -38,13 +54,14 @@ export const load: PageServerLoad = async ({ params }) => {
 			i.absences?.map((a) => ({
 				id: a.id,
 				date: a.date.toISOString(),
-				justifie: a.justifie
+				justifie: justifiedAbsenceIds.has(a.id)
 			})) || [],
 		retards:
 			i.retards?.map((r) => ({
 				id: r.id,
 				date: r.date.toISOString(),
-				duree: r.duree
+				duree: r.duree,
+				justifie: justifiedRetardIds.has(r.id)
 			})) || []
 	}));
 

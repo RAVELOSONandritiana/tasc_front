@@ -6,6 +6,7 @@
 	import CoefficientDialog from '$lib/components/user/classe/CoefficientDialog.svelte';
 	import ParticipantsDialog from '$lib/components/user/classe/ParticipantsDialog.svelte';
 	import NotesDialog from '$lib/components/user/classe/NotesDialog.svelte';
+	import DeleteCourseDialog from '$lib/components/user/classe/DeleteCourseDialog.svelte';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import { page } from '$app/stores';
 	import { deserialize } from '$app/forms';
@@ -33,6 +34,9 @@
 	let openParticipantsDialog = $state(false);
 	let openExamenDialog = $state(false);
 	let openNoteDialog = $state(false);
+
+	let openDeleteDialog = $state(false);
+	let selectedCoursForDelete: Cours | null = $state(null);
 
 	let selectedCours: Cours | null = $state(null);
 
@@ -78,6 +82,16 @@
 		selectedCours = cours;
 		loadNotes(cours.id);
 		openNoteDialog = true;
+	}
+
+	function demanderSuppression(cours: Cours) {
+		selectedCoursForDelete = cours;
+		openDeleteDialog = true;
+	}
+
+	function supprimerCours(coursId: string) {
+		listeCours = listeCours.filter((c) => c.id !== coursId);
+		selectedCoursForDelete = null;
 	}
 
 	function formaterParticipants(cours: Cours): string {
@@ -208,11 +222,13 @@
 						!!data.currentProfesseurId && cours.professeurId === data.currentProfesseurId}
 					{@const peutModifierParticipants =
 						data.userRole === 'SURVEILLANT' || data.userRole === 'ADMINISTRATEUR'}
+					{@const peutSupprimer = peutModifierParticipants}
 					<CourseCard
 						{cours}
 						{matiere}
 						{estTitulaire}
 						{peutModifierParticipants}
+						{peutSupprimer}
 						defaultMatiereColor={DEFAULT_MATIERE_COLOR}
 						formatParticipants={formaterParticipants}
 						onEditCoefficient={ouvrirModifierCoefficient}
@@ -222,6 +238,7 @@
 							selectedCoursForImage = c;
 							openImageDialog = true;
 						}}
+						onDeleteCours={demanderSuppression}
 					/>
 				{/each}
 			</div>
@@ -263,6 +280,12 @@
 		{notesCours}
 		{notesLoading}
 		onLoadNotes={loadNotes}
+	/>
+
+	<DeleteCourseDialog
+		bind:open={openDeleteDialog}
+		cours={selectedCoursForDelete}
+		onDeleted={supprimerCours}
 	/>
 
 	<UploadFile bind:open={openImageDialog} bind:files={coursImageFiles} header="Image du cours" onSubmit={handleUploadCoursImage} />

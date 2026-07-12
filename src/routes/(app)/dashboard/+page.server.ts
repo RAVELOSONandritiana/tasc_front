@@ -1,8 +1,7 @@
-import type { PageServerLoad, Actions } from './$types';
+import type { PageServerLoad } from './$types';
 import { getEleves, getProfesseurs, getSurveillants, getClasses, getIncidents, getNotifications, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 import { formatClasseNom } from '$lib/utils';
 import { fail } from '@sveltejs/kit';
-import { logActivity } from '$lib/server/activity';
 
 function toISODate(d: Date): string {
 	const y = d.getFullYear();
@@ -100,9 +99,25 @@ export const load: PageServerLoad = async ({ url }) => {
 		}
 	});
 
+	const allAbsenceIds = inscriptions.flatMap((i) => i.absences.map((a) => a.id));
+	const allRetardIds = inscriptions.flatMap((i) => i.retards.map((r) => r.id));
+	const lignesJustifiees = await prisma.rapportLigne.findMany({
+		where: {
+			OR: [{ absenceId: { in: allAbsenceIds } }, { retardId: { in: allRetardIds } }]
+		},
+		select: { absenceId: true, retardId: true }
+	});
+	// Une absence/retard est justifiée uniquement si elle est liée à un rapport.
+	const justifiedAbsenceIds = new Set(
+		lignesJustifiees.filter((l) => l.absenceId).map((l) => l.absenceId as string)
+	);
+	const justifiedRetardIds = new Set(
+		lignesJustifiees.filter((l) => l.retardId).map((l) => l.retardId as string)
+	);
+
 	const unjustifiedAbsencesList = inscriptions.flatMap((ins) =>
 		ins.absences
-			.filter((a) => !a.justifie)
+			.filter((a) => !justifiedAbsenceIds.has(a.id))
 			.map((a) => ({
 				id: a.id,
 				eleveNom: ins.eleve?.personne?.lastname || '',
@@ -158,7 +173,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		{ label: 'Absent', count: Math.max(absentsCount, 0) }
 	];
 
-	const justifiedCount = allAbsences.filter((a) => a.justifie).length;
+	const justifiedCount = allAbsences.filter((a) => justifiedAbsenceIds.has(a.id)).length;
 	const unjustifiedCount = allAbsences.length - justifiedCount;
 	const absenceJustification = [
 		{ label: 'Justifiée', count: justifiedCount, color: '#10b981' },
@@ -294,46 +309,4 @@ export const load: PageServerLoad = async ({ url }) => {
 		rangeStart: toISODate(rangeStart),
 		rangeEnd: toISODate(rangeEnd)
 	};
-};
-
-export const actions: Actions = {
-	justifierAbsence: async ({ request, locals }) => {
-		const data = await request.formData();
-		const absenceId = data.get('absenceId') as string;
-		if (!absenceId) return fail(400, { error: 'ID de l\'absence requis' });
-
-		try {
-			await prisma.absence.update({
-				where: { id: absenceId },
-				data: { justifie: true }
-			});
-			logActivity(locals.user, 'justification_absence', `Justification d'une absence`).catch(() => {});
-		} catch (e) {
-			console.error('Justifier absence error:', e);
-			return fail(500, { error: 'Erreur lors de la justification' });
-		}
-
-		return { success: true };
-	},
-
-	justifierSelection: async ({ request, locals }) => {
-		const data = await request.formData();
-		const absenceIds = data.getAll('absenceId') as string[];
-		if (absenceIds.length === 0) return fail(400, { error: 'Aucune absence sélectionnée' });
-
-		try {
-			await prisma.absence.updateMany({
-				where: { id: { in: absenceIds } },
-				data: { justifie: true }
-			});
-			logActivity(locals.user, 'justification_absence', `Justification de ${absenceIds.length} absence(s)`).catch(
-				() => {}
-			);
-		} catch (e) {
-			console.error('Justifier selection error:', e);
-			return fail(500, { error: 'Erreur lors de la justification' });
-		}
-
-		return { success: true };
-	}
 };

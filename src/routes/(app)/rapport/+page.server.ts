@@ -224,8 +224,15 @@ export const actions: Actions = {
 		try {
 			const rapport = await prisma.rapport.findUnique({ where: { id: rapportId } });
 			if (!rapport) return fail(404, { error: 'Rapport introuvable' });
-			if (rapport.compteId && rapport.compteId !== locals.user?.userId) {
-				return fail(403, { error: 'Seul l\'auteur peut supprimer ce rapport' });
+			// Les surveillants et administrateurs peuvent supprimer tout rapport.
+			// Les autres (ex. enseignants auteurs) ne peuvent supprimer que leurs propres rapports.
+			if (
+				locals.user?.role !== 'SURVEILLANT' &&
+				locals.user?.role !== 'ADMINISTRATEUR' &&
+				rapport.compteId &&
+				rapport.compteId !== locals.user?.userId
+			) {
+				return fail(403, { error: 'Seul l\'auteur ou un surveillant/admin peut supprimer ce rapport' });
 			}
 			await prisma.rapport.delete({ where: { id: rapportId } });
 			logActivity(locals.user, 'suppression_rapport', 'Suppression d\'un rapport').catch(() => {});

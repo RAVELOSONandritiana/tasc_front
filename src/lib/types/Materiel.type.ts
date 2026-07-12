@@ -78,6 +78,7 @@ export type Retard = {
 	id: string;
 	date: string;
 	duree: string;
+	justifie: boolean;
 };
 
 export type Examen = {

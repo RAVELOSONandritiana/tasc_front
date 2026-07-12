@@ -273,6 +273,10 @@ export const actions: Actions = {
 			return fail(400, { error: 'coursId requis' });
 		}
 
+		if (locals.user?.role !== 'SURVEILLANT' && locals.user?.role !== 'ADMINISTRATEUR') {
+			return fail(403, { error: 'Seuls les surveillants et administrateurs peuvent supprimer un cours' });
+		}
+
 		try {
 			await deleteCours(coursId);
 			logActivity(locals.user, 'suppression_cours' as any, "Suppression d'un cours").catch(

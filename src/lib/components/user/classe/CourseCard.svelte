@@ -1,7 +1,7 @@
 <script lang="ts">
 	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Image as ImageIcon, Pencil, Users, BookOpen } from '@lucide/svelte/icons';
+	import { Image as ImageIcon, Pencil, Users, BookOpen, Trash2 } from '@lucide/svelte/icons';
 	import type { Cours } from '$lib/types/Materiel.type';
 
 	let {
@@ -9,10 +9,12 @@
 		matiere,
 		estTitulaire = true,
 		peutModifierParticipants = true,
+		peutSupprimer = true,
 		onEditCoefficient,
 		onEditParticipants,
 		onOpenNotes,
 		onOpenImageDialog,
+		onDeleteCours,
 		formatParticipants,
 		defaultMatiereColor
 	}: {
@@ -20,10 +22,12 @@
 		matiere?: { id: string; nom: string; couleur?: string };
 		estTitulaire?: boolean;
 		peutModifierParticipants?: boolean;
+		peutSupprimer?: boolean;
 		onEditCoefficient: (cours: Cours) => void;
 		onEditParticipants: (cours: Cours) => void;
 		onOpenNotes: (cours: Cours) => void;
 		onOpenImageDialog: (cours: Cours) => void;
+		onDeleteCours: (cours: Cours) => void;
 		formatParticipants: (cours: Cours) => string;
 		defaultMatiereColor: string;
 	} = $props();
@@ -72,6 +76,20 @@
 				>
 					<Pencil class="size-4" />
 				</Button>
+				<button
+					type="button"
+					class={buttonVariants({
+						variant: 'secondary',
+						size: 'icon-sm',
+						class: 'size-8 rounded-full bg-black/40 text-white hover:bg-red-600/80 hover:bg-black/60'
+					})}
+					onclick={() => onDeleteCours(cours)}
+					disabled={!peutSupprimer}
+					title={peutSupprimer ? 'Supprimer le cours' : 'Réservé aux surveillants'}
+					aria-label="Supprimer le cours"
+				>
+					<Trash2 class="size-4" />
+				</button>
 			</div>
 		</div>
 		<div
