@@ -7,6 +7,7 @@
 	let {
 		cours,
 		matiere,
+		estTitulaire = true,
 		onEditCoefficient,
 		onEditParticipants,
 		onOpenNotes,
@@ -16,6 +17,7 @@
 	}: {
 		cours: Cours;
 		matiere?: { id: string; nom: string; couleur?: string };
+		estTitulaire?: boolean;
 		onEditCoefficient: (cours: Cours) => void;
 		onEditParticipants: (cours: Cours) => void;
 		onOpenNotes: (cours: Cours) => void;
@@ -109,6 +111,8 @@
 					variant="default"
 					class="h-8 flex-1 rounded-lg px-3 text-xs"
 					onclick={() => onOpenNotes(cours)}
+					disabled={!estTitulaire}
+					title={estTitulaire ? undefined : 'Réservé au professeur titulaire du cours'}
 				>
 					<BookOpen class="mr-1 size-3" />
 					Notes

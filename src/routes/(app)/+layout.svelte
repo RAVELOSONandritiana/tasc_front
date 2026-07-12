@@ -18,7 +18,8 @@
 		Building2,
 		UserRoundSearch,
 		Settings,
-		LogOut
+		LogOut,
+		FileText
 	} from '@lucide/svelte/icons';
 
 	let { children, data } = $props();
@@ -31,6 +32,7 @@
 		{ path: '/eleves', label: 'Élèves', icon: GraduationCap, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
 		{ path: '/classe', label: 'Classes', icon: ClipboardList, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
 		{ path: '/incidents', label: 'Incidents', icon: AlertTriangle, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{ path: '/rapport', label: 'Rapports', icon: FileText, roles: ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT'] },
 		{ path: '/parametre', label: 'Paramètres', icon: Settings, roles: ['ADMINISTRATEUR'] },
 		{ path: '/salle', label: 'Salles', icon: Building2, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
 		{ path: '/profil', label: 'Mon profil', icon: UserRoundSearch, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] }

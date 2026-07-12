@@ -1,6 +1,8 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { getEleves, getProfesseurs, getSurveillants, getClasses, getIncidents, getNotifications, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 import { formatClasseNom } from '$lib/utils';
+import { fail } from '@sveltejs/kit';
+import { logActivity } from '$lib/server/activity';
 
 function toISODate(d: Date): string {
 	const y = d.getFullYear();
@@ -91,11 +93,24 @@ export const load: PageServerLoad = async ({ url }) => {
 		where: anneeId ? { anneeId, actif: true } : { actif: true },
 		include: {
 			classe: { select: { id: true, nom: true, niveau: true, serie: true } },
+			eleve: { include: { personne: true } },
 			absences: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
 			retards: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
 			notes: { where: { date: { gte: rangeStart, lte: rangeEnd } } }
 		}
 	});
+
+	const unjustifiedAbsencesList = inscriptions.flatMap((ins) =>
+		ins.absences
+			.filter((a) => !a.justifie)
+			.map((a) => ({
+				id: a.id,
+				eleveNom: ins.eleve?.personne?.lastname || '',
+				elevePrenom: ins.eleve?.personne?.name || '',
+				classe: formatClasseNom(ins.classe?.niveau, ins.classe?.nom),
+				date: a.date.toISOString()
+			}))
+	);
 
 	const allAbsences = inscriptions.flatMap((i) => i.absences);
 	const allRetards = inscriptions.flatMap((i) => i.retards);
@@ -273,9 +288,52 @@ export const load: PageServerLoad = async ({ url }) => {
 		classes,
 		chartData,
 		additionalStats,
+		unjustifiedAbsencesList,
 		anneeStart: anneeStartISO,
 		todayISO,
 		rangeStart: toISODate(rangeStart),
 		rangeEnd: toISODate(rangeEnd)
 	};
+};
+
+export const actions: Actions = {
+	justifierAbsence: async ({ request, locals }) => {
+		const data = await request.formData();
+		const absenceId = data.get('absenceId') as string;
+		if (!absenceId) return fail(400, { error: 'ID de l\'absence requis' });
+
+		try {
+			await prisma.absence.update({
+				where: { id: absenceId },
+				data: { justifie: true }
+			});
+			logActivity(locals.user, 'justification_absence', `Justification d'une absence`).catch(() => {});
+		} catch (e) {
+			console.error('Justifier absence error:', e);
+			return fail(500, { error: 'Erreur lors de la justification' });
+		}
+
+		return { success: true };
+	},
+
+	justifierSelection: async ({ request, locals }) => {
+		const data = await request.formData();
+		const absenceIds = data.getAll('absenceId') as string[];
+		if (absenceIds.length === 0) return fail(400, { error: 'Aucune absence sélectionnée' });
+
+		try {
+			await prisma.absence.updateMany({
+				where: { id: { in: absenceIds } },
+				data: { justifie: true }
+			});
+			logActivity(locals.user, 'justification_absence', `Justification de ${absenceIds.length} absence(s)`).catch(
+				() => {}
+			);
+		} catch (e) {
+			console.error('Justifier selection error:', e);
+			return fail(500, { error: 'Erreur lors de la justification' });
+		}
+
+		return { success: true };
+	}
 };

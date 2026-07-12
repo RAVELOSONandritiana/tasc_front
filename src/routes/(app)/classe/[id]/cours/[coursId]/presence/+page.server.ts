@@ -13,7 +13,7 @@ type ElevePresence = {
 	imageUrl?: string | null;
 };
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const classeId = params.id;
 	const coursId = params.coursId;
 
@@ -68,12 +68,16 @@ export const load: PageServerLoad = async ({ params }) => {
 	const historique = await prisma.seanceCours.findMany({
 		where: { coursId: coursId, statut: 'TERMINE' },
 		include: {
-			presences: true,
+			presences: { include: { eleve: { include: { personne: true } } } },
 			professeur: { include: { personne: true } }
 		},
 		orderBy: { dateDebut: 'desc' },
 		take: 10
 	});
+
+	const profConnecteId = locals.user ? await getProfesseurId(locals) : null;
+	const canStart =
+		!!profConnecteId && (!cours.professeurId || cours.professeurId === profConnecteId);
 
 	return {
 		eleves,
@@ -94,18 +98,30 @@ export const load: PageServerLoad = async ({ params }) => {
 					statut: seanceActive.statut
 				}
 			: null,
+		professeurId: cours.professeurId ?? null,
+		canStart,
 		presencesMap,
-		historique: historique.map((s) => ({
-			id: s.id,
-			dateDebut: s.dateDebut.toISOString(),
-			professeur: s.professeur
-				? `${s.professeur.personne.name} ${s.professeur.personne.lastname}`
-				: '—',
-			presents: s.presences.filter((p) => p.statut === 'PRESENT').length,
-			retards: s.presences.filter((p) => p.statut === 'RETARD').length,
-			absents: s.presences.filter((p) => p.statut === 'ABSENT').length,
-			total: s.presences.length
-		}))
+		historique: historique.map((s) => {
+			const absentsList = s.presences
+				.filter((p) => p.statut === 'ABSENT')
+				.map((p) => `${p.eleve.personne.name} ${p.eleve.personne.lastname}`);
+			const retardsList = s.presences
+				.filter((p) => p.statut === 'RETARD')
+				.map((p) => `${p.eleve.personne.name} ${p.eleve.personne.lastname}`);
+			return {
+				id: s.id,
+				dateDebut: s.dateDebut.toISOString(),
+				professeur: s.professeur
+					? `${s.professeur.personne.name} ${s.professeur.personne.lastname}`
+					: '—',
+				presents: s.presences.filter((p) => p.statut === 'PRESENT').length,
+				retards: s.presences.filter((p) => p.statut === 'RETARD').length,
+				absents: s.presences.filter((p) => p.statut === 'ABSENT').length,
+				total: s.presences.length,
+				absentsList,
+				retardsList
+			};
+		})
 	};
 };
 
@@ -121,6 +137,13 @@ async function getProfesseurId(locals: App.Locals): Promise<string | null> {
 export const actions: Actions = {
 	startSeance: async ({ params, locals }) => {
 		const coursId = params.coursId;
+		if (!locals.user) return fail(403, { error: 'Non autorisé' });
+
+		const profConnecteId = await getProfesseurId(locals);
+		if (!profConnecteId) {
+			return fail(403, { error: 'Seul le professeur titulaire peut démarrer ce cours' });
+		}
+
 		const annee = await getActiveAnneeScolaire();
 		if (!annee) return fail(400, { error: 'Aucune année scolaire active' });
 
@@ -128,8 +151,10 @@ export const actions: Actions = {
 			where: { id: coursId },
 			select: { professeurId: true }
 		});
-		const professeurId = cours?.professeurId ?? (await getProfesseurId(locals));
-		if (!professeurId) return fail(400, { error: 'Professeur introuvable' });
+		if (cours?.professeurId && cours.professeurId !== profConnecteId) {
+			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le démarrer' });
+		}
+		const professeurId = cours?.professeurId || profConnecteId;
 
 		const existante = await prisma.seanceCours.findFirst({
 			where: { coursId, statut: 'EN_COURS' }
@@ -198,6 +223,20 @@ export const actions: Actions = {
 
 	stopSeance: async ({ params, locals }) => {
 		const coursId = params.coursId;
+		if (!locals.user) return fail(403, { error: 'Non autorisé' });
+
+		const profConnecteId = await getProfesseurId(locals);
+		if (!profConnecteId) {
+			return fail(403, { error: 'Seul le professeur titulaire peut terminer ce cours' });
+		}
+
+		const cours = await prisma.cours.findUnique({
+			where: { id: coursId },
+			select: { professeurId: true }
+		});
+		if (cours?.professeurId && cours.professeurId !== profConnecteId) {
+			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le terminer' });
+		}
 
 		const seance = await prisma.seanceCours.findFirst({
 			where: { coursId, statut: 'EN_COURS' },

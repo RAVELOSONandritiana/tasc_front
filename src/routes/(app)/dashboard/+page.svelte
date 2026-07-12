@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import * as Avatar from '$lib/components/ui/avatar';
 	import {
 		Users,
 		GraduationCap,
@@ -13,9 +15,11 @@
 		TrendingUp,
 		Clock,
 		UserX,
-		Activity
+		Activity,
+		Check
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -23,6 +27,29 @@
 	const stats = $derived(data.stats);
 	const classes = $derived(data.classes);
 	const chartData = $derived(data.chartData);
+	const injustifiees = $derived(data.unjustifiedAbsencesList || []);
+
+	let justifOpen = $state(false);
+	let selectedAbsences = $state<string[]>([]);
+
+	const selectedCount = $derived(
+		selectedAbsences.filter((id) => injustifiees.some((a) => a.id === id)).length
+	);
+
+	function toggleAbsence(id: string, checked: boolean) {
+		if (checked) selectedAbsences = [...selectedAbsences, id];
+		else selectedAbsences = selectedAbsences.filter((x) => x !== id);
+	}
+
+	function toggleAll() {
+		if (selectedCount === injustifiees.length) selectedAbsences = [];
+		else selectedAbsences = injustifiees.map((a) => a.id);
+	}
+
+	// Réinitialise la sélection à l'ouverture du dialogue.
+	$effect(() => {
+		if (justifOpen) selectedAbsences = [];
+	});
 
 	let startDate = $state(data.rangeStart);
 	let endDate = $state(data.rangeEnd);
@@ -323,17 +350,23 @@
 				</div>
 			</Card>
 
-			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
-				<div class="flex items-center gap-3">
-					<div class="flex size-12 items-center justify-center rounded-lg bg-orange-500/10">
-						<AlertCircle class="size-6 text-orange-500" />
-					</div>
-					<div>
-						<p class="text-2xl font-bold">{additionalStats.unjustifiedAbsences ?? 0}</p>
-						<p class="text-xs text-muted-foreground">Absences non justifiées</p>
-					</div>
+		<Card
+			class="animate-slide-up opacity-0 p-5 transition-shadow hover:cursor-pointer hover:shadow-md"
+			role="button"
+			tabindex="0"
+			onclick={() => (justifOpen = true)}
+			onkeydown={(e) => (e.key === 'Enter' ? (justifOpen = true) : null)}
+		>
+			<div class="flex items-center gap-3">
+				<div class="flex size-12 items-center justify-center rounded-lg bg-orange-500/10">
+					<AlertCircle class="size-6 text-orange-500" />
 				</div>
-			</Card>
+				<div>
+					<p class="text-2xl font-bold">{additionalStats.unjustifiedAbsences ?? 0}</p>
+					<p class="text-xs text-muted-foreground">Absences non justifiées</p>
+				</div>
+			</div>
+		</Card>
 		</div>
 
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -751,6 +784,69 @@
 					</div>
 				{/if}
 			</Card>
+		<Dialog.Root bind:open={justifOpen}>
+			<Dialog.Content class="sm:max-w-lg">
+				<Dialog.Header>
+					<Dialog.Title>Absences non justifiées</Dialog.Title>
+					<Dialog.Description>
+						Cochez les absences à justifier, puis validez. Toutes les absences sélectionnées
+						seront marquées comme justifiées d'un coup.
+					</Dialog.Description>
+				</Dialog.Header>
+				{#if injustifiees.length === 0}
+					<p class="py-10 text-center text-sm text-muted-foreground">
+						Aucune absence non justifiée sur la période sélectionnée.
+					</p>
+				{:else}
+					<form method="POST" action="?/justifierSelection" use:enhance>
+						<div class="max-h-[55vh] space-y-2 overflow-y-auto py-2">
+							{#each injustifiees as a (a.id)}
+								<label
+									class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted {selectedAbsences
+										.includes(a.id)
+										? 'border-emerald-500/40 bg-emerald-500/5'
+										: 'border-sidebar-border'}"
+								>
+									<input
+										type="checkbox"
+										name="absenceId"
+										value={a.id}
+										checked={selectedAbsences.includes(a.id)}
+										onchange={(e) => toggleAbsence(a.id, e.currentTarget.checked)}
+										class="mt-0.5"
+									/>
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium">{a.elevePrenom} {a.eleveNom}</p>
+										<p class="text-xs text-muted-foreground">
+											{a.classe} · {new Date(a.date).toLocaleString('fr-FR', {
+												day: 'numeric',
+												month: 'short',
+												hour: '2-digit',
+												minute: '2-digit'
+											})}
+										</p>
+									</div>
+								</label>
+							{/each}
+						</div>
+						<div class="mt-3 flex items-center justify-between gap-2 border-t border-sidebar-border pt-3">
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onclick={toggleAll}
+								disabled={injustifiees.length === 0}
+							>
+								{selectedCount === injustifiees.length ? 'Tout décocher' : 'Tout sélectionner'}
+							</Button>
+							<Button type="submit" size="sm" class="gap-1.5" disabled={selectedCount === 0}>
+								<Check class="size-3.5" /> Justifier la sélection ({selectedCount})
+							</Button>
+						</div>
+					</form>
+				{/if}
+			</Dialog.Content>
+		</Dialog.Root>
 		</div>
 	</div>
 </div>

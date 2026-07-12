@@ -1,0 +1,10 @@
+les prof peutvent voir les rapports d'absence 
+et de retard mais pas de modification ni d'ajout, 
+chaque matiere a son propre historique de seance avec
+ possibiliter de lister les absents et retards et dans rapport 
+ une fois que la personne est selectionne tout les absences ou 
+ retard selon ce qui a ete selectionne sont affiches et on selectionne
+  seulement donc pas besoin de ajouter une date,  et gere bien 
+  l'interaction avec les absences non jusitifies qui 
+  sont afficher dans le dashboard la car quand une absence 
+  est justifie ou retard ces chiffres doivent aussi changer mise a jourregles 

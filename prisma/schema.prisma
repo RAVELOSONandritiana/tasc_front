@@ -22,6 +22,7 @@ model AnneeScolaire {
   incidents      Incident[]
   matieres       Matiere[]
   seancesCours   SeanceCours[]
+  rapports       Rapport[]
 
   @@map("annees_scolaires")
 }
@@ -82,6 +83,7 @@ model Inscription {
   notes           Note[]
   retards         Retard[]
   presences       PresenceEleve[]
+  rapports        Rapport[]
 
   @@unique([eleveId, anneeId])
   @@map("inscriptions")
@@ -249,6 +251,7 @@ model Eleve {
   notes           Note[]
   retards         Retard[]
   presences       PresenceEleve[]
+  rapports        Rapport[]
 
   @@map("eleves")
 }
@@ -397,6 +400,7 @@ model Absence {
   updatedAt     DateTime     @updatedAt
   eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
   inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
+  rapports      RapportLigne[]
 
   @@map("absences")
 }
@@ -407,14 +411,60 @@ model Retard {
   date          DateTime     @default(now())
   duree         String
   motif         String?
+  justifie      Boolean      @default(false)
   eleveId       String
   inscriptionId String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
   inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
+  rapports      RapportLigne[]
 
   @@map("retards")
+}
+
+/// Rapport d'un surveillant concernant un retard ou une absence d'un eleve.
+model Rapport {
+  id            String        @id @default(uuid())
+  type          TypeRapport   @default(RETARD)
+  message       String?
+  auteur        String
+  compteId      String?
+  eleveId       String
+  inscriptionId String?
+  anneeId       String
+  date          DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  eleve         Eleve         @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+  inscription   Inscription?  @relation(fields: [inscriptionId], references: [id])
+  lignes        RapportLigne[]
+
+  @@index([eleveId])
+  @@index([anneeId])
+  @@map("rapports")
+}
+
+/// Ligne d'un rapport : reference un absence ou un retard concret de l'eleve.
+model RapportLigne {
+  id        String      @id @default(uuid())
+  rapportId String
+  type      TypeRapport
+  eleveId   String
+  date      DateTime
+  motif     String?
+  absenceId String?
+  retardId  String?
+  createdAt DateTime    @default(now())
+  rapport   Rapport     @relation(fields: [rapportId], references: [id], onDelete: Cascade)
+  absence   Absence?    @relation(fields: [absenceId], references: [id], onDelete: Cascade)
+  retard    Retard?     @relation(fields: [retardId], references: [id], onDelete: Cascade)
+
+  @@index([rapportId])
+  @@index([absenceId])
+  @@index([retardId])
+  @@map("rapport_lignes")
 }
 
 /// Incident / actu concernant un eleve.
@@ -507,6 +557,11 @@ enum TypeIncident {
   ERREUR
   NOTE
   ABSENT
+}
+
+enum TypeRapport {
+  RETARD
+  ABSENCE
 }
 
 enum StatutSeance {

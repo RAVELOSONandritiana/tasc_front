@@ -22,6 +22,8 @@ export type ActivityAction =
 	| 'fin_seance'
 	| 'creation_eleve'
 	| 'suppression_eleve'
+	| 'creation_rapport'
+	| 'suppression_rapport'
 	| 'changement_mot_de_passe';
 
 export async function logActivity(

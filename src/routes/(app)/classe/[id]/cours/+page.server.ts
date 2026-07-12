@@ -22,7 +22,7 @@ import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const classe = await getClasseById(params.id);
 	if (!classe) {
 		throw fail(404, { error: 'Classe introuvable' });
@@ -80,7 +80,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		phone: p.personne.phone
 	}));
 
-	const listeCours: Cours[] = coursList
+		const listeCours: Cours[] = coursList
 		.filter((c) => c.classeId === params.id)
 		.map((c) => ({
 			id: c.id,
@@ -89,15 +89,16 @@ export const load: PageServerLoad = async ({ params }) => {
 			professeur: c.professeur
 				? `${c.professeur.personne.name} ${c.professeur.personne.lastname}`
 				: '',
+			professeurId: c.professeurId || null,
 			participants: c.participants || [],
 			matiereId: c.matiereId,
-		matiere: c.matiere
-			? {
-					id: c.matiere.id,
-					nom: c.matiere.nom,
-					couleur: c.matiere.couleur || undefined
-				}
-			: undefined,
+			matiere: c.matiere
+				? {
+						id: c.matiere.id,
+						nom: c.matiere.nom,
+						couleur: c.matiere.couleur || undefined
+					}
+				: undefined,
 			url: c.imageUrl || undefined
 		}));
 
@@ -124,7 +125,13 @@ export const load: PageServerLoad = async ({ params }) => {
 		enseignants,
 		listeCours,
 		listeExamens,
-		elevesClasse
+		elevesClasse,
+		currentProfesseurId: locals.user
+			? ((await prisma.compte.findUnique({
+					where: { id: locals.user.userId },
+					include: { personne: { include: { professeur: true } } }
+				}))?.personne?.professeur?.id ?? null)
+			: null
 	};
 };
 

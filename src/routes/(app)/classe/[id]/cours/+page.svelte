@@ -204,9 +204,12 @@
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each coursFiltres as cours (cours.id)}
 					{@const matiere = matiereMap[cours.matiereId || '']}
+					{@const estTitulaire =
+						!!data.currentProfesseurId && cours.professeurId === data.currentProfesseurId}
 					<CourseCard
 						{cours}
 						{matiere}
+						{estTitulaire}
 						defaultMatiereColor={DEFAULT_MATIERE_COLOR}
 						formatParticipants={formaterParticipants}
 						onEditCoefficient={ouvrirModifierCoefficient}

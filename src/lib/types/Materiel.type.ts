@@ -29,6 +29,7 @@ export type Cours = {
 	nom: string;
 	coefficient: number;
 	professeur?: string;
+	professeurId?: string | null;
 	participants?: string[];
 	matiereId?: string;
 	matiere?: { id: string; nom: string; couleur?: string };
