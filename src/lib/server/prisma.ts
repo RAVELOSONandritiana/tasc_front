@@ -1027,3 +1027,16 @@ export async function getNotesByCoursIdSorted(coursId: string) {
 export async function deleteNote(id: string) {
   return prisma.note.delete({ where: { id } });
 }
+
+export async function updateNote(
+  id: string,
+  data: { valeur?: number; libelle?: string | null }
+) {
+  return prisma.note.update({
+    where: { id },
+    data: {
+      ...(data.valeur !== undefined ? { valeur: data.valeur } : {}),
+      ...(data.libelle !== undefined ? { libelle: data.libelle || null } : {})
+    }
+  });
+}

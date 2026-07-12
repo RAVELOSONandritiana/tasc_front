@@ -324,7 +324,8 @@
 					<th class="border border-gray-800 px-4 py-2 text-left">Matière</th>
 					<th class="border border-gray-800 px-4 py-2 text-center w-24">Coefficient</th>
 					<th class="border border-gray-800 px-4 py-2 text-center w-40">Notes</th>
-					<th class="border border-gray-800 px-4 py-2 text-center w-32">Total</th>
+					<th class="border border-gray-800 px-4 py-2 text-center w-24">Moyenne</th>
+					<th class="border border-gray-800 px-4 py-2 text-center w-24">Total</th>
 					<th class="border border-gray-800 px-4 py-2 text-left">Appréciations</th>
 				</tr>
 			</thead>
@@ -339,21 +340,18 @@
 							<div class="flex flex-wrap items-center justify-center gap-1">
 								{#each notesM as note (note.id)}
 									<span class="inline-block rounded px-1.5 py-0.5 font-mono">
-										{note.valeur}/20
+										{formatNombre(note.valeur)}/20
 									</span>
 								{:else}
 									<span class="text-gray-400 italic">0/20</span>
 								{/each}
 							</div>
 						</td>
+						<td class="border border-gray-800 px-4 py-2.5 text-center font-semibold">
+							{notesM.length > 0 ? `${formatNombre(moyM)}/20` : '0/20'}
+						</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-center font-bold">
-							<div class="flex flex-wrap items-center justify-center gap-1">
-								{#each notesM as note (note.id)}
-									<span class="font-mono">{note.valeur * getCoefficientCours(note.coursId)}</span>
-								{:else}
-									<span class="text-gray-400 italic">0</span>
-								{/each}
-							</div>
+							{formatNombre(moyM * (cours.coefficient || 0))}
 						</td>
 						<td class="border border-gray-800 px-4 py-2.5 text-xs text-gray-700 font-sans">
 							<span class="font-medium text-black block">{cours.professeur || '—'}</span>

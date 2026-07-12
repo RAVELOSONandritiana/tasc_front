@@ -13,6 +13,7 @@ import {
 	createNote,
 	getNotesByCoursIdSorted,
 	deleteNote,
+	updateNote,
 	updateMatiere,
 	getActiveAnneeScolaire,
 	prisma
@@ -294,17 +295,14 @@ export const actions: Actions = {
 
 	createNote: async ({ request, locals, params }) => {
 		const data = await request.formData();
-		const valeurBrute = parseFloat((data.get('valeur') as string) || '0');
-		const typeNotation = (data.get('typeNotation') as string) || 'sur_20';
+		const valeur = parseFloat((data.get('valeur') as string) || '0');
 		const libelle = (data.get('libelle') as string | null)?.trim() || '';
 		const eleveId = data.get('eleveId') as string;
 		const coursId = data.get('coursId') as string;
 		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
-		const coefficientMode = (data.get('coefficientMode') as string) || 'unitaire';
-		const bonus = parseFloat((data.get('bonus') as string) || '0') || 0;
 
 		const errors: Record<string, string> = {};
-		if (isNaN(valeurBrute)) {
+		if (isNaN(valeur)) {
 			errors.valeur = 'La note doit être un nombre valide';
 		}
 		if (!eleveId) {
@@ -314,50 +312,28 @@ export const actions: Actions = {
 			errors.coursId = 'Cours introuvable';
 		}
 		if (Object.keys(errors).length > 0) {
-			return fail(400, { errors, valeur: valeurBrute, eleveId, libelle });
+			return fail(400, { errors, valeur, eleveId, libelle });
 		}
 
 		try {
 			const cours = await prisma.cours.findUnique({
 				where: { id: coursId },
-				select: { classeId: true, coefficient: true }
+				select: { classeId: true }
 			});
 			if (!cours) {
 				return fail(404, { errors: { coursId: 'Cours introuvable' } });
 			}
 
-			let convertedValeur = valeurBrute;
-			switch (typeNotation) {
-				case 'sur_10':
-					convertedValeur = valeurBrute * 2;
-					break;
-				case 'sur_100':
-					convertedValeur = valeurBrute / 5;
-					break;
-				case 'sur_5':
-					convertedValeur = valeurBrute * 4;
-					break;
-				case 'sur_20':
-				default:
-					convertedValeur = valeurBrute;
-			}
-
-			const valeurFinale = convertedValeur + bonus;
-
-			if (valeurFinale < 0 || valeurFinale > 40) {
+			if (valeur < 0 || valeur > 20) {
 				return fail(400, {
-					errors: { valeur: 'La note (avec bonus) doit être comprise entre 0 et 40' },
-					valeur: valeurBrute,
+					errors: { valeur: 'La note doit être comprise entre 0 et 20' },
+					valeur,
 					eleveId,
 					libelle
 				});
 			}
 
-			let coefficient = 1;
-			if (coefficientMode === 'cours') {
-				coefficient =
-					cours.coefficient && Number.isFinite(cours.coefficient) ? cours.coefficient : 1;
-			}
+			const coefficient = 1;
 
 			const annee = await getActiveAnneeScolaire();
 			if (!annee) {
@@ -378,7 +354,7 @@ export const actions: Actions = {
 				where: {
 					eleveId,
 					coursId,
-					valeur: valeurFinale,
+					valeur,
 					coefficient,
 					examenId: examenId || null,
 					libelle: libelle || null
@@ -389,7 +365,7 @@ export const actions: Actions = {
 			}
 
 			const note = await createNote({
-				valeur: valeurFinale,
+				valeur,
 				coefficient,
 				libelle: libelle || undefined,
 				eleveId,
@@ -401,7 +377,7 @@ export const actions: Actions = {
 			logActivity(
 				locals.user,
 				'creation_note' as any,
-				`Note créée : ${valeurFinale}/20`
+				`Note créée : ${valeur}/20`
 			).catch(() => {});
 
 			return { success: true, note };
@@ -414,53 +390,29 @@ export const actions: Actions = {
 
 	createNoteAll: async ({ request, locals }) => {
 		const data = await request.formData();
-		const valeurBrute = parseFloat((data.get('valeur') as string) || '0');
-		const typeNotation = (data.get('typeNotation') as string) || 'sur_20';
+		const valeur = parseFloat((data.get('valeur') as string) || '0');
 		const libelle = (data.get('libelle') as string | null)?.trim() || '';
 		const coursId = data.get('coursId') as string;
 		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
-		const coefficientMode = (data.get('coefficientMode') as string) || 'unitaire';
-		const bonus = parseFloat((data.get('bonus') as string) || '0') || 0;
 
-		if (isNaN(valeurBrute) || !coursId) {
+		if (isNaN(valeur) || !coursId) {
 			return fail(400, { error: 'Valeur et cours requis' });
 		}
 
 		try {
 			const cours = await prisma.cours.findUnique({
 				where: { id: coursId },
-				select: { classeId: true, coefficient: true }
+				select: { classeId: true }
 			});
 			if (!cours) {
 				return fail(404, { error: 'Cours introuvable' });
 			}
 
-			let convertedValeur = valeurBrute;
-			switch (typeNotation) {
-				case 'sur_10':
-					convertedValeur = valeurBrute * 2;
-					break;
-				case 'sur_100':
-					convertedValeur = valeurBrute / 5;
-					break;
-				case 'sur_5':
-					convertedValeur = valeurBrute * 4;
-					break;
-				default:
-					convertedValeur = valeurBrute;
+			if (valeur < 0 || valeur > 20) {
+				return fail(400, { error: 'La note doit être comprise entre 0 et 20' });
 			}
 
-			const valeurFinale = convertedValeur + bonus;
-
-			if (valeurFinale < 0 || valeurFinale > 40) {
-				return fail(400, { error: 'La note (avec bonus) doit être comprise entre 0 et 40' });
-			}
-
-			let coefficient = 1;
-			if (coefficientMode === 'cours') {
-				coefficient =
-					cours.coefficient && Number.isFinite(cours.coefficient) ? cours.coefficient : 1;
-			}
+			const coefficient = 1;
 
 			const annee = await getActiveAnneeScolaire();
 			if (!annee) {
@@ -478,7 +430,7 @@ export const actions: Actions = {
 					where: {
 						eleveId: ins.eleveId,
 						coursId,
-						valeur: valeurFinale,
+						valeur,
 						coefficient,
 						examenId: examenId || null,
 						libelle: libelle || null
@@ -486,7 +438,7 @@ export const actions: Actions = {
 				});
 				if (existante) continue;
 				await createNote({
-					valeur: valeurFinale,
+					valeur,
 					coefficient,
 					libelle: libelle || undefined,
 					eleveId: ins.eleveId,
@@ -506,6 +458,113 @@ export const actions: Actions = {
 			return { success: true, creees };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la création des notes' });
+		}
+	},
+
+	updateNote: async ({ request, locals }) => {
+		const data = await request.formData();
+		const noteId = data.get('noteId') as string;
+		const valeur = parseFloat((data.get('valeur') as string) || '0');
+		const libelle = (data.get('libelle') as string | null)?.trim() || '';
+
+		if (!noteId) {
+			return fail(400, { error: 'noteId requis' });
+		}
+		if (isNaN(valeur) || valeur < 0 || valeur > 20) {
+			return fail(400, { error: 'La note doit être comprise entre 0 et 20' });
+		}
+
+		try {
+			const note = await updateNote(noteId, { valeur, libelle });
+			logActivity(locals.user, 'modification_note' as any, `Note modifiée : ${valeur}/20`).catch(
+				() => {}
+			);
+			return { success: true, note };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la modification de la note' });
+		}
+	},
+
+	createNotesBatch: async ({ request, locals }) => {
+		const data = await request.formData();
+		const coursId = data.get('coursId') as string;
+		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+		const libelle = (data.get('libelle') as string | null)?.trim() || '';
+		const notesRaw = data.get('notes') as string;
+
+		if (!coursId) {
+			return fail(400, { error: 'Cours introuvable' });
+		}
+		if (!notesRaw) {
+			return fail(400, { error: 'Aucune note à enregistrer' });
+		}
+
+		let notesMap: Record<string, number | string>;
+		try {
+			notesMap = JSON.parse(notesRaw);
+		} catch {
+			return fail(400, { error: 'Données de notes invalides' });
+		}
+
+		try {
+			const cours = await prisma.cours.findUnique({
+				where: { id: coursId },
+				select: { classeId: true }
+			});
+			if (!cours) {
+				return fail(404, { error: 'Cours introuvable' });
+			}
+
+			const annee = await getActiveAnneeScolaire();
+			if (!annee) {
+				return fail(500, { error: 'Aucune année scolaire active' });
+			}
+
+			const inscriptions = await prisma.inscription.findMany({
+				where: { classeId: cours.classeId, anneeId: annee.id, actif: true },
+				select: { id: true, eleveId: true }
+			});
+			const inscriptionByEleve = new Map(inscriptions.map((i) => [i.eleveId, i.id]));
+
+			let enregistrees = 0;
+			for (const [eleveId, rawValeur] of Object.entries(notesMap)) {
+				if (rawValeur === '' || rawValeur === null || rawValeur === undefined) continue;
+				const valeur = typeof rawValeur === 'number' ? rawValeur : parseFloat(rawValeur);
+				if (isNaN(valeur) || valeur < 0 || valeur > 20) continue;
+
+				const noteExistante = await prisma.note.findFirst({
+					where: {
+						eleveId,
+						coursId,
+						examenId: examenId || null
+					}
+				});
+
+				if (noteExistante) {
+					await updateNote(noteExistante.id, { valeur, libelle });
+				} else {
+					await createNote({
+						valeur,
+						coefficient: 1,
+						libelle: libelle || undefined,
+						eleveId,
+						coursId,
+						examenId: examenId || undefined,
+						inscriptionId: inscriptionByEleve.get(eleveId) || undefined
+					});
+				}
+				enregistrees++;
+			}
+
+			logActivity(
+				locals.user,
+				'creation_note' as any,
+				`Notes enregistrées (${enregistrees})`
+			).catch(() => {});
+
+			return { success: true, enregistrees };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la sauvegarde des notes' });
 		}
 	},
 
