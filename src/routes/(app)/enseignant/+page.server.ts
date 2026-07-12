@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur } from '$lib/server/prisma';
+import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur, isForeignKeyError, FOREIGN_KEY_MESSAGE } from '$lib/server/prisma';
 import type { Professeur } from '$lib/types/Personne.type';
 import type { Personne } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
@@ -116,6 +116,9 @@ export const actions: Actions = {
 			).catch(() => {});
 			return { success: true };
 		} catch (e: unknown) {
+			if (isForeignKeyError(e)) {
+				return fail(409, { error: FOREIGN_KEY_MESSAGE });
+			}
 			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la suppression' });
 		}
 	}

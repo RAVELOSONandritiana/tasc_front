@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import CardContent from '$lib/components/ui/card/card-content.svelte';
@@ -59,12 +58,6 @@
 					{/if}
 					Se connecter
 				</Button>
-				<div class="text-center text-sm">
-					Pas encore de compte ?
-					<Button type="button" variant="link" class="h-auto p-0 text-sm" onclick={() => goto('/signup')}>
-						Créer un compte
-					</Button>
-				</div>
 			</CardContent>
 		</Card>
 	</form>

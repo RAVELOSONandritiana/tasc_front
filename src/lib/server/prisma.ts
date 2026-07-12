@@ -849,10 +849,25 @@ export async function deleteProfesseur(id: string) {
 		const prof = await tx.professeur.findUnique({ where: { id }, include: { personne: true } });
 		if (!prof) throw new Error('Enseignant introuvable');
 		await tx.professeur.delete({ where: { id } });
-		await tx.compte.updateMany({ where: { personneId: prof.personneId }, data: { role: 'PERSONNEL' } });
+		// Suppression du compte associé (sinon il reste orphelin en rôle PERSONNEL).
+		await tx.compte.deleteMany({ where: { personneId: prof.personneId } });
 		return { success: true };
 	});
 }
+
+/**
+ * Détecte une erreur de contrainte de clé étrangère (ex. suppression impossible
+ * car l'élément est encore référencé par d'autres données).
+ */
+export function isForeignKeyError(e: unknown): boolean {
+	const err = e as { code?: string; message?: string };
+	if (err?.code === 'P2003') return true;
+	const msg = err?.message || '';
+	return /foreign key constraint/i.test(msg) || /constraint failed/i.test(msg);
+}
+
+export const FOREIGN_KEY_MESSAGE =
+	'Suppression impossible : cet élément est encore lié à d\'autres données (cours, notes, présences, etc.). Retirez d\'abord ces liens avant de le supprimer.';
 
 export async function getUserActivities(compteId: string, limit = 20) {
 	const activities = await prisma.activite.findMany({

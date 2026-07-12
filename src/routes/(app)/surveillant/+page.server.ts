@@ -1,6 +1,6 @@
 import type { Surveillant } from '$lib/types/Personne.type';
 import type { Actions, PageServerLoad } from './$types';
-import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPersonne, deleteSurveillant } from '$lib/server/prisma';
+import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPersonne, deleteSurveillant, isForeignKeyError, FOREIGN_KEY_MESSAGE } from '$lib/server/prisma';
 import type { Prisma } from '@prisma/client';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
@@ -84,6 +84,9 @@ export const actions: Actions = {
 			).catch(() => {});
 			return { success: true };
 		} catch (e: any) {
+			if (isForeignKeyError(e)) {
+				return fail(409, { error: FOREIGN_KEY_MESSAGE });
+			}
 			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
 		}
 	}

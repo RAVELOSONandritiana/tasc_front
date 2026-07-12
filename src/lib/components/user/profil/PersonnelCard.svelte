@@ -23,6 +23,7 @@
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import DeleteErrorDialog from '$lib/components/user/DeleteErrorDialog.svelte';
 
 	type PersonWithStats = Personne & {
 		matiere?: string[];
@@ -60,6 +61,8 @@
 	const stats = personne.stats;
 	const displayMatieres = matieres || personne.matiere;
 	let submittingDelete = $state(false);
+	let deleteError = $state('');
+	let showDeleteError = $state(false);
 </script>
 
 <CardUI
@@ -76,15 +79,14 @@
 			submittingDelete = true;
 			return async ({ result }: { result: ActionResult }) => {
 				submittingDelete = false;
-				console.log('[Delete] Result:', result);
 				if (result.type === 'success') {
 					window.location.reload();
 				} else if (result.type === 'failure') {
-					console.error('[Delete] Failure:', result.data);
-					alert(result.data?.error || 'Suppression impossible');
+					deleteError = result.data?.error || 'Suppression impossible.';
+					showDeleteError = true;
 				} else {
-					console.error('[Delete] Error:', result);
-					alert('Erreur lors de la suppression');
+					deleteError = 'Erreur lors de la suppression.';
+					showDeleteError = true;
 				}
 			};
 		}}>
@@ -183,4 +185,6 @@
 			Voir profil
 		</Button>
 	</div>
+
+	<DeleteErrorDialog bind:open={showDeleteError} message={deleteError} />
 </CardUI>

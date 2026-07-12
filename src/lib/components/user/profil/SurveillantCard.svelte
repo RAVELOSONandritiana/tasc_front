@@ -22,6 +22,7 @@
 	import { enhance } from '$app/forms';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import DeleteErrorDialog from '$lib/components/user/DeleteErrorDialog.svelte';
 
 	type SurveillantWithStats = Surveillant & { stats?: Surveillant['stats'] };
 
@@ -45,6 +46,8 @@
 	const roleLabel = $derived((tags && tags[0]) || 'Surveillant');
 	const stats = personne.stats;
 	let submittingDelete = $state(false);
+	let deleteError = $state('');
+	let showDeleteError = $state(false);
 </script>
 
 <CardUI

@@ -1,5 +1,5 @@
 import type { Actions, ServerLoad } from '@sveltejs/kit';
-import { getPersonnes, deletePersonnel } from '$lib/server/prisma';
+import { getPersonnes, deletePersonnel, isForeignKeyError, FOREIGN_KEY_MESSAGE } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 
@@ -34,6 +34,9 @@ export const actions: Actions = {
 			).catch(() => {});
 			return { success: true };
 		} catch (e: any) {
+			if (isForeignKeyError(e)) {
+				return fail(409, { error: FOREIGN_KEY_MESSAGE });
+			}
 			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
 		}
 	}
