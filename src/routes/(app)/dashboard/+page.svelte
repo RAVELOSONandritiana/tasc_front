@@ -39,8 +39,8 @@
 
 	const classBarData = $derived(
 		classSizes.map((item, i) => {
-			const barHeight = Math.max((item.count / maxClassSize) * 160, 2);
-			const gap = 500 / classSizes.length;
+			const barHeight = Math.max((item.count / maxClassSize) * 115, 2);
+			const gap = 460 / classSizes.length;
 			const barW = Math.min(gap * 0.7, 60);
 			const x = 40 + i * gap + (gap - barW) / 2;
 			const y = 180 - barHeight;
@@ -50,7 +50,7 @@
 
 	const incidentBarData = $derived(
 		incidentsByType.map((item, i) => {
-			const barHeight = Math.max((item.count / maxIncidentCount) * 160, 2);
+			const barHeight = Math.max((item.count / maxIncidentCount) * 115, 2);
 			const gap = 320 / incidentsByType.length;
 			const barW = Math.min(gap * 0.7, 50);
 			const x = 40 + i * gap + (gap - barW) / 2;
@@ -61,7 +61,7 @@
 
 	const delayBarData = $derived(
 		delaysByClass.map((item, i) => {
-			const barHeight = Math.max((item.count / maxDelays) * 160, 2);
+			const barHeight = Math.max((item.count / maxDelays) * 115, 2);
 			const gap = 320 / delaysByClass.length;
 			const barW = Math.min(gap * 0.7, 50);
 			const x = 40 + i * gap + (gap - barW) / 2;
@@ -170,7 +170,7 @@
 					<p class="text-sm text-muted-foreground">Aucune donnée</p>
 				{:else}
 					<div class="h-64 w-full">
-						<svg viewBox="0 0 500 220" class="h-full w-full">
+						<svg viewBox="0 0 500 260" class="h-full w-full">
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre d'élèves par classe
 							</text>
@@ -188,7 +188,7 @@
 								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">
 									{item.count}
 								</text>
-								<text x={x + barW / 2} y="60" text-anchor="middle" class="fill-muted-foreground text-xs">
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">
 									{item.className}
 								</text>
 							{/each}
@@ -208,36 +208,39 @@
 				{@const total = attendanceData.reduce((sum, d) => sum + d.count, 0)}
 				{@const radius = 70}
 				{@const cx = 100}
-				{@const cy = 100}
+				{@const cy = 110}
 				{@const circumference = 2 * Math.PI * radius}
 				<div class="h-64 w-full">
-					<svg viewBox="0 0 200 200" class="h-full w-full">
-						<text x={cx} y="20" text-anchor="middle" class="fill-foreground text-sm font-semibold">
-							{total} total
-						</text>
+					<svg viewBox="0 0 200 220" class="h-full w-full">
 						{#each attendanceData as item, i}
 							{@const percent = total > 0 ? item.count / total : 0}
 							{@const dashArray = `${percent * circumference} ${circumference}`}
 							{@const dashOffset = -(attendanceData.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
 							{@const labelAngle = (attendanceData.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0) + percent / 2) * 2 * Math.PI - Math.PI / 2}
-							{@const labelX = cx + (radius + 25) * Math.cos(labelAngle)}
-							{@const labelY = cy + (radius + 25) * Math.sin(labelAngle)}
-							<circle
-								cx={cx}
-								cy={cy}
-								r={radius}
-								fill="transparent"
-								stroke={donutColors[i % donutColors.length]}
-								stroke-width="35"
-								stroke-dasharray={dashArray}
-								stroke-dashoffset={dashOffset}
-								class="hover:opacity-80 transition-opacity"
-							/>
-							<text x={labelX} y={labelY} text-anchor="middle" class="fill-foreground text-[10px] font-medium">
-								{item.label}: {item.count}
-							</text>
-						{/each}
-						<circle cx={cx} cy={cy} r={radius - 15} fill="var(--color-background)" />
+				{@const labelX = cx + (radius + 30) * Math.cos(labelAngle)}
+				{@const labelY = cy + (radius + 30) * Math.sin(labelAngle)}
+				<circle
+					cx={cx}
+					cy={cy}
+					r={radius}
+					fill="transparent"
+					stroke={donutColors[i % donutColors.length]}
+					stroke-width="35"
+					stroke-dasharray={dashArray}
+					stroke-dashoffset={dashOffset}
+					class="hover:opacity-80 transition-opacity"
+				/>
+				<text x={labelX} y={labelY} text-anchor="middle" class="fill-foreground text-[10px] font-medium">
+					{item.label}: {item.count}
+				</text>
+			{/each}
+			<circle cx={cx} cy={cy} r={radius - 15} fill="var(--color-background)" />
+			<text x={cx} y={cy - 2} text-anchor="middle" class="fill-foreground text-lg font-bold">
+				{total}
+			</text>
+			<text x={cx} y={cy + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">
+				total
+			</text>
 					</svg>
 				</div>
 			{/if}
@@ -254,7 +257,7 @@
 					<p class="text-sm text-muted-foreground">Aucun incident</p>
 				{:else}
 					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 220" class="h-full w-full">
+						<svg viewBox="0 0 400 260" class="h-full w-full">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Distribution des incidents
 							</text>
@@ -272,7 +275,7 @@
 								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">
 									{item.count}
 								</text>
-								<text x={x + barW / 2} y="60" text-anchor="middle" class="fill-muted-foreground text-xs">
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">
 									{item.type}
 								</text>
 							{/each}
@@ -290,7 +293,7 @@
 					<p class="text-sm text-muted-foreground">Aucune donnée</p>
 				{:else}
 					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 220" class="h-full w-full">
+						<svg viewBox="0 0 400 260" class="h-full w-full">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Évolution sur les derniers jours
 							</text>
@@ -298,7 +301,7 @@
 							<path d={trendPath} fill="none" stroke="rgb(59 130 246 / 0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 							{#each trendPoints as p}
 								<circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="white" stroke-width="2" />
-								<text x={p.x} y="50" text-anchor="middle" class="fill-muted-foreground text-xs">
+								<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
 									{p.date}
 								</text>
 							{/each}
@@ -318,7 +321,7 @@
 					<p class="text-sm text-muted-foreground">Aucun retard enregistré</p>
 				{:else}
 					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 220" class="h-full w-full">
+						<svg viewBox="0 0 400 260" class="h-full w-full">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre de retards
 							</text>
@@ -336,7 +339,7 @@
 								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">
 									{item.count}
 								</text>
-								<text x={x + barW / 2} y="60" text-anchor="middle" class="fill-muted-foreground text-xs">
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">
 									{item.className}
 								</text>
 							{/each}
