@@ -384,7 +384,7 @@
 			<img
 				src={c.url}
 				alt="image classe"
-				class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
+				class="block h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
 				onerror={() => (imageError = true)}
 			/>
 		{:else}
@@ -397,7 +397,7 @@
 		{/if}
 	</div>
 	<div class={color + ' h-2 w-full'}></div>
-	<div class="flex flex-col gap-4 bg-white/5 p-4">
+	<div class="flex flex-1 flex-col gap-4 bg-white/5 p-4">
 		<div class="flex items-center gap-2">
 			<span class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
 				>CLASSE -</span

@@ -42,9 +42,9 @@ export const load: PageServerLoad = async ({ params }) => {
 				include: {
 					seance: { include: { cours: { include: { matiere: true } } } }
 				},
-				orderBy: { heureMarquage: 'desc' },
-				take: 50
-			})
+			orderBy: { heureMarquage: 'desc' },
+			take: 200
+		})
 		: [];
 
 	const seancesDonnees = personne?.professeur
@@ -55,7 +55,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					presences: true
 				},
 				orderBy: { dateDebut: 'desc' },
-				take: 50
+				take: 200
 			})
 		: [];
 
@@ -114,7 +114,19 @@ export const load: PageServerLoad = async ({ params }) => {
 			).map((c) => c.id);
 			result.coursCount = coursIds.length;
 
+			// Élèves participants : union des listes de participants de ses cours.
+			const coursAvecParticipants = await prisma.cours.findMany({
+				where: { professeurId: profId },
+				select: { participants: true }
+			});
+			const participantsSet = new Set<string>();
+			for (const c of coursAvecParticipants) {
+				for (const p of c.participants ?? []) participantsSet.add(p);
+			}
+			result.elevesParticipants = participantsSet.size;
+
 			let efficacite = 0;
+			let sansMoyenne = 0;
 			if (coursIds.length > 0) {
 				const notes = await prisma.note.findMany({
 					where: { coursId: { in: coursIds } },
@@ -130,9 +142,11 @@ export const load: PageServerLoad = async ({ params }) => {
 				}
 				for (const id in sums) {
 					if (sums[id].s / sums[id].n >= 10) efficacite += 1;
+					else sansMoyenne += 1;
 				}
 			}
 			result.efficacite = efficacite;
+			result.elevesSansMoyenne = sansMoyenne;
 		}
 		return result;
 	}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PersonnelCard from '$lib/components/user/profil/PersonnelCard.svelte';
+	import PersonCard from '$lib/components/user/PersonCard.svelte';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Card } from '$lib/components/ui/card';
@@ -8,7 +8,7 @@
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
-	const { personnes } = data;
+	let personnes = $state([...data.personnes]);
 
 	let searchText = $state('');
 
@@ -19,6 +19,10 @@
 				.includes(searchText.toLowerCase())
 		)
 	);
+
+	function supprimerPersonne(id: string) {
+		personnes = personnes.filter((p) => p.id !== id);
+	}
 
 	function goNew() {
 		goto('/personne/new');
@@ -59,13 +63,19 @@
 
 		<!-- List -->
 		<div class="p-4 md:p-6">
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each filteredPersonnel as p, i (p.phone)}
 					<div
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<PersonnelCard personne={{ ...p, stats: { retards: 0, absences: 0, incidents: 0, heuresCours: 0, notesPositives: 0, notesNegatives: 0 } }} role="Personnel" id={p.id} hrefProfil={`/profil/${p.compte?.id || p.id}`} deleteAction="?/delete" />
+						<PersonCard
+							personne={p}
+							role="PERSONNEL"
+							detail={p.commune ? `Commune - ${p.commune}` : p.domicile ? `Domicile - ${p.domicile}` : ''}
+							hrefProfil={`/profil/${p.compte?.id || p.id}`}
+							onDelete={supprimerPersonne}
+						/>
 					</div>
 				{/each}
 			</div>

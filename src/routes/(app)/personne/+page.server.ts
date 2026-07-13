@@ -2,6 +2,7 @@ import type { Actions, ServerLoad } from '@sveltejs/kit';
 import { getPersonnes, deletePersonnel, isForeignKeyError, FOREIGN_KEY_MESSAGE } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const load: ServerLoad = async () => {
 	const personnes = await getPersonnes();
@@ -15,6 +16,7 @@ export const load: ServerLoad = async () => {
 			commune: p.commune || '',
 			phone: p.phone,
 			email: p.email,
+			imageUrl: p.imageUrl || null,
 			compte: p.compte
 		}))
 	};
@@ -32,6 +34,7 @@ export const actions: Actions = {
 				'suppression_personnel',
 				'Suppression du personnel'
 			).catch(() => {});
+			broadcastRealtime({ entity: 'personne', action: 'delete', id });
 			return { success: true };
 		} catch (e: any) {
 			if (isForeignKeyError(e)) {

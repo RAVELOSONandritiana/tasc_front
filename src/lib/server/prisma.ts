@@ -516,12 +516,14 @@ export async function createEleve(
 		domicile: string;
 		fokontany: string;
 		commune: string;
-		region?: string;
-		province?: string;
+		regionResidence?: string;
+		provinceResidence?: string;
 		dateNaissance: string;
 		lieuNaissance?: string;
+		communeNaissance?: string;
 		regionNaissance?: string;
 		provinceNaissance?: string;
+		cin?: string;
 		nomPere?: string | null;
 		prenomPere?: string | null;
 		telephonePere?: string | null;
@@ -531,6 +533,9 @@ export async function createEleve(
 		nomTuteur?: string | null;
 		prenomTuteur?: string | null;
 		telephoneTuteur?: string | null;
+		im?: string | null;
+		sexe?: string | null;
+		redoublant?: boolean;
 	},
 	anneeId?: string
 ) {
@@ -557,10 +562,20 @@ export async function createEleve(
 				nomMere: data.nomMere || null,
 				prenomMere: data.prenomMere || null,
 				telephoneMere: data.telephoneMere || null,
-				nomTuteur: data.nomTuteur || null,
-				prenomTuteur: data.prenomTuteur || null,
-				telephoneTuteur: data.telephoneTuteur || null
-			}
+		nomTuteur: data.nomTuteur || null,
+		prenomTuteur: data.prenomTuteur || null,
+		telephoneTuteur: data.telephoneTuteur || null,
+		im: data.im || null,
+		sexe: data.sexe || null,
+		redoublant: data.redoublant ?? false,
+		cin: data.cin || null,
+		lieuNaissance: data.lieuNaissance ? data.lieuNaissance.toUpperCase() : null,
+		communeNaissance: data.communeNaissance ? data.communeNaissance.toUpperCase() : null,
+		regionNaissance: data.regionNaissance ? data.regionNaissance.toUpperCase() : null,
+		provinceNaissance: data.provinceNaissance || null,
+		regionResidence: data.regionResidence ? data.regionResidence.toUpperCase() : null,
+		provinceResidence: data.provinceResidence || null
+	}
 		});
 
 		if (anneeId) {
@@ -574,6 +589,80 @@ export async function createEleve(
 		}
 
 		return { personne, eleve };
+	});
+}
+
+export async function updateEleveInfos(
+	id: string,
+	data: {
+		name?: string;
+		lastname?: string;
+		email?: string;
+		phone?: string;
+		domicile?: string | null;
+		fokontany?: string | null;
+		commune?: string | null;
+		redoublant?: boolean;
+		im?: string | null;
+		sexe?: string | null;
+		cin?: string | null;
+		lieuNaissance?: string | null;
+		communeNaissance?: string | null;
+		regionNaissance?: string | null;
+		provinceNaissance?: string | null;
+		regionResidence?: string | null;
+		provinceResidence?: string | null;
+		nomPere?: string | null;
+		prenomPere?: string | null;
+		telephonePere?: string | null;
+		nomMere?: string | null;
+		prenomMere?: string | null;
+		telephoneMere?: string | null;
+		nomTuteur?: string | null;
+		prenomTuteur?: string | null;
+		telephoneTuteur?: string | null;
+	}
+) {
+	return prisma.eleve.update({
+		where: { id },
+		data: {
+			redoublant: data.redoublant,
+			im: data.im === undefined ? undefined : data.im || null,
+			sexe: data.sexe === undefined ? undefined : data.sexe || null,
+			cin: data.cin === undefined ? undefined : data.cin || null,
+			lieuNaissance:
+				data.lieuNaissance === undefined ? undefined : data.lieuNaissance || null,
+			communeNaissance:
+				data.communeNaissance === undefined ? undefined : data.communeNaissance || null,
+			regionNaissance:
+				data.regionNaissance === undefined ? undefined : data.regionNaissance || null,
+			provinceNaissance:
+				data.provinceNaissance === undefined ? undefined : data.provinceNaissance || null,
+			regionResidence:
+				data.regionResidence === undefined ? undefined : data.regionResidence || null,
+			provinceResidence:
+				data.provinceResidence === undefined ? undefined : data.provinceResidence || null,
+			nomPere: data.nomPere === undefined ? undefined : data.nomPere || null,
+			prenomPere: data.prenomPere === undefined ? undefined : data.prenomPere || null,
+			telephonePere: data.telephonePere === undefined ? undefined : data.telephonePere || null,
+			nomMere: data.nomMere === undefined ? undefined : data.nomMere || null,
+			prenomMere: data.prenomMere === undefined ? undefined : data.prenomMere || null,
+			telephoneMere: data.telephoneMere === undefined ? undefined : data.telephoneMere || null,
+			nomTuteur: data.nomTuteur === undefined ? undefined : data.nomTuteur || null,
+			prenomTuteur: data.prenomTuteur === undefined ? undefined : data.prenomTuteur || null,
+			telephoneTuteur: data.telephoneTuteur === undefined ? undefined : data.telephoneTuteur || null,
+			personne: {
+				update: {
+					name: data.name,
+					lastname: data.lastname,
+					email: data.email,
+					phone: data.phone,
+					domicile: data.domicile === undefined ? undefined : data.domicile || null,
+					fokontany: data.fokontany === undefined ? undefined : data.fokontany || null,
+					commune: data.commune === undefined ? undefined : data.commune || null
+				}
+			}
+		}
 	});
 }
 
@@ -738,6 +827,7 @@ export async function addEleveToClasse(eleveId: string, classeId: string) {
 				nom: eleve?.personne.name,
 				prenom: eleve?.personne.lastname,
 				dateNaissance: eleve?.dateNaissance?.toISOString().split('T')[0] || '',
+				domicile: eleve?.personne.domicile || '',
 				actif: true
 			};
 		}
@@ -770,6 +860,7 @@ export async function addEleveToClasse(eleveId: string, classeId: string) {
 			nom: eleve?.personne.name,
 			prenom: eleve?.personne.lastname,
 			dateNaissance: eleve?.dateNaissance?.toISOString().split('T')[0] || '',
+			domicile: eleve?.personne.domicile || '',
 			actif: inscription.actif
 		};
 	});

@@ -4,7 +4,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import PersonnelCard from '$lib/components/user/profil/PersonnelCard.svelte';
+	import PersonCard from '$lib/components/user/PersonCard.svelte';
+	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
 	import type { PageProps } from './$types';
 	import type { Personne } from '$lib/types/Personne.type';
 	import type { RoleCompte } from '@prisma/client';
@@ -33,6 +34,10 @@
 	const { data }: PageProps = $props();
 
 	let listProfesseur = $state(data.professeur);
+
+	function supprimerProf(id: string) {
+		listProfesseur = listProfesseur.filter((p) => p.id !== id);
+	}
 	const allPersonnel = $state<Personne[]>((data.personnel || []).map((p: ServerPersonne) => ({
 		id: p.id,
 		name: p.name,
@@ -139,7 +144,16 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<PersonnelCard personne={prof} role="Enseignant" id={prof.id} hrefProfil={`/profil/${prof.compte?.id || prof.personneId}`} deleteAction="?/delete" />
+						<PersonCard
+						personne={prof}
+						role="ENSEIGNANT"
+						detail={`Matière - ${prof.matiere?.join(', ') || '—'}`}
+						email={prof.email}
+						phone={prof.phone}
+						domicile={prof.domicile}
+						hrefProfil={`/profil/${prof.compte?.id || prof.personneId}`}
+						onDelete={supprimerProf}
+					/>
 					</div>
 				{/each}
 			</div>
@@ -205,12 +219,15 @@
 							{#each searchResults as p (p.id)}
 								<button
 									type="button"
-									class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+									class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
 									onclick={() => selectPersonne(p)}
 								>
-									<p class="text-sm font-medium">{p.name} {p.lastname}</p>
-									<p class="text-xs text-muted-foreground">{p.email || ''}</p>
-									<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
+									<PersonAvatar imageUrl={p.imageUrl} name={p.name} lastname={p.lastname} sizeClass="size-9" />
+									<div class="min-w-0">
+										<p class="text-sm font-medium">{p.name} {p.lastname}</p>
+										<p class="text-xs text-muted-foreground">{p.email || ''}</p>
+										<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
+									</div>
 								</button>
 							{/each}
 						</div>
@@ -219,10 +236,13 @@
 
 				{#if selectedPersonne}
 					<div class="flex items-center justify-between gap-2 rounded-md border p-3">
-						<div>
-							<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
-							<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
-							<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
+						<div class="flex min-w-0 items-center gap-3">
+							<PersonAvatar imageUrl={selectedPersonne.imageUrl} name={selectedPersonne.name} lastname={selectedPersonne.lastname} sizeClass="size-9" />
+							<div class="min-w-0">
+								<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
+								<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
+								<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
+							</div>
 						</div>
 						<button
 							type="button"

@@ -41,6 +41,9 @@ export type EleveCours = {
 	nom: string;
 	prenom: string;
 	dateNaissance: string;
+	im?: string | null;
+	sexe?: string | null;
+	redoublant?: boolean;
 	actif: boolean;
 	notes?: Note[];
 	incidents?: Incident[];

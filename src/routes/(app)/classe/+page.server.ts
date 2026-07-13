@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseImage, deleteClasse, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const load: PageServerLoad = async () => {
 	const annee = await getActiveAnneeScolaire();
@@ -65,6 +66,8 @@ export const actions: Actions = {
 				`Création de la classe ${classe.nom || niveau + (serie ? ' ' + serie.toUpperCase() : '')}`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'classe', action: 'create', id: classe.id });
+
 			return { success: true, classe };
 		} catch (e: unknown) {
 			return fail(500, { errors: { _form: (e as Error)?.message || "Erreur lors de la création" } });
@@ -83,6 +86,7 @@ export const actions: Actions = {
 				select: { imageUrl: true }
 			});
 			await updateClasseImage(id, imageUrl);
+			broadcastRealtime({ entity: 'classe', action: 'update', id });
 			return { success: true, oldImageUrl: oldClasse?.imageUrl || null };
 		} catch (e: unknown) {
 			return fail(500, { error: (e as Error)?.message || "Erreur lors de la mise à jour de l'image" });
@@ -124,6 +128,8 @@ export const actions: Actions = {
 				`Modification de la classe ${classe.nom || niveau + (serie ? ' ' + serie.toUpperCase() : '')}`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'classe', action: 'update', id: classe.id });
+
 			return {
 				success: true,
 				classe: {
@@ -152,6 +158,7 @@ export const actions: Actions = {
 				'suppression_classe',
 				'Suppression de la classe'
 			).catch(() => {});
+			broadcastRealtime({ entity: 'classe', action: 'delete', id });
 			return { success: true };
 		} catch (e: unknown) {
 			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la suppression' });

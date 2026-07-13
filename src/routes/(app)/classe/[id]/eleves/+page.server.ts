@@ -9,6 +9,7 @@ import {
 import type { EleveCours } from '$lib/types/Materiel.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const inscriptions = await getElevesByClasseId(params.id);
@@ -34,6 +35,9 @@ export const load: PageServerLoad = async ({ params }) => {
 		nom: i.eleve.personne.name,
 		prenom: i.eleve.personne.lastname,
 		dateNaissance: i.eleve.dateNaissance?.toISOString().split('T')[0] || '',
+		domicile: i.eleve.personne.domicile || '',
+		sexe: i.eleve.sexe ?? null,
+		im: i.eleve.im ?? null,
 		actif: i.actif,
 		notes: i.notes?.map((n) => ({
 			id: n.id,
@@ -68,6 +72,10 @@ export const load: PageServerLoad = async ({ params }) => {
 	return {
 		elevesInscrits,
 		elevesDisponibles: await getElevesDisponiblesForClasse(params.id),
+		classe: await prisma.classe.findUnique({
+			where: { id: params.id },
+			select: { niveau: true, nom: true }
+		}),
 		classeId: params.id
 	};
 };
@@ -84,6 +92,7 @@ export const actions: Actions = {
 				'suppression_eleve',
 				'Suppression de l\'élève'
 			).catch(() => {});
+			broadcastRealtime({ entity: 'eleve', action: 'delete', id });
 			return { success: true };
 		} catch (e) {
 			const message = e instanceof Error ? e.message : 'Erreur lors de la suppression';
@@ -139,6 +148,7 @@ export const actions: Actions = {
 						nom: eleve.personne.name,
 						prenom: eleve.personne.lastname,
 						dateNaissance: eleve.dateNaissance?.toISOString().split('T')[0] || '',
+						domicile: eleve.personne.domicile || '',
 						actif: true,
 						dejaInscrit: true
 					}
@@ -152,6 +162,9 @@ export const actions: Actions = {
 				'creation_eleve',
 				`Inscription de l'élève ${eleve.nom} ${eleve.prenom} dans la classe`
 			).catch(() => {});
+
+			broadcastRealtime({ entity: 'eleve', action: 'create', id: eleve.id });
+			broadcastRealtime({ entity: 'classe', action: 'update', id: params.id ?? '' });
 
 			return { success: true, eleve };
 		} catch (e) {

@@ -5,6 +5,8 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import SurveillantCard from '$lib/components/user/profil/SurveillantCard.svelte';
+	import PersonCard from '$lib/components/user/PersonCard.svelte';
+	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
 	import type { PageProps } from './$types';
 	import type { Personne } from '$lib/types/Personne.type';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
@@ -18,6 +20,10 @@
 
 	let listSurveillant = $state(data.listSurveillant);
 	const allPersonnel = $state<Personne[]>(data.personnel || []);
+
+	function supprimerSurv(id: string) {
+		listSurveillant = listSurveillant.filter((p) => p.id !== id);
+	}
 
 	let searchText = $state('');
 	let dialogOpen = $state(false);
@@ -96,13 +102,22 @@
 		</div>
 
 		<div class="p-4 md:p-6">
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each listFiltered as p, i (p.phone || `${p.name}${p.lastname}`)}
 					<div
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<SurveillantCard personne={p} tags={[p.poste]} hrefProfil={`/profil/${p.compte?.id || p.personneId}`} id={p.personneId} deleteAction="?/delete" />
+						<PersonCard
+							personne={p}
+							role="SURVEILLANT"
+							detail={`Poste - ${p.poste}`}
+							email={p.email}
+							phone={p.phone}
+							domicile={p.domicile}
+							hrefProfil={`/profil/${p.compte?.id || p.personneId}`}
+							onDelete={supprimerSurv}
+						/>
 					</div>
 				{/each}
 			</div>
@@ -165,15 +180,18 @@
 					{#if searchResults.length > 0 && !selectedPersonne}
 						<div class="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
 							{#each searchResults as p (p.id)}
-								<button
-									type="button"
-									class="flex w-full flex-col rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
-									onclick={() => selectPersonne(p)}
-								>
+							<button
+								type="button"
+								class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+								onclick={() => selectPersonne(p)}
+							>
+								<PersonAvatar imageUrl={p.imageUrl} name={p.name} lastname={p.lastname} sizeClass="size-9" />
+								<div class="min-w-0">
 									<p class="text-sm font-medium">{p.name} {p.lastname}</p>
 									<p class="text-xs text-muted-foreground">{p.email || ''}</p>
 									<p class="text-xs text-muted-foreground">{p.phone || ''}</p>
-								</button>
+								</div>
+							</button>
 							{/each}
 						</div>
 					{/if}
@@ -181,10 +199,13 @@
 
 				{#if selectedPersonne}
 					<div class="flex items-center justify-between gap-2 rounded-md border p-3">
-						<div>
-							<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
-							<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
-							<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
+						<div class="flex min-w-0 items-center gap-3">
+							<PersonAvatar imageUrl={selectedPersonne.imageUrl} name={selectedPersonne.name} lastname={selectedPersonne.lastname} sizeClass="size-9" />
+							<div class="min-w-0">
+								<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
+								<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
+								<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
+							</div>
 						</div>
 						<button
 							type="button"

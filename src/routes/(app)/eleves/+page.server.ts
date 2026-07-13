@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { getEleves, getActiveAnneeScolaire, deleteEleve } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 import type { Prisma } from '@prisma/client';
 import type { Eleve } from '$lib/types/Personne.type';
 import { formatClasseNom } from '$lib/utils';
@@ -45,6 +46,7 @@ export const actions: Actions = {
 		try {
 			await deleteEleve(id);
 			logActivity(locals.user, 'suppression_eleve', 'Suppression de l\'élève').catch(() => {});
+			broadcastRealtime({ entity: 'eleve', action: 'delete', id });
 			return { success: true };
 		} catch (e) {
 			const message = e instanceof Error ? e.message : 'Erreur lors de la suppression';

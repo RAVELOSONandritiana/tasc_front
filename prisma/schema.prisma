@@ -229,6 +229,16 @@ model Eleve {
   id              String        @id @default(uuid())
   personneId      String        @unique
   dateNaissance   DateTime
+  im              String?
+  sexe            String?
+  redoublant      Boolean      @default(false)
+  cin             String?
+  lieuNaissance   String?
+  communeNaissance String?
+  regionNaissance String?
+  provinceNaissance String?
+  regionResidence String?
+  provinceResidence String?
   photoUrl        String?
   incidentsCount  Int           @default(0)
   notesPositives  Int           @default(0)
@@ -504,11 +514,16 @@ model Reaction {
 model Comment {
 	id         String   @id @default(uuid())
 	author     String
+	authorId   String?
 	text       String
 	date       DateTime @default(now())
 	incidentId String
+	parentId   String?
+	edited     Boolean  @default(false)
 	createdAt  DateTime @default(now())
-	incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+	incident   Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+	parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+	replies    Comment[] @relation("CommentReplies")
 
 	@@map("comments")
 }
@@ -522,6 +537,7 @@ model Notification {
   scope       String   @default("ALL")
   actionType  String?
   matricule   String?
+  userId      String?
   createdAt   DateTime @default(now())
 
   @@map("notifications")

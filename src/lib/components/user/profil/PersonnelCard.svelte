@@ -123,7 +123,9 @@
 	<div class="flex-1 px-8 pt-0 pb-5">
 		<div class="relative -mt-10 mb-4 flex items-end gap-4">
 			<Avatar class="h-16 w-16 rounded-xl border-[3px] border-sidebar shadow-md">
-				{#if env.PUBLIC_DEFAULT_AVATAR}
+				{#if personne.imageUrl}
+					<AvatarImage src={personne.imageUrl} alt="{personne.name} {personne.lastname}" />
+				{:else if env.PUBLIC_DEFAULT_AVATAR}
 					<AvatarImage src={env.PUBLIC_DEFAULT_AVATAR} alt={personne.name} />
 				{/if}
 				<AvatarFallback

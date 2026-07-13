@@ -2,6 +2,7 @@ import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { createEleve, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
@@ -11,6 +12,7 @@ export const actions: Actions = {
 		const prenom = (data.get('prenom') as string | null)?.trim() || '';
 		const dateNaissance = (data.get('dateNaissance') as string | null)?.trim() || '';
 		const lieuNaissance = (data.get('lieuNaissance') as string | null)?.trim() || '';
+		const communeNaissance = (data.get('communeNaissance') as string | null)?.trim() || '';
 		const regionNaissance = (data.get('regionNaissance') as string | null)?.trim() || '';
 		const provinceNaissance = (data.get('provinceNaissance') as string | null)?.trim() || '';
 		const domicile = (data.get('domicile') as string | null)?.trim() || '';
@@ -18,9 +20,9 @@ export const actions: Actions = {
 		const communeResidence = (data.get('communeResidence') as string | null)?.trim() || '';
 		const regionResidence = (data.get('regionResidence') as string | null)?.trim() || '';
 		const provinceResidence = (data.get('provinceResidence') as string | null)?.trim() || '';
+		const cin = (data.get('cin') as string | null)?.trim() || '';
 		const telephoneEleve = (data.get('telephoneEleve') as string | null)?.trim() || '';
 		const emailEleve = (data.get('emailEleve') as string | null)?.trim() || '';
-		const cin = (data.get('cin') as string | null)?.trim() || '';
 		const nomPere = (data.get('nomPere') as string | null)?.trim() || '';
 		const prenomPere = (data.get('prenomPere') as string | null)?.trim() || '';
 		const telephonePere = (data.get('telephonePere') as string | null)?.trim() || '';
@@ -30,18 +32,24 @@ export const actions: Actions = {
 		const nomTuteur = (data.get('nomTuteur') as string | null)?.trim() || '';
 		const prenomTuteur = (data.get('prenomTuteur') as string | null)?.trim() || '';
 		const telephoneTuteur = (data.get('telephoneTuteur') as string | null)?.trim() || '';
+		const im = (data.get('im') as string | null)?.trim() || '';
+		const sexe = (data.get('sexe') as string | null)?.trim() || '';
+		const redoublant = data.get('statut') === 'true';
 
 		const errors: Record<string, string> = {};
 
 		if (!nom) errors.nom = 'Le nom est obligatoire';
 		if (!prenom) errors.prenom = 'Le prénom est obligatoire';
 		if (!dateNaissance) errors.dateNaissance = 'La date de naissance est obligatoire';
+		if (!sexe) errors.sexe = 'Le sexe est obligatoire';
 		if (!lieuNaissance) errors.lieuNaissance = 'Le lieu de naissance est obligatoire';
 		if (!domicile) errors.domicile = 'Le domicile est obligatoire';
 		if (!fokontany) errors.fokontany = 'Le fokontany est obligatoire';
 		if (!communeResidence) errors.communeResidence = 'La commune de résidence est obligatoire';
-		if (telephoneEleve && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneEleve)) errors.telephoneEleve = 'Format invalide';
-		if (emailEleve && !/^[\w.-]+@[\w.-]+\.\w+$/.test(emailEleve)) errors.emailEleve = 'Format invalide';
+		if (telephoneEleve && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneEleve))
+			errors.telephoneEleve = 'Format invalide';
+		if (emailEleve && !/^[\w.-]+@[\w.-]+\.\w+$/.test(emailEleve))
+			errors.emailEleve = 'Format invalide';
 		if (cin && !/^[0-9]{12}$/.test(cin.replace(/\s/g, ''))) errors.cin = '12 chiffres requis';
 
 		const pereComplet = Boolean(nomPere && prenomPere);
@@ -50,15 +58,18 @@ export const actions: Actions = {
 
 		if (nomPere && !prenomPere) errors.prenomPere = 'Le prénom du père est obligatoire';
 		if (!nomPere && prenomPere) errors.nomPere = 'Le nom du père est obligatoire';
-		if (telephonePere && !/^(\+261|0)[0-9]{9,10}$/.test(telephonePere)) errors.telephonePere = 'Format invalide';
+		if (telephonePere && !/^(\+261|0)[0-9]{9,10}$/.test(telephonePere))
+			errors.telephonePere = 'Format invalide';
 
 		if (nomMere && !prenomMere) errors.prenomMere = 'Le prénom de la mère est obligatoire';
 		if (!nomMere && prenomMere) errors.nomMere = 'Le nom de la mère est obligatoire';
-		if (telephoneMere && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneMere)) errors.telephoneMere = 'Format invalide';
+		if (telephoneMere && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneMere))
+			errors.telephoneMere = 'Format invalide';
 
 		if (nomTuteur && !prenomTuteur) errors.prenomTuteur = 'Le prénom du tuteur est obligatoire';
 		if (!nomTuteur && prenomTuteur) errors.nomTuteur = 'Le nom du tuteur est obligatoire';
-		if (telephoneTuteur && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneTuteur)) errors.telephoneTuteur = 'Format invalide';
+		if (telephoneTuteur && !/^(\+261|0)[0-9]{9,10}$/.test(telephoneTuteur))
+			errors.telephoneTuteur = 'Format invalide';
 
 		if (!pereComplet && !mereComplet && !tuteurComplet) {
 			errors.responsable =
@@ -71,7 +82,7 @@ export const actions: Actions = {
 
 		try {
 			const annee = await getActiveAnneeScolaire();
-			await createEleve(
+			const cree = await createEleve(
 				{
 					name: nom,
 					lastname: prenom,
@@ -80,12 +91,14 @@ export const actions: Actions = {
 					domicile: domicile.toUpperCase(),
 					fokontany: fokontany.toUpperCase(),
 					commune: communeResidence.toUpperCase(),
-					region: regionResidence.toUpperCase() || undefined,
-					province: provinceResidence || undefined,
 					dateNaissance,
-					lieuNaissance: lieuNaissance.toUpperCase() || undefined,
-					regionNaissance: regionNaissance.toUpperCase() || undefined,
+					lieuNaissance: lieuNaissance || undefined,
+					communeNaissance: communeNaissance || undefined,
+					regionNaissance: regionNaissance || undefined,
 					provinceNaissance: provinceNaissance || undefined,
+					regionResidence: regionResidence || undefined,
+					provinceResidence: provinceResidence || undefined,
+					cin: cin || undefined,
 					nomPere: nomPere || null,
 					prenomPere: prenomPere || null,
 					telephonePere: telephonePere || null,
@@ -94,15 +107,22 @@ export const actions: Actions = {
 					telephoneMere: telephoneMere || null,
 					nomTuteur: nomTuteur || null,
 					prenomTuteur: prenomTuteur || null,
-					telephoneTuteur: telephoneTuteur || null
+					telephoneTuteur: telephoneTuteur || null,
+					im: im || null,
+					sexe: sexe || null,
+					redoublant
 				},
 				annee?.id
 			);
+			broadcastRealtime({ entity: 'eleve', action: 'create', id: cree.eleve.id });
+			broadcastRealtime({ entity: 'personne', action: 'create', id: cree.eleve.personneId });
 		} catch (e: unknown) {
-			return fail(500, { errors: { _form: 'Erreur lors de la création' , error: e} });
+			return fail(500, { errors: { _form: 'Erreur lors de la création', error: e } });
 		}
 
-		logActivity(locals.user, 'creation_eleve', `Création de l'élève ${nom} ${prenom}`).catch(() => {});
+		logActivity(locals.user, 'creation_eleve', `Création de l'élève ${nom} ${prenom}`).catch(
+			() => {}
+		);
 
 		return { success: true };
 	}

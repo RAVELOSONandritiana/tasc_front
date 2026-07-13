@@ -4,13 +4,23 @@ import { authenticate, createSessionToken, SESSION_COOKIE } from '$lib/server/au
 import { logActivity } from '$lib/server/activity';
 import { createNotification } from '$lib/server/notifications';
 import { prisma } from '$lib/server/prisma';
+import { isRateLimited, getRateLimitReset } from '$lib/server/ratelimit';
+import type { RequestEvent } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
 	return {};
 };
 
 export const actions: Actions = {
-	login: async ({ request, cookies }) => {
+	login: async ({ request, cookies, getClientAddress }: RequestEvent) => {
+		const ip = getClientAddress();
+		if (isRateLimited(`login:${ip}`)) {
+			const reset = Math.ceil(getRateLimitReset(`login:${ip}`) / 1000);
+			return fail(429, {
+				error: `Trop de tentatives. Réessayez dans ${reset} seconde(s).`
+			});
+		}
+
 		const data = await request.formData();
 		const matricule = data.get('matricule') as string;
 		const password = data.get('password') as string;

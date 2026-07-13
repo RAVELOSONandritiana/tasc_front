@@ -1,9 +1,15 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getAnneeScolaires, createAnneeScolaire, setActiveAnneeScolaire, prisma } from '$lib/server/prisma';
+import {
+	getAnneeScolaires,
+	createAnneeScolaire,
+	setActiveAnneeScolaire,
+	prisma
+} from '$lib/server/prisma';
 import type { StatutCompte, RoleCompte } from '@prisma/client';
 import { hashPassword } from '$lib/server/auth';
 import { logActivity } from '$lib/server/activity';
 import { broadcastNotification, type NotificationScope } from '$lib/server/notifications';
+import { broadcastRealtime } from '$lib/server/realtime';
 import { fail, redirect } from '@sveltejs/kit';
 
 function genererMotDePasse(longueur = 6): string {
@@ -27,7 +33,7 @@ interface CompteView {
 
 export const load: PageServerLoad = async () => {
 	const annees = await getAnneeScolaires();
-	const listeAnnees = annees.map(a => ({
+	const listeAnnees = annees.map((a) => ({
 		id: a.id,
 		nom: a.nom,
 		dateCreation: a.dateCreation.toISOString().split('T')[0],
@@ -54,15 +60,15 @@ export const load: PageServerLoad = async () => {
 
 	const comptes: CompteView[] = comptesRaw
 		.filter((c) => c.personne)
-		.map(c => ({
-		id: c.id,
-		nom: c.personne.lastname,
-		prenom: c.profil?.prenom || c.personne.name,
-		email: c.personne.email,
-		role: c.role,
-		dateCreation: c.dateCreation.toISOString().split('T')[0],
-		statut: c.statut === 'EN_ATTENTE' ? 'en_attente' : c.statut === 'ACTIF' ? 'actif' : 'bloque'
-	}));
+		.map((c) => ({
+			id: c.id,
+			nom: c.personne.lastname,
+			prenom: c.profil?.prenom || c.personne.name,
+			email: c.personne.email,
+			role: c.role,
+			dateCreation: c.dateCreation.toISOString().split('T')[0],
+			statut: c.statut === 'EN_ATTENTE' ? 'en_attente' : c.statut === 'ACTIF' ? 'actif' : 'bloque'
+		}));
 
 	// Demandes de réinitialisation de mot de passe (notifications admin).
 	const demandesRaw = await prisma.notification.findMany({
@@ -94,6 +100,7 @@ export const actions: Actions = {
 				where: { id },
 				data: { statut: 'ACTIF' }
 			});
+			broadcastRealtime({ entity: 'compte', action: 'update', id, scope: 'ADMIN' });
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors de la validation' });
 		}
@@ -111,6 +118,7 @@ export const actions: Actions = {
 				where: { id },
 				data: { statut: 'BLOQUE' }
 			});
+			broadcastRealtime({ entity: 'compte', action: 'update', id, scope: 'ADMIN' });
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors du blocage' });
 		}
@@ -128,6 +136,7 @@ export const actions: Actions = {
 				where: { id },
 				data: { statut: 'ACTIF' }
 			});
+			broadcastRealtime({ entity: 'compte', action: 'update', id, scope: 'ADMIN' });
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors du déblocage' });
 		}
@@ -142,84 +151,87 @@ export const actions: Actions = {
 
 		try {
 			await createAnneeScolaire(nom.trim());
+			broadcastRealtime({ entity: 'annee', action: 'create', id: '', scope: 'ADMIN' });
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors de la création' });
 		}
 		throw redirect(303, '/parametre');
 	},
 
-		activerAnnee: async ({ request }) => {
-			const data = await request.formData();
-			const id = data.get('id') as string;
+	activerAnnee: async ({ request }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
 
-			if (!id) return fail(400, { error: 'ID requis' });
+		if (!id) return fail(400, { error: 'ID requis' });
 
-			try {
-				await setActiveAnneeScolaire(id);
-			} catch (error) {
-				return fail(500, { error: 'Erreur lors de l\'activation' });
-			}
-			throw redirect(303, '/parametre');
-		},
-
-		traiterReset: async ({ request, locals }) => {
-			if (locals.user?.role !== 'ADMINISTRATEUR') {
-				return fail(403, { error: 'Réservé à l\'administrateur' });
-			}
-
-			const data = await request.formData();
-			const notifId = data.get('notifId') as string;
-			if (!notifId) return fail(400, { error: 'Demande introuvable' });
-
-			const notif = await prisma.notification.findUnique({ where: { id: notifId } });
-			if (!notif || !notif.matricule) {
-				return fail(400, { error: 'Demande invalide' });
-			}
-
-			const compte = await prisma.compte.findUnique({ where: { matricule: notif.matricule } });
-			if (!compte) return fail(400, { error: 'Aucun compte avec ce matricule' });
-
-			const nouveauMdp = genererMotDePasse(6);
-			const hashed = hashPassword(nouveauMdp);
-
-			try {
-				await prisma.compte.update({
-					where: { id: compte.id },
-					data: { password: hashed }
-				});
-
-				const updated = await prisma.notification.update({
-					where: { id: notifId },
-					data: {
-						title: 'Mot de passe réinitialisé',
-						description: `Compte ${compte.matricule} : nouveau mot de passe « ${nouveauMdp} ». Communiquez-le à l'utilisateur.`,
-						actionType: 'PASSWORD_RESET_DONE',
-						read: true
-					}
-				});
-
-				// Met à jour la cloche de notification en temps réel (si connectée).
-				broadcastNotification({
-					id: updated.id,
-					title: updated.title,
-					description: updated.description,
-					time: updated.time,
-					read: updated.read,
-					scope: updated.scope as NotificationScope,
-					actionType: updated.actionType,
-					matricule: updated.matricule,
-					createdAt: updated.createdAt.toISOString()
-				});
-
-				logActivity(
-					locals.user,
-					'changement_mot_de_passe',
-					`Réinitialisation du mot de passe du compte ${compte.matricule}`
-				).catch(() => {});
-			} catch (error) {
-				return fail(500, { error: 'Erreur lors de la réinitialisation' });
-			}
-
-			return { resetSuccess: true, matricule: compte.matricule, nouveauMdp };
+		try {
+			await setActiveAnneeScolaire(id);
+			broadcastRealtime({ entity: 'annee', action: 'update', id, scope: 'ADMIN' });
+		} catch (error) {
+			return fail(500, { error: "Erreur lors de l'activation" });
 		}
-	};
+		throw redirect(303, '/parametre');
+	},
+
+	traiterReset: async ({ request, locals }) => {
+		if (locals.user?.role !== 'ADMINISTRATEUR') {
+			return fail(403, { error: "Réservé à l'administrateur" });
+		}
+
+		const data = await request.formData();
+		const notifId = data.get('notifId') as string;
+		if (!notifId) return fail(400, { error: 'Demande introuvable' });
+
+		const notif = await prisma.notification.findUnique({ where: { id: notifId } });
+		if (!notif || !notif.matricule) {
+			return fail(400, { error: 'Demande invalide' });
+		}
+
+		const compte = await prisma.compte.findUnique({ where: { matricule: notif.matricule } });
+		if (!compte) return fail(400, { error: 'Aucun compte avec ce matricule' });
+
+		const nouveauMdp = genererMotDePasse(6);
+		const hashed = hashPassword(nouveauMdp);
+
+		try {
+			await prisma.compte.update({
+				where: { id: compte.id },
+				data: { password: hashed }
+			});
+
+			const updated = await prisma.notification.update({
+				where: { id: notifId },
+				data: {
+					title: 'Mot de passe réinitialisé',
+					description: `Compte ${compte.matricule} : nouveau mot de passe « ${nouveauMdp} ». Communiquez-le à l'utilisateur.`,
+					actionType: 'PASSWORD_RESET_DONE',
+					read: true
+				}
+			});
+
+			// Met à jour la cloche de notification en temps réel (si connectée).
+			broadcastNotification({
+				id: updated.id,
+				title: updated.title,
+				description: updated.description,
+				time: updated.time,
+				read: updated.read,
+				scope: updated.scope as NotificationScope,
+				actionType: updated.actionType,
+				matricule: updated.matricule,
+				userId: updated.userId,
+				createdAt: updated.createdAt.toISOString()
+			});
+
+			logActivity(
+				locals.user,
+				'changement_mot_de_passe',
+				`Réinitialisation du mot de passe du compte ${compte.matricule}`
+			).catch(() => {});
+		} catch (error) {
+			return fail(500, { error: 'Erreur lors de la réinitialisation' });
+		}
+
+		return { resetSuccess: true, matricule: compte.matricule, nouveauMdp };
+	}
+};

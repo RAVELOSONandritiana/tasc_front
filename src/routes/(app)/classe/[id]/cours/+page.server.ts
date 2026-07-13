@@ -20,6 +20,7 @@ import {
 } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -80,7 +81,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		phone: p.personne.phone
 	}));
 
-		const listeCours: Cours[] = coursList
+	const listeCours: Cours[] = coursList
 		.filter((c) => c.classeId === params.id)
 		.map((c) => ({
 			id: c.id,
@@ -127,10 +128,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		listeExamens,
 		elevesClasse,
 		currentProfesseurId: locals.user
-			? ((await prisma.compte.findUnique({
-					where: { id: locals.user.userId },
-					include: { personne: { include: { professeur: true } } }
-				}))?.personne?.professeur?.id ?? null)
+			? ((
+					await prisma.compte.findUnique({
+						where: { id: locals.user.userId },
+						include: { personne: { include: { professeur: true } } }
+					})
+				)?.personne?.professeur?.id ?? null)
 			: null,
 		userRole: locals.user?.role ?? null
 	};
@@ -201,6 +204,11 @@ export const actions: Actions = {
 				`Création du cours ${cours.matiere?.nom || ''}`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'cours', action: 'create', id: cours.id });
+			if (matiereNom) {
+				broadcastRealtime({ entity: 'matiere', action: 'create', id: finalMatiereId });
+			}
+
 			return { success: true, cours };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la création du cours' });
@@ -237,6 +245,8 @@ export const actions: Actions = {
 				`Modification du coefficient du cours ${coursId}`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'cours', action: 'update', id: coursId });
+
 			return { success: true, cours };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
@@ -259,6 +269,7 @@ export const actions: Actions = {
 				'modification_cours' as any,
 				`Modification des participants du cours ${coursId}`
 			).catch(() => {});
+			broadcastRealtime({ entity: 'cours', action: 'update', id: coursId });
 			return { success: true, cours };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
@@ -274,7 +285,9 @@ export const actions: Actions = {
 		}
 
 		if (locals.user?.role !== 'SURVEILLANT' && locals.user?.role !== 'ADMINISTRATEUR') {
-			return fail(403, { error: 'Seuls les surveillants et administrateurs peuvent supprimer un cours' });
+			return fail(403, {
+				error: 'Seuls les surveillants et administrateurs peuvent supprimer un cours'
+			});
 		}
 
 		try {
@@ -282,6 +295,7 @@ export const actions: Actions = {
 			logActivity(locals.user, 'suppression_cours' as any, "Suppression d'un cours").catch(
 				() => {}
 			);
+			broadcastRealtime({ entity: 'cours', action: 'delete', id: coursId });
 			return { success: true };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la suppression' });
@@ -309,6 +323,8 @@ export const actions: Actions = {
 			logActivity(locals.user, 'creation_examen' as any, `Examen créé : ${examen.nom}`).catch(
 				() => {}
 			);
+
+			broadcastRealtime({ entity: 'examen', action: 'create', id: examen.id });
 
 			return { success: true, examen };
 		} catch (e: any) {
@@ -386,6 +402,7 @@ export const actions: Actions = {
 						'modification_note' as any,
 						`Note modifiée : ${valeur}/20`
 					).catch(() => {});
+					broadcastRealtime({ entity: 'note', action: 'update', id: coursId });
 					return { success: true, note, updated: true };
 				}
 			}
@@ -414,11 +431,9 @@ export const actions: Actions = {
 				inscriptionId: inscription?.id || undefined
 			});
 
-			logActivity(
-				locals.user,
-				'creation_note' as any,
-				`Note créée : ${valeur}/20`
-			).catch(() => {});
+			logActivity(locals.user, 'creation_note' as any, `Note créée : ${valeur}/20`).catch(() => {});
+
+			broadcastRealtime({ entity: 'note', action: 'create', id: coursId });
 
 			return { success: true, note };
 		} catch (e: any) {
@@ -506,6 +521,8 @@ export const actions: Actions = {
 				`Notes créées pour la classe (${creees})`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'note', action: 'create', id: coursId });
+
 			return { success: true, creees };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la création des notes' });
@@ -530,6 +547,7 @@ export const actions: Actions = {
 			logActivity(locals.user, 'modification_note' as any, `Note modifiée : ${valeur}/20`).catch(
 				() => {}
 			);
+			broadcastRealtime({ entity: 'note', action: 'update', id: noteId });
 			return { success: true, note };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la modification de la note' });
@@ -613,6 +631,8 @@ export const actions: Actions = {
 				`Notes enregistrées (${enregistrees})`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'note', action: 'update', id: coursId });
+
 			return { success: true, enregistrees };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la sauvegarde des notes' });
@@ -630,6 +650,7 @@ export const actions: Actions = {
 		try {
 			await deleteNote(noteId);
 			logActivity(locals.user, 'suppression_note' as any, 'Note supprimée').catch(() => {});
+			broadcastRealtime({ entity: 'note', action: 'delete', id: noteId });
 			return { success: true, noteId };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la suppression de la note' });
@@ -678,6 +699,7 @@ export const actions: Actions = {
 				nom: nom || undefined,
 				couleur: couleur || undefined
 			});
+			broadcastRealtime({ entity: 'matiere', action: 'update', id: matiereId });
 			return { success: true, matiere };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la mise à jour' });
@@ -695,6 +717,7 @@ export const actions: Actions = {
 
 		try {
 			await updateCoursImage(coursId, imageUrl);
+			broadcastRealtime({ entity: 'cours', action: 'update', id: coursId });
 			return { success: true, url: imageUrl };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || "Erreur lors de la mise à jour de l'image" });

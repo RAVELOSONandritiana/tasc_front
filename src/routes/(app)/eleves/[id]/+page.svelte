@@ -3,6 +3,7 @@
 	import { Card } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
+	import { Input } from '$lib/components/ui/input';
 	import {
 		Mail,
 		Phone,
@@ -19,13 +20,64 @@
 		ChevronUp
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import type { PageProps } from './$types';
 	import type { EleveIncident } from '$lib/types/Incident.type';
 	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 
 	const { data }: PageProps = $props();
 	const eleve = data.eleve;
 	const incidents: EleveIncident[] = data.incidents || [];
+
+	let editOpen = $state(false);
+	let nomValue = $state(eleve.nom);
+	let prenomValue = $state(eleve.prenom);
+	let dateNaissanceValue = $state(eleve.dateNaissance);
+	let sexeValue = $state(eleve.sexe ?? '');
+	let imValue = $state(eleve.im ?? '');
+	let emailValue = $state(eleve.email ?? '');
+	let telephoneValue = $state(eleve.telephone ?? '');
+	let domicileValue = $state(eleve.domicile ?? '');
+	let fokontanyValue = $state(eleve.fokontany ?? '');
+	let communeValue = $state(eleve.commune ?? '');
+	let redoublantValue = $state(eleve.redoublant ? 'true' : 'false');
+	let nomPereValue = $state(eleve.nomPere ?? '');
+	let prenomPereValue = $state(eleve.prenomPere ?? '');
+	let telephonePereValue = $state(eleve.telephonePere ?? '');
+	let nomMereValue = $state(eleve.nomMere ?? '');
+	let prenomMereValue = $state(eleve.prenomMere ?? '');
+	let telephoneMereValue = $state(eleve.telephoneMere ?? '');
+	let nomTuteurValue = $state(eleve.nomTuteur ?? '');
+	let prenomTuteurValue = $state(eleve.prenomTuteur ?? '');
+	let telephoneTuteurValue = $state(eleve.telephoneTuteur ?? '');
+	let saving = $state(false);
+	let savedMsg = $state(false);
+
+	// svelte-ignore state_referenced_locally
+	function openEdit() {
+		nomValue = eleve.nom;
+		prenomValue = eleve.prenom;
+		dateNaissanceValue = eleve.dateNaissance;
+		sexeValue = eleve.sexe ?? '';
+		imValue = eleve.im ?? '';
+		emailValue = eleve.email ?? '';
+		telephoneValue = eleve.telephone ?? '';
+		domicileValue = eleve.domicile ?? '';
+		fokontanyValue = eleve.fokontany ?? '';
+		communeValue = eleve.commune ?? '';
+		redoublantValue = eleve.redoublant ? 'true' : 'false';
+		nomPereValue = eleve.nomPere ?? '';
+		prenomPereValue = eleve.prenomPere ?? '';
+		telephonePereValue = eleve.telephonePere ?? '';
+		nomMereValue = eleve.nomMere ?? '';
+		prenomMereValue = eleve.prenomMere ?? '';
+		telephoneMereValue = eleve.telephoneMere ?? '';
+		nomTuteurValue = eleve.nomTuteur ?? '';
+		prenomTuteurValue = eleve.prenomTuteur ?? '';
+		telephoneTuteurValue = eleve.telephoneTuteur ?? '';
+		editOpen = true;
+	}
 
 	const initial = eleve.prenom.charAt(0) + eleve.nom.charAt(0);
 	let photo = $state<string | null>(eleve.imageUrl ?? null);
@@ -35,9 +87,9 @@
 	let negativesOpen = $state(false);
 	let autresOpen = $state(false);
 
-	const notesPositives = incidents.filter(i => i.type === 'note');
-	const notesNegatives = incidents.filter(i => i.type === 'erreur');
-	const autresIncidents = incidents.filter(i => i.type !== 'note' && i.type !== 'erreur');
+	const notesPositives = incidents.filter((i) => i.type === 'note');
+	const notesNegatives = incidents.filter((i) => i.type === 'erreur');
+	const autresIncidents = incidents.filter((i) => i.type !== 'note' && i.type !== 'erreur');
 </script>
 
 <main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
@@ -97,6 +149,251 @@
 						<p class="text-sm font-medium">{eleve.adresse || '—'}</p>
 					</div>
 				</div>
+				{#if data.canEdit}
+					<div class="col-span-full mt-2">
+						{#if !editOpen}
+							<div
+								class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed p-3"
+							>
+								<div class="flex flex-wrap items-center gap-4 text-sm">
+									<span
+										><span class="text-xs text-muted-foreground">IM :</span>
+										<span class="font-medium">{eleve.im || '—'}</span></span
+									>
+									<span
+										><span class="text-xs text-muted-foreground">Sexe :</span>
+										<span class="font-medium"
+											>{eleve.sexe === 'F' ? 'Fille' : eleve.sexe === 'G' ? 'Garçon' : '—'}</span
+										></span
+									>
+									<span
+										><span class="text-xs text-muted-foreground">Statut :</span>
+										<span class="font-medium">{eleve.redoublant ? 'Redoublant' : 'Passant'}</span
+										></span
+									>
+								</div>
+								<Button size="sm" variant="outline" onclick={openEdit}>Modifier</Button>
+							</div>
+						{:else}
+							<form
+								method="POST"
+								action="?/update"
+								use:enhance={() => {
+									saving = true;
+									return async ({ result, update }) => {
+										saving = false;
+										if (result.type === 'success') {
+											await update({ invalidateAll: true });
+											savedMsg = true;
+											editOpen = false;
+											setTimeout(() => (savedMsg = false), 2000);
+										} else if (result.type === 'failure') {
+											alert((result.data as { error?: string })?.error ?? 'Mise à jour impossible');
+										}
+									};
+								}}
+								class="space-y-4 rounded-md border border-dashed p-4"
+							>
+								<div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+									<div class="grid gap-1">
+										<Label class="text-xs" for="nom-edit">Nom</Label>
+										<Input id="nom-edit" name="nom" bind:value={nomValue} class="h-8" />
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="prenom-edit">Prénom</Label>
+										<Input id="prenom-edit" name="prenom" bind:value={prenomValue} class="h-8" />
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="date-edit">Date de naissance</Label>
+										<Input
+											id="date-edit"
+											name="dateNaissance"
+											type="date"
+											bind:value={dateNaissanceValue}
+											class="h-8"
+										/>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="sexe-edit">Sexe</Label>
+										<NativeSelect.Root
+											id="sexe-edit"
+											name="sexe"
+											bind:value={sexeValue}
+											class="h-8"
+										>
+											<NativeSelect.Option value="">—</NativeSelect.Option>
+											<NativeSelect.Option value="F">Fille</NativeSelect.Option>
+											<NativeSelect.Option value="G">Garçon</NativeSelect.Option>
+										</NativeSelect.Root>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="im-edit">IM</Label>
+										<Input id="im-edit" name="im" bind:value={imValue} class="h-8" />
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="statut-edit">Statut scolaire</Label>
+										<NativeSelect.Root
+											id="statut-edit"
+											name="redoublant"
+											bind:value={redoublantValue}
+											class="h-8"
+										>
+											<NativeSelect.Option value="false">Passant</NativeSelect.Option>
+											<NativeSelect.Option value="true">Redoublant</NativeSelect.Option>
+										</NativeSelect.Root>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="email-edit">Email</Label>
+										<Input
+											id="email-edit"
+											name="email"
+											type="email"
+											bind:value={emailValue}
+											class="h-8"
+										/>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="tel-edit">Téléphone</Label>
+										<Input
+											id="tel-edit"
+											name="telephone"
+											type="tel"
+											bind:value={telephoneValue}
+											class="h-8"
+										/>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="domicile-edit">Domicile</Label>
+										<Input
+											id="domicile-edit"
+											name="domicile"
+											bind:value={domicileValue}
+											class="h-8"
+										/>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="fokontany-edit">Fokontany</Label>
+										<Input
+											id="fokontany-edit"
+											name="fokontany"
+											bind:value={fokontanyValue}
+											class="h-8"
+										/>
+									</div>
+									<div class="grid gap-1">
+										<Label class="text-xs" for="commune-edit">Commune</Label>
+										<Input id="commune-edit" name="commune" bind:value={communeValue} class="h-8" />
+									</div>
+								</div>
+
+								<div class="rounded-md border p-3">
+									<p
+										class="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+									>
+										Responsables
+									</p>
+									<div class="grid gap-3 md:grid-cols-3">
+										<div class="grid gap-2">
+											<p class="text-xs font-medium">Père</p>
+											<Input
+												name="nomPere"
+												bind:value={nomPereValue}
+												placeholder="Nom"
+												class="h-8"
+											/>
+											<Input
+												name="prenomPere"
+												bind:value={prenomPereValue}
+												placeholder="Prénom"
+												class="h-8"
+											/>
+											<Input
+												name="telephonePere"
+												bind:value={telephonePereValue}
+												type="tel"
+												placeholder="Téléphone"
+												class="h-8"
+											/>
+										</div>
+										<div class="grid gap-2">
+											<p class="text-xs font-medium">Mère</p>
+											<Input
+												name="nomMere"
+												bind:value={nomMereValue}
+												placeholder="Nom"
+												class="h-8"
+											/>
+											<Input
+												name="prenomMere"
+												bind:value={prenomMereValue}
+												placeholder="Prénom"
+												class="h-8"
+											/>
+											<Input
+												name="telephoneMere"
+												bind:value={telephoneMereValue}
+												type="tel"
+												placeholder="Téléphone"
+												class="h-8"
+											/>
+										</div>
+										<div class="grid gap-2">
+											<p class="text-xs font-medium">Tuteur</p>
+											<Input
+												name="nomTuteur"
+												bind:value={nomTuteurValue}
+												placeholder="Nom"
+												class="h-8"
+											/>
+											<Input
+												name="prenomTuteur"
+												bind:value={prenomTuteurValue}
+												placeholder="Prénom"
+												class="h-8"
+											/>
+											<Input
+												name="telephoneTuteur"
+												bind:value={telephoneTuteurValue}
+												type="tel"
+												placeholder="Téléphone"
+												class="h-8"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="flex items-center gap-2">
+									<Button type="submit" size="sm" disabled={saving}
+										>{saving ? 'Enregistrement…' : 'Enregistrer'}</Button
+									>
+									<Button type="button" size="sm" variant="ghost" onclick={() => (editOpen = false)}
+										>Annuler</Button
+									>
+								</div>
+							</form>
+						{/if}
+						{#if savedMsg}
+							<p class="mt-2 text-xs text-emerald-500">Informations mises à jour.</p>
+						{/if}
+					</div>
+				{:else}
+					<div class="col-span-full mt-2 flex flex-wrap gap-4 text-sm">
+						<span
+							><span class="text-xs text-muted-foreground">IM :</span>
+							<span class="font-medium">{eleve.im || '—'}</span></span
+						>
+						<span
+							><span class="text-xs text-muted-foreground">Sexe :</span>
+							<span class="font-medium"
+								>{eleve.sexe === 'F' ? 'Fille' : eleve.sexe === 'G' ? 'Garçon' : '—'}</span
+							></span
+						>
+						<span
+							><span class="text-xs text-muted-foreground">Statut :</span>
+							<span class="font-medium">{eleve.redoublant ? 'Redoublant' : 'Passant'}</span></span
+						>
+					</div>
+				{/if}
 			</Card>
 
 			<Card class="space-y-3 p-4">
@@ -126,7 +423,9 @@
 			<div class="grid gap-4 md:grid-cols-3">
 				{#each [{ titre: 'Père', nom: eleve.nomPere, prenom: eleve.prenomPere, tel: eleve.telephonePere }, { titre: 'Mère', nom: eleve.nomMere, prenom: eleve.prenomMere, tel: eleve.telephoneMere }, { titre: 'Tuteur', nom: eleve.nomTuteur, prenom: eleve.prenomTuteur, tel: eleve.telephoneTuteur }] as responsable (responsable.titre)}
 					<div class="rounded-lg border p-3">
-						<p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{responsable.titre}</p>
+						<p class="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+							{responsable.titre}
+						</p>
 						{#if responsable.nom || responsable.prenom}
 							<p class="text-sm font-medium">{responsable.prenom || ''} {responsable.nom || ''}</p>
 							<p class="mt-1 flex items-center gap-2 text-sm">
@@ -203,18 +502,23 @@
 						class="flex w-full items-center justify-between rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 text-left transition-all hover:bg-emerald-50/50 dark:border-emerald-700/70 dark:bg-emerald-950/10 dark:hover:bg-emerald-950/20"
 					>
 						<div class="flex items-center gap-3">
-							<div class="flex size-10 items-center justify-center rounded-full bg-emerald-100/90 dark:bg-emerald-900/40">
+							<div
+								class="flex size-10 items-center justify-center rounded-full bg-emerald-100/90 dark:bg-emerald-900/40"
+							>
 								<CheckCircle2 class="size-5 text-emerald-600 dark:text-emerald-400" />
 							</div>
 							<div>
 								<p class="font-semibold text-emerald-800 dark:text-emerald-300">Notes positives</p>
 								<p class="text-xs text-emerald-600/80 dark:text-emerald-400/70">
-									{notesPositives.length} {(notesPositives.length > 1) ? 'incidents' : 'incident'}
+									{notesPositives.length}
+									{notesPositives.length > 1 ? 'incidents' : 'incident'}
 								</p>
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
-							<span class="flex size-6 items-center justify-center rounded-full bg-emerald-100/90 text-xs font-bold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+							<span
+								class="flex size-6 items-center justify-center rounded-full bg-emerald-100/90 text-xs font-bold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+							>
 								{notesPositives.length}
 							</span>
 							{#if positivesOpen}
@@ -225,11 +529,17 @@
 						</div>
 					</button>
 					{#if positivesOpen}
-						<div class="ml-4 space-y-2 border-l-2 border-emerald-300/70 pl-4 dark:border-emerald-700/70">
+						<div
+							class="ml-4 space-y-2 border-l-2 border-emerald-300/70 pl-4 dark:border-emerald-700/70"
+						>
 							{#each notesPositives as incident}
-								<div class="rounded-lg border border-emerald-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-emerald-800/70 dark:bg-slate-900/80">
+								<div
+									class="rounded-lg border border-emerald-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-emerald-800/70 dark:bg-slate-900/80"
+								>
 									<p class="text-sm text-slate-800 dark:text-slate-100">{incident.message}</p>
-									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}</p>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+										Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}
+									</p>
 								</div>
 							{/each}
 						</div>
@@ -242,18 +552,23 @@
 						class="flex w-full items-center justify-between rounded-xl border border-red-200/80 bg-red-50/30 p-4 text-left transition-all hover:bg-red-50/50 dark:border-red-700/70 dark:bg-red-950/10 dark:hover:bg-red-950/20"
 					>
 						<div class="flex items-center gap-3">
-							<div class="flex size-10 items-center justify-center rounded-full bg-red-100/90 dark:bg-red-900/40">
+							<div
+								class="flex size-10 items-center justify-center rounded-full bg-red-100/90 dark:bg-red-900/40"
+							>
 								<X class="size-5 text-red-600 dark:text-red-400" />
 							</div>
 							<div>
 								<p class="font-semibold text-red-800 dark:text-red-300">Notes négatives</p>
 								<p class="text-xs text-red-600/80 dark:text-red-400/70">
-									{notesNegatives.length} {(notesNegatives.length > 1) ? 'incidents' : 'incident'}
+									{notesNegatives.length}
+									{notesNegatives.length > 1 ? 'incidents' : 'incident'}
 								</p>
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
-							<span class="flex size-6 items-center justify-center rounded-full bg-red-100/90 text-xs font-bold text-red-700 dark:bg-red-900/50 dark:text-red-300">
+							<span
+								class="flex size-6 items-center justify-center rounded-full bg-red-100/90 text-xs font-bold text-red-700 dark:bg-red-900/50 dark:text-red-300"
+							>
 								{notesNegatives.length}
 							</span>
 							{#if negativesOpen}
@@ -266,9 +581,13 @@
 					{#if negativesOpen}
 						<div class="ml-4 space-y-2 border-l-2 border-red-300/70 pl-4 dark:border-red-700/70">
 							{#each notesNegatives as incident}
-								<div class="rounded-lg border border-red-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-red-800/70 dark:bg-slate-900/80">
+								<div
+									class="rounded-lg border border-red-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-red-800/70 dark:bg-slate-900/80"
+								>
 									<p class="text-sm text-slate-800 dark:text-slate-100">{incident.message}</p>
-									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}</p>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+										Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}
+									</p>
 								</div>
 							{/each}
 						</div>
@@ -281,18 +600,23 @@
 						class="flex w-full items-center justify-between rounded-xl border border-blue-200/80 bg-blue-50/30 p-4 text-left transition-all hover:bg-blue-50/50 dark:border-blue-700/70 dark:bg-blue-950/10 dark:hover:bg-blue-950/20"
 					>
 						<div class="flex items-center gap-3">
-							<div class="flex size-10 items-center justify-center rounded-full bg-blue-100/90 dark:bg-blue-900/40">
+							<div
+								class="flex size-10 items-center justify-center rounded-full bg-blue-100/90 dark:bg-blue-900/40"
+							>
 								<Info class="size-5 text-blue-600 dark:text-blue-400" />
 							</div>
 							<div>
 								<p class="font-semibold text-blue-800 dark:text-blue-300">Autres incidents</p>
 								<p class="text-xs text-blue-600/80 dark:text-blue-400/70">
-									{autresIncidents.length} {(autresIncidents.length > 1) ? 'incidents' : 'incident'}
+									{autresIncidents.length}
+									{autresIncidents.length > 1 ? 'incidents' : 'incident'}
 								</p>
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
-							<span class="flex size-6 items-center justify-center rounded-full bg-blue-100/90 text-xs font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+							<span
+								class="flex size-6 items-center justify-center rounded-full bg-blue-100/90 text-xs font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+							>
 								{autresIncidents.length}
 							</span>
 							{#if autresOpen}
@@ -305,10 +629,18 @@
 					{#if autresOpen}
 						<div class="ml-4 space-y-2 border-l-2 border-blue-300/70 pl-4 dark:border-blue-700/70">
 							{#each autresIncidents as incident}
-								<div class="rounded-lg border border-blue-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-blue-800/70 dark:bg-slate-900/80">
-									<Badge variant="outline" class="mb-1 text-xs border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300">{incident.type}</Badge>
+								<div
+									class="rounded-lg border border-blue-200/70 bg-white/90 p-3 shadow-sm transition-all hover:shadow dark:border-blue-800/70 dark:bg-slate-900/80"
+								>
+									<Badge
+										variant="outline"
+										class="mb-1 border-blue-300 text-xs text-blue-700 dark:border-blue-700 dark:text-blue-300"
+										>{incident.type}</Badge
+									>
 									<p class="text-sm text-slate-800 dark:text-slate-100">{incident.message}</p>
-									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}</p>
+									<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+										Par {incident.auteur} • {new Date(incident.date).toLocaleDateString('fr-FR')}
+									</p>
 								</div>
 							{/each}
 						</div>

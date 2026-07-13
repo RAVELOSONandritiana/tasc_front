@@ -21,7 +21,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return new Response('Unauthorized', { status: 401 });
 	}
 	if (locals.user.role !== 'ADMINISTRATEUR') {
-		return json({ success: false, error: 'Réservé à l\'administrateur' }, { status: 403 });
+		return json({ success: false, error: "Réservé à l'administrateur" }, { status: 403 });
 	}
 
 	const body = await request.json().catch(() => ({}));
@@ -35,7 +35,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ success: false, error: 'Notification introuvable' }, { status: 404 });
 	}
 	if (notif.actionType !== 'PASSWORD_RESET' || !notif.matricule) {
-		return json({ success: false, error: 'Cette notification n\'est pas réinitialisable' }, { status: 400 });
+		return json(
+			{ success: false, error: "Cette notification n'est pas réinitialisable" },
+			{ status: 400 }
+		);
 	}
 
 	const compte = await prisma.compte.findUnique({ where: { matricule: notif.matricule } });
@@ -76,6 +79,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		scope: updated.scope as NotificationScope,
 		actionType: updated.actionType,
 		matricule: updated.matricule,
+		userId: updated.userId,
 		createdAt: updated.createdAt.toISOString()
 	};
 

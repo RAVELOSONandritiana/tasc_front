@@ -2,6 +2,7 @@ import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { createPersonnel } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
@@ -50,7 +51,8 @@ export const actions: Actions = {
 		if (!lieuNaissance?.trim()) errors.lieuNaissance = 'Le lieu de naissance est obligatoire';
 		if (!domicile?.trim()) errors.domicile = 'Le domicile est obligatoire';
 		if (!fokontany?.trim()) errors.fokontany = 'Le fokontany est obligatoire';
-		if (!communeResidence?.trim()) errors.communeResidence = 'La commune de résidence est obligatoire';
+		if (!communeResidence?.trim())
+			errors.communeResidence = 'La commune de résidence est obligatoire';
 		if (!telephone?.trim()) errors.telephone = 'Le téléphone est obligatoire';
 		else if (!/^(\+261|0)[0-9]{9,10}$/.test(telephone)) errors.telephone = 'Format invalide';
 		if (email?.trim() && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) errors.email = 'Format invalide';
@@ -83,12 +85,15 @@ export const actions: Actions = {
 				cin: cin.replace(/\s/g, '')
 			});
 			console.log('Personnel created successfully:', result);
+			broadcastRealtime({ entity: 'personne', action: 'create', id: result.personne.id });
 		} catch (e) {
 			console.error('Error creating personnel:', e);
 			return fail(500, { errors: { _form: 'Erreur lors de la création' } });
 		}
 
-		logActivity(locals.user, 'creation_personnel', `Création du personnel ${nom} ${prenom}`).catch(() => {});
+		logActivity(locals.user, 'creation_personnel', `Création du personnel ${nom} ${prenom}`).catch(
+			() => {}
+		);
 
 		return { success: true };
 	}

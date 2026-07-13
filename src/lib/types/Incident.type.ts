@@ -6,8 +6,11 @@ export type Reaction = {
 export type Comment = {
 	id: string;
 	author: string;
+	authorId?: string | null;
 	text: string;
 	date: string;
+	parentId?: string | null;
+	edited?: boolean;
 };
 
 export type IncidentType = 'info' | 'erreur' | 'note' | 'absent';

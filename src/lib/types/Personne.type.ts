@@ -50,10 +50,16 @@ export type Eleve = {
 	nom: string;
 	prenom: string;
 	dateNaissance: string;
+	im?: string | null;
+	sexe?: string | null;
 	classe: string;
 	email?: string | null;
 	telephone?: string | null;
 	adresse?: string | null;
+	domicile?: string | null;
+	fokontany?: string | null;
+	commune?: string | null;
+	redoublant?: boolean;
 	imageUrl?: string | null;
 	personneId?: string;
 	nomPere?: string | null;

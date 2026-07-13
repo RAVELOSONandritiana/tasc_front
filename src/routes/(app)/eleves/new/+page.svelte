@@ -15,6 +15,11 @@
 	let errors = $state<Record<string, string>>({});
 	let checked = $state(false);
 
+	let searchIm = $state('');
+	let searching = $state(false);
+	let searchError = $state('');
+	let foundEleve = $state(false);
+
 	let form = $state({
 		nom: '',
 		prenom: '',
@@ -39,7 +44,10 @@
 		telephoneMere: '',
 		nomTuteur: '',
 		prenomTuteur: '',
-		telephoneTuteur: ''
+		telephoneTuteur: '',
+		im: '',
+		sexe: '',
+		statut: 'false'
 	});
 
 	function resetForm() {
@@ -67,11 +75,76 @@
 			telephoneMere: '',
 			nomTuteur: '',
 			prenomTuteur: '',
-			telephoneTuteur: ''
+			telephoneTuteur: '',
+			im: '',
+			sexe: '',
+			statut: 'false'
 		};
 		errors = {};
 		success = false;
 		checked = false;
+		searchIm = '';
+		searchError = '';
+		foundEleve = false;
+	}
+
+	async function searchByIm() {
+		const im = searchIm.trim();
+		if (!im) {
+			searchError = 'Veuillez saisir un IM';
+			foundEleve = false;
+			return;
+		}
+		searching = true;
+		searchError = '';
+		foundEleve = false;
+		try {
+			const res = await fetch(`/eleves/new?im=${encodeURIComponent(im)}`);
+			const data = await res.json();
+			if (!res.ok || !data.found) {
+				searchError = data.error || 'Aucun élève trouvé avec cet IM';
+				foundEleve = false;
+				return;
+			}
+			const e = data.eleve;
+			form = {
+				nom: e.nom || '',
+				prenom: e.prenom || '',
+				dateNaissance: e.dateNaissance || '',
+				lieuNaissance: e.lieuNaissance || '',
+				communeNaissance: '',
+				regionNaissance: e.regionNaissance || '',
+				provinceNaissance: e.provinceNaissance || '',
+				domicile: e.domicile || '',
+				fokontany: e.fokontany || '',
+				communeResidence: e.communeResidence || '',
+				regionResidence: e.regionResidence || '',
+				provinceResidence: e.provinceResidence || '',
+				telephoneEleve: e.telephoneEleve || '',
+				emailEleve: e.emailEleve || '',
+				cin: e.cin || '',
+				nomPere: e.nomPere || '',
+				prenomPere: e.prenomPere || '',
+				telephonePere: e.telephonePere || '',
+				nomMere: e.nomMere || '',
+				prenomMere: e.prenomMere || '',
+				telephoneMere: e.telephoneMere || '',
+				nomTuteur: e.nomTuteur || '',
+				prenomTuteur: e.prenomTuteur || '',
+				telephoneTuteur: e.telephoneTuteur || '',
+				im: e.im || '',
+				sexe: e.sexe || '',
+				statut: e.statut || 'false'
+			};
+			checked = Boolean(e.nomTuteur || e.prenomTuteur);
+			searchError = '';
+			foundEleve = true;
+		} catch {
+			searchError = 'Erreur lors de la recherche';
+			foundEleve = false;
+		} finally {
+			searching = false;
+		}
 	}
 </script>
 
@@ -90,6 +163,50 @@
 				<p class="text-sm font-medium text-emerald-500">Élève créé avec succès !</p>
 			</div>
 		{/if}
+
+		<div class="mb-6 rounded-md border border-blue-500/40 bg-blue-500/5 p-4">
+			<p class="mb-3 text-sm font-medium">
+				Rechercher un élève existant (par IM)
+			</p>
+			<p class="mb-3 text-xs text-muted-foreground">
+				Si l'élève est déjà enregistré (ex : passage à un autre niveau), ses informations
+				seront automatiquement chargées dans le formulaire ci-dessous.
+			</p>
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+				<div class="grid flex-1 gap-2">
+					<Label for="searchIm">IM</Label>
+					<Input
+						id="searchIm"
+						bind:value={searchIm}
+						placeholder="Numéro IM"
+						oninput={(e) =>
+							(searchIm = (e.target as HTMLInputElement).value.toUpperCase())}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								e.preventDefault();
+								searchByIm();
+							}
+						}}
+					/>
+				</div>
+				<Button type="button" onclick={searchByIm} disabled={searching}>
+					{#if searching}
+						<Spinner class="mr-2 size-4" />
+						Recherche...
+					{:else}
+						Rechercher
+					{/if}
+				</Button>
+			</div>
+			{#if searchError}
+				<p class="mt-2 text-xs text-destructive">{searchError}</p>
+			{/if}
+			{#if foundEleve}
+				<p class="mt-2 text-xs text-emerald-500">
+					Élève trouvé : informations chargées dans le formulaire.
+				</p>
+			{/if}
+		</div>
 
 		{#if errors._form}
 			<div class="mb-6 rounded-md border border-destructive bg-destructive/10 p-3">
@@ -168,6 +285,39 @@
 								{#if errors.dateNaissance}
 									<span class="text-xs text-destructive">{errors.dateNaissance}</span>
 								{/if}
+							</div>
+							<div class="grid gap-2">
+								<Label for="sexe">Sexe *</Label>
+								<NativeSelect.Root id="sexe" class="w-full" name="sexe" bind:value={form.sexe}>
+									<NativeSelect.Option value="">Sélectionner</NativeSelect.Option>
+									<NativeSelect.Option value="F">Fille</NativeSelect.Option>
+									<NativeSelect.Option value="G">Garçon</NativeSelect.Option>
+								</NativeSelect.Root>
+								{#if errors.sexe}
+									<span class="text-xs text-destructive">{errors.sexe}</span>
+								{/if}
+							</div>
+							<div class="grid gap-2">
+								<Label for="im">IM</Label>
+								<Input
+									id="im"
+									name="im"
+									bind:value={form.im}
+									placeholder="Numéro IM"
+									oninput={(e) => (form.im = (e.target as HTMLInputElement).value.toUpperCase())}
+								/>
+							</div>
+							<div class="grid gap-2">
+								<Label for="statut">Statut scolaire</Label>
+								<NativeSelect.Root
+									id="statut"
+									class="w-full"
+									name="statut"
+									bind:value={form.statut}
+								>
+									<NativeSelect.Option value="false">Passant</NativeSelect.Option>
+									<NativeSelect.Option value="true">Redoublant</NativeSelect.Option>
+								</NativeSelect.Root>
 							</div>
 						</div>
 

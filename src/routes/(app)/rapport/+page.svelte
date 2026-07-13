@@ -6,7 +6,6 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import {
 		FileText,
@@ -185,14 +184,23 @@
 		>
 			<UserX class="size-3.5" /> Absences ({counts.absences})
 		</button>
-		<div class="ml-auto flex items-center gap-2">
-			<Label for="filtre-classe" class="text-xs text-muted-foreground">Classe</Label>
-			<NativeSelect.Root id="filtre-classe" class="w-fit" size="sm" bind:value={filtreClasse}>
-				<NativeSelect.Option value="TOUTES">Toutes les classes</NativeSelect.Option>
-				{#each classesDisponibles as c (c)}
-					<NativeSelect.Option value={c}>{c}</NativeSelect.Option>
-				{/each}
-			</NativeSelect.Root>
+		<div class="ml-auto flex flex-wrap items-center gap-2">
+			<Badge
+				variant={filtreClasse === 'TOUTES' ? 'default' : 'outline'}
+				class="cursor-pointer transition-all hover:shadow-sm"
+				onclick={() => (filtreClasse = 'TOUTES')}
+			>
+				Toutes les classes
+			</Badge>
+			{#each classesDisponibles as c (c)}
+				<Badge
+					variant={filtreClasse === c ? 'default' : 'outline'}
+					class="cursor-pointer transition-all hover:shadow-sm"
+					onclick={() => (filtreClasse = c)}
+				>
+					{c}
+				</Badge>
+			{/each}
 		</div>
 	</div>
 

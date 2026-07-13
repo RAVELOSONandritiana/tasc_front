@@ -9,7 +9,8 @@
 	import type { PageProps } from './$types';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
-	import { Trash, Plus, UserCheck, X } from '@lucide/svelte';
+	import { Trash, Plus, UserCheck, X, Printer } from '@lucide/svelte';
+	import { formatClasseNom } from '$lib/utils';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 
 	const { data }: PageProps = $props();
@@ -56,6 +57,7 @@
 	let submittingDelete = $state(false);
 	let deleteForm = $state<HTMLFormElement | null>(null);
 	let eleveToDelete = $state<{ id: string; nom: string; prenom: string } | null>(null);
+	let datePresence = $state(new Date().toISOString().split('T')[0]);
 
 	function removeEleve(id: string) {
 		elevesInscrits = elevesInscrits.filter((e) => e.id !== id);
@@ -84,15 +86,31 @@
 		];
 		elevesDisponibles = elevesDisponibles.filter((e) => e.id !== eleve.id);
 	}
+
+	let presenceOpen = $state(false);
+	function numeroClasse(eleve: EleveCours): string {
+		const ordre =
+			[...elevesInscrits]
+				.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'))
+				.findIndex((e) => e.id === eleve.id) + 1;
+		const suffix = eleve.sexe === 'F' ? 'F' : 'G';
+		return `${ordre}${suffix}`;
+	}
 </script>
 
 <div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
 	<div
-		class="sticky top-16 z-50 flex justify-between border-b border-sidebar-border bg-sidebar p-4"
+		class="sticky top-16 z-50 flex justify-between border-b border-sidebar-border bg-sidebar p-4 {presenceOpen
+			? 'print:hidden'
+			: ''}"
 	>
 		<SearchInput placeholder="Rechercher un élève" bind:value={searchEleve} />
 
 		<div class="flex gap-2">
+			<Button variant="outline" onclick={() => (presenceOpen = true)}>
+				<Printer class="mr-2 size-4" />
+				Liste de présence
+			</Button>
 			<Dialog.Root
 				bind:open={openAddDialog}
 				onOpenChange={(open) => {
@@ -221,7 +239,7 @@
 		</div>
 	</div>
 
-	<div class="flex-1 overflow-y-auto p-4">
+	<div class="flex-1 overflow-y-auto p-4 {presenceOpen ? 'print:hidden' : ''}">
 		<p class="mb-4 text-sm text-muted-foreground">
 			Tous les élèves inscrits seront automatiquement affectés aux examens de chaque cours.
 		</p>
@@ -230,9 +248,11 @@
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
+						<Table.Head class="text-center">N° classe</Table.Head>
 						<Table.Head>Nom</Table.Head>
 						<Table.Head>Prénom</Table.Head>
 						<Table.Head>Date naissance</Table.Head>
+						<Table.Head>Domicile</Table.Head>
 						<Table.Head class="text-center">Incidents</Table.Head>
 						<Table.Head class="text-center">Absences</Table.Head>
 						<Table.Head class="text-center">Retards</Table.Head>
@@ -242,10 +262,22 @@
 				<Table.Body>
 					{#each elevesFiltres as eleve (eleve.id)}
 						<Table.Row>
+							<Table.Cell class="text-center font-semibold">{numeroClasse(eleve)}</Table.Cell>
 							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
 							<Table.Cell>{eleve.prenom}</Table.Cell>
 							<Table.Cell>
-								{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : '—'}
+								{#if eleve.dateNaissance}
+									{new Date(eleve.dateNaissance).toLocaleDateString()}
+								{:else}
+									<span class="text-muted-foreground/50">—</span>
+								{/if}
+							</Table.Cell>
+							<Table.Cell>
+								{#if eleve.domicile}
+									{eleve.domicile}
+								{:else}
+									<span class="text-muted-foreground/50">—</span>
+								{/if}
 							</Table.Cell>
 							<Table.Cell class="text-center">
 								{eleve.incidents?.length || 0}
@@ -309,4 +341,45 @@
 		loading={submittingDelete}
 		onConfirm={() => deleteForm?.requestSubmit()}
 	/>
+
+	{#if presenceOpen}
+		<div
+			class="fixed inset-0 z-[100] overflow-auto bg-white p-8 text-black print:static print:bg-white print:p-0"
+		>
+			<div class="mb-4 flex items-center justify-between print:hidden">
+				<Button variant="outline" onclick={() => (presenceOpen = false)}>Retour</Button>
+				<Button onclick={() => window.print()}>Imprimer</Button>
+			</div>
+
+			<h1 class="mb-3 text-left text-xl font-bold uppercase">
+				{formatClasseNom(data.classe?.niveau, data.classe?.nom)} — Liste de présence
+			</h1>
+
+			<div class="mb-4 flex items-center gap-2 text-sm">
+				<span class="font-semibold">Date :</span>
+				<span>{new Date(datePresence).toLocaleDateString('fr-FR')}</span>
+			</div>
+
+			<table class="w-full border-collapse border border-black text-sm">
+				<thead>
+					<tr>
+						<th class="border border-black px-2 py-1 text-left">Nom</th>
+						<th class="border border-black px-2 py-1 text-left">Prénom</th>
+						<th class="border border-black px-2 py-1 text-left">N° classe</th>
+						<th class="border border-black px-2 py-1 text-left">Présent / Absent</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each elevesInscrits as eleve (eleve.id)}
+						<tr>
+							<td class="border border-black px-2 py-2">{eleve.nom}</td>
+							<td class="border border-black px-2 py-2">{eleve.prenom}</td>
+							<td class="border border-black px-2 py-2">{numeroClasse(eleve)}</td>
+							<td class="border border-black px-2 py-2"></td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
 </div>

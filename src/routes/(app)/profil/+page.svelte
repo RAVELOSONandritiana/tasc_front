@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -58,18 +59,6 @@
 	function cancelEdit() {
 		isEditing = false;
 		saved = false;
-	}
-
-	function saveProfile() {
-		saving = true;
-		setTimeout(() => {
-			saving = false;
-			isEditing = false;
-			saved = true;
-			setTimeout(() => {
-				saved = false;
-			}, 3000);
-		}, 800);
 	}
 
 	const roleColors: Record<string, string> = {
@@ -209,7 +198,7 @@
 								<X class="size-4" />
 								Annuler
 							</Button>
-							<Button onclick={saveProfile} disabled={saving} class="gap-2">
+							<Button type="submit" form="profile-form" disabled={saving} class="gap-2">
 								{#if saving}
 									<div
 										class="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground"
@@ -263,7 +252,26 @@
 		{/if}
 
 		<!-- Info Cards -->
-		<div class="grid gap-4 md:grid-cols-2">
+		<form
+			id="profile-form"
+			method="POST"
+			action="?/update"
+			class="grid gap-4 md:grid-cols-2"
+			use:enhance={() => {
+				saving = true;
+				return async ({ result, update }) => {
+					saving = false;
+					if (result.type === 'success') {
+						await update({ invalidateAll: true });
+						isEditing = false;
+						saved = true;
+						setTimeout(() => (saved = false), 3000);
+					} else if (result.type === 'failure') {
+						alert((result.data as { error?: string })?.error ?? 'Mise à jour impossible');
+					}
+				};
+			}}
+		>
 			<Card
 				class="animate-slide-up stagger-5 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
 			>
@@ -301,23 +309,23 @@
 					<div class="grid gap-4">
 						<div class="grid gap-2">
 							<Label for="edit-nom">Nom</Label>
-							<Input id="edit-nom" bind:value={editNom} />
+							<Input id="edit-nom" name="nom" bind:value={editNom} />
 						</div>
 						<div class="grid gap-2">
 							<Label for="edit-prenom">Prénom</Label>
-							<Input id="edit-prenom" bind:value={editPrenom} />
+							<Input id="edit-prenom" name="prenom" bind:value={editPrenom} />
 						</div>
 						<div class="grid gap-2">
 							<Label for="edit-email">Email</Label>
-							<Input id="edit-email" type="email" bind:value={editEmail} />
+							<Input id="edit-email" type="email" name="email" bind:value={editEmail} />
 						</div>
 						<div class="grid gap-2">
 							<Label for="edit-phone">Téléphone</Label>
-							<Input id="edit-phone" type="tel" bind:value={editPhone} />
+							<Input id="edit-phone" type="tel" name="phone" bind:value={editPhone} />
 						</div>
 						<div class="grid gap-2">
 							<Label for="edit-adresse">Adresse</Label>
-							<Input id="edit-adresse" bind:value={editAdresse} />
+							<Input id="edit-adresse" name="adresse" bind:value={editAdresse} />
 						</div>
 					</div>
 				{/if}
@@ -360,27 +368,28 @@
 					</div>
 				</div>
 			</Card>
-		</div>
 
-		<!-- Bio Section -->
-		<Card
-			class="animate-slide-up stagger-7 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
-		>
-			<h3 class="mb-4 font-semibold">À propos</h3>
-			{#if !isEditing}
-				<p class="text-sm leading-relaxed text-muted-foreground">
-					{data.profil.bio ||
-						'Aucune bio renseignée. Cliquez sur "Modifier le profil" pour en ajouter une.'}
-				</p>
-			{:else}
-				<Textarea
-					bind:value={editBio}
-					placeholder="Décrivez-vous en quelques mots..."
-					rows={3}
-					class="text-sm"
-				/>
-			{/if}
-		</Card>
+			<!-- Bio Section -->
+			<Card
+				class="animate-slide-up stagger-7 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
+			>
+				<h3 class="mb-4 font-semibold">À propos</h3>
+				{#if !isEditing}
+					<p class="text-sm leading-relaxed text-muted-foreground">
+						{data.profil.bio ||
+							'Aucune bio renseignée. Cliquez sur "Modifier le profil" pour en ajouter une.'}
+					</p>
+				{:else}
+					<Textarea
+						name="bio"
+						bind:value={editBio}
+						placeholder="Décrivez-vous en quelques mots..."
+						rows={3}
+						class="text-sm"
+					/>
+				{/if}
+			</Card>
+		</form>
 
 		<!-- Activity History -->
 		<Card
@@ -391,7 +400,12 @@
 					<History class="size-4 text-primary" />
 					Historique des activités
 				</h3>
-				<Button variant="ghost" size="sm" class="gap-1 text-xs" onclick={() => goto(`/profil/${data.profil.id}/history`)}>
+				<Button
+					variant="ghost"
+					size="sm"
+					class="gap-1 text-xs"
+					onclick={() => goto(`/profil/${data.profil.id}/history`)}
+				>
 					Voir tout
 					<History class="size-3.5" />
 				</Button>
@@ -400,10 +414,12 @@
 				<div class="space-y-2">
 					{#each data.activities.slice(0, 5) as act (act.id)}
 						<div class="flex items-start gap-3 rounded-md border border-sidebar-border p-3">
-							<div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+							<div
+								class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10"
+							>
 								<Clock class="size-4 text-primary" />
 							</div>
-							<div class="flex-1 min-w-0">
+							<div class="min-w-0 flex-1">
 								<p class="text-sm font-medium">{act.description}</p>
 								<p class="text-xs text-muted-foreground">
 									{new Date(act.createdAt).toLocaleString('fr-FR', {
@@ -419,7 +435,9 @@
 					{/each}
 				</div>
 			{:else}
-				<div class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+				<div
+					class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground"
+				>
 					<Clock class="mb-2 size-8" />
 					<p class="text-sm">Aucune activité enregistrée</p>
 				</div>

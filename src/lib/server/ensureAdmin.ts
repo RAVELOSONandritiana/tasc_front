@@ -1,12 +1,11 @@
 import { prisma } from './prisma';
 import { hashPassword } from './auth';
 
-const ADMIN_MATRICULE = '666666';
 const ADMIN_PASSWORD = '666666';
 
 export async function ensureAdmin() {
-	const existing = await prisma.compte.findUnique({
-		where: { matricule: ADMIN_MATRICULE }
+	const existing = await prisma.compte.findFirst({
+		where: { role: 'ADMINISTRATEUR' }
 	});
 
 	if (existing) return existing;
@@ -22,7 +21,7 @@ export async function ensureAdmin() {
 
 	const compte = await prisma.compte.create({
 		data: {
-			matricule: ADMIN_MATRICULE,
+			matricule: '666666',
 			password: hashPassword(ADMIN_PASSWORD),
 			role: 'ADMINISTRATEUR',
 			statut: 'ACTIF',

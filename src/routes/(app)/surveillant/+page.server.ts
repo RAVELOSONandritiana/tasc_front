@@ -4,8 +4,11 @@ import { getSurveillants, getAllPersonnesForSurveillant, createSurveillantFromPe
 import type { Prisma } from '@prisma/client';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
-type SurveillantWithPersonne = Prisma.SurveillantGetPayload<{ include: { personne: true } }>;
+type SurveillantWithPersonne = Prisma.SurveillantGetPayload<{
+	include: { personne: { include: { compte: { select: { id: true; role: true; matricule: true } } } } }
+}>;
 
 function mapSurveillant(prismaSurv: SurveillantWithPersonne): Surveillant {
 	return {
@@ -17,6 +20,7 @@ function mapSurveillant(prismaSurv: SurveillantWithPersonne): Surveillant {
 		commune: prismaSurv.personne.commune || '',
 		phone: prismaSurv.personne.phone,
 		email: prismaSurv.personne.email,
+		imageUrl: prismaSurv.personne.imageUrl || null,
 		compte: prismaSurv.personne.compte as { id: string; role: string; matricule: string } | undefined,
 		personneId: prismaSurv.personne.id,
 		poste: prismaSurv.poste,
@@ -66,6 +70,8 @@ export const actions: Actions = {
 				`Création du surveillant ${result.personne.name} ${result.personne.lastname}`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'surveillant', action: 'create', id: result.surveillant?.id ?? '' });
+
 			return { success: true, result };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la création' });
@@ -82,6 +88,7 @@ export const actions: Actions = {
 				'suppression_surveillant',
 				'Suppression du surveillant'
 			).catch(() => {});
+			broadcastRealtime({ entity: 'surveillant', action: 'delete', id });
 			return { success: true };
 		} catch (e: any) {
 			if (isForeignKeyError(e)) {

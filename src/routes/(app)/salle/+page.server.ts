@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const status = url.searchParams.get('status') || 'all';
@@ -37,13 +38,15 @@ export const actions: Actions = {
 		const nom = formData.get('nom') as string;
 		const capacite = parseInt(formData.get('capacite') as string);
 
-		await prisma.salle.create({
+		const salle = await prisma.salle.create({
 			data: {
 				num,
 				nom,
 				capacite
 			}
 		});
+
+		broadcastRealtime({ entity: 'salle', action: 'create', id: salle.id });
 
 		throw redirect(303, '/salle');
 	},
@@ -61,6 +64,8 @@ export const actions: Actions = {
 				capacite
 			}
 		});
+
+		broadcastRealtime({ entity: 'salle', action: 'update', id });
 
 		throw redirect(303, '/salle');
 	},
@@ -91,6 +96,8 @@ export const actions: Actions = {
 			return fail(500, { error: 'Erreur lors de la suppression' });
 		}
 
+		broadcastRealtime({ entity: 'salle', action: 'delete', id });
+
 		return { success: true };
 	},
 
@@ -108,6 +115,8 @@ export const actions: Actions = {
 			where: { id },
 			data: { imageUrl }
 		});
+
+		broadcastRealtime({ entity: 'salle', action: 'update', id });
 
 		return { success: true, oldImageUrl: oldSalle?.imageUrl || null };
 	}

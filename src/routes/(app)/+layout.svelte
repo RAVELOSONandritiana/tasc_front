@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
+	import { initRealtime } from '$lib/realtime';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import Profil from '$lib/components/user/Profil.svelte';
@@ -24,22 +26,63 @@
 
 	let { children, data } = $props();
 
+	// Connexion temps réel : synchronise les données sur tous les
+	// utilisateurs connectés (création / mise à jour / suppression).
+	if (browser) {
+		initRealtime();
+	}
+
 	const allPaths = [
-		{ path: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
+		{
+			path: '/dashboard',
+			label: 'Tableau de bord',
+			icon: LayoutDashboard,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+		},
 		{ path: '/surveillant', label: 'Surveillants', icon: UserSquare2, roles: ['ADMINISTRATEUR'] },
 		{ path: '/enseignant', label: 'Enseignants', icon: UserCog, roles: ['ADMINISTRATEUR'] },
 		{ path: '/personne', label: 'Personnels', icon: Users, roles: ['ADMINISTRATEUR'] },
-		{ path: '/eleves', label: 'Élèves', icon: GraduationCap, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
-		{ path: '/classe', label: 'Classes', icon: ClipboardList, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
-		{ path: '/incidents', label: 'Incidents', icon: AlertTriangle, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
-		{ path: '/rapport', label: 'Rapports', icon: FileText, roles: ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT'] },
+		{
+			path: '/eleves',
+			label: 'Élèves',
+			icon: GraduationCap,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+		},
+		{
+			path: '/classe',
+			label: 'Classes',
+			icon: ClipboardList,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+		},
+		{
+			path: '/incidents',
+			label: 'Incidents',
+			icon: AlertTriangle,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+		},
+		{
+			path: '/rapport',
+			label: 'Rapports',
+			icon: FileText,
+			roles: ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT']
+		},
 		{ path: '/parametre', label: 'Paramètres', icon: Settings, roles: ['ADMINISTRATEUR'] },
-		{ path: '/salle', label: 'Salles', icon: Building2, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] },
-		{ path: '/profil', label: 'Mon profil', icon: UserRoundSearch, roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL'] }
+		{
+			path: '/salle',
+			label: 'Salles',
+			icon: Building2,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+		},
+		{
+			path: '/profil',
+			label: 'Mon profil',
+			icon: UserRoundSearch,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+		}
 	];
 
 	const userRole = data.user?.role;
-	const path = allPaths.filter(p => userRole ? p.roles.includes(userRole) : false);
+	const path = allPaths.filter((p) => (userRole ? p.roles.includes(userRole) : false));
 
 	const isActive = (linkPath: string) => $page.url.pathname.startsWith(linkPath);
 </script>
@@ -91,18 +134,18 @@
 					</Sidebar.Menu>
 				</Sidebar.Group>
 			</Sidebar.Content>
-	<Sidebar.Footer class="border-t border-sidebar-border p-4">
-		<form method="POST" action="/signout?/logout" use:loadingForm>
-				<Button
-					type="submit"
-					variant="outline"
-					class="w-full gap-2 text-muted-foreground transition-colors hover:text-destructive"
-				>
-					<LogOut class="size-4" />
-					Déconnexion
-				</Button>
-			</form>
-		</Sidebar.Footer>
+			<Sidebar.Footer class="border-t border-sidebar-border p-4">
+				<form method="POST" action="/signout?/logout" use:loadingForm>
+					<Button
+						type="submit"
+						variant="outline"
+						class="w-full gap-2 text-muted-foreground transition-colors hover:text-destructive"
+					>
+						<LogOut class="size-4" />
+						Déconnexion
+					</Button>
+				</form>
+			</Sidebar.Footer>
 		</Sidebar.Root>
 
 		<div class="flex flex-1 flex-col bg-background text-foreground">

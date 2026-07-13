@@ -6,6 +6,7 @@ export type ActivityAction =
 	| 'deconnexion'
 	| 'creation_incident'
 	| 'suppression_incident'
+	| 'modification_incident'
 	| 'modification_eleve'
 	| 'creation_cours'
 	| 'creation_classe'

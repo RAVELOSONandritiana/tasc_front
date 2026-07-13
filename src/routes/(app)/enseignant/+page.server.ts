@@ -4,6 +4,7 @@ import type { Professeur } from '$lib/types/Personne.type';
 import type { Personne } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 type PrismaProfesseurShape = {
 	id: string;
@@ -23,6 +24,7 @@ type PrismaProfesseurShape = {
 		commune: string | null;
 		phone: string;
 		email: string;
+		imageUrl: string | null;
 		compte?: { id: string; role: string; matricule: string } | null;
 	};
 };
@@ -37,6 +39,7 @@ function mapProfesseur(prismaProf: PrismaProfesseurShape): Professeur {
 		commune: prismaProf.personne.commune || '',
 		phone: prismaProf.personne.phone,
 		email: prismaProf.personne.email,
+		imageUrl: prismaProf.personne.imageUrl || null,
 		compte: prismaProf.personne.compte as { id: string; role: string; matricule: string } | undefined,
 		personneId: prismaProf.personne.id,
 		matiere: prismaProf.matiere,
@@ -64,6 +67,7 @@ export const load: PageServerLoad = async () => {
 		commune: personne.commune ?? undefined,
 		phone: personne.phone,
 		email: personne.email,
+		imageUrl: personne.imageUrl || null,
 		compte: personne.compte ?? undefined
 	}));
 	return {
@@ -98,6 +102,8 @@ export const actions: Actions = {
 				`Création de l'enseignant ${result.personne.name} ${result.personne.lastname}`
 			).catch(() => {});
 
+			broadcastRealtime({ entity: 'enseignant', action: 'create', id: result.professeur?.id ?? '' });
+
 			return { success: true, result };
 		} catch (e: unknown) {
 			return fail(500, { error: (e as Error)?.message || 'Erreur lors de la création' });
@@ -114,6 +120,7 @@ export const actions: Actions = {
 				'suppression_enseignant',
 				'Suppression de l\'enseignant'
 			).catch(() => {});
+			broadcastRealtime({ entity: 'enseignant', action: 'delete', id });
 			return { success: true };
 		} catch (e: unknown) {
 			if (isForeignKeyError(e)) {

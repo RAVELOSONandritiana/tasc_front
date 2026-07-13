@@ -167,9 +167,9 @@
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-base font-semibold">{eleve.prenom} {eleve.nom}</p>
 								<p class="text-xs text-muted-foreground">
-									{eleve.dateNaissance
+									Date : {eleve.dateNaissance
 										? new Date(eleve.dateNaissance).toLocaleDateString('fr-FR')
-										: ''}
+										: '—'}
 								</p>
 								<span
 									class="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium {statut ===

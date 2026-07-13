@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { subscribe, canSeeNotification } from '$lib/server/notifications';
+import { subscribeToRealtime, canSeeRealtime } from '$lib/server/realtime';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) {
@@ -7,7 +7,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	const role = locals.user.role;
-	const currentUserId = locals.user.userId;
 
 	let unsubscribe: (() => void) | null = null;
 	let heartbeat: ReturnType<typeof setInterval> | null = null;
@@ -26,9 +25,9 @@ export const GET: RequestHandler = async ({ locals }) => {
 			// Initial comment to open the stream immediately.
 			controller.enqueue(encoder.encode(': connected\n\n'));
 
-			unsubscribe = subscribe((notif) => {
-				if (canSeeNotification(notif.scope, role, notif.userId, currentUserId)) {
-					send('notification', notif);
+			unsubscribe = subscribeToRealtime((event) => {
+				if (canSeeRealtime(event.scope ?? 'ALL', role)) {
+					send('realtime', event);
 				}
 			});
 

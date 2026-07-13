@@ -81,6 +81,71 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
+	update: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'Non autorisé' });
+		}
+
+		const data = await request.formData();
+		const name = (data.get('prenom') as string | null)?.trim() ?? '';
+		const lastname = (data.get('nom') as string | null)?.trim() ?? '';
+		const email = (data.get('email') as string | null)?.trim() ?? '';
+		const phone = (data.get('phone') as string | null)?.trim() ?? '';
+		const adresse = (data.get('adresse') as string | null)?.trim() ?? '';
+		const bio = (data.get('bio') as string | null)?.trim() ?? '';
+
+		if (!name || !lastname) {
+			return fail(400, { error: 'Le nom et le prénom sont obligatoires' });
+		}
+		if (email && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) {
+			return fail(400, { error: 'Adresse email invalide' });
+		}
+		if (phone && !/^(\+261|0)[0-9]{9,10}$/.test(phone)) {
+			return fail(400, { error: 'Numéro de téléphone invalide' });
+		}
+
+		try {
+			const compte = await prisma.compte.findUnique({
+				where: { id: locals.user.userId },
+				include: { personne: true }
+			});
+			if (!compte) {
+				return fail(404, { error: 'Compte introuvable' });
+			}
+
+			await prisma.$transaction(async (tx) => {
+				await tx.personne.update({
+					where: { id: compte.personne.id },
+					data: {
+						name,
+						lastname,
+						email: email || undefined,
+						phone: phone || undefined
+					}
+				});
+
+				await tx.profil.upsert({
+					where: { compteId: compte.id },
+					create: {
+						compteId: compte.id,
+						nom: name,
+						prenom: lastname,
+						email: email || compte.personne.email || '',
+						role: compte.role,
+						dateInscription: new Date(),
+						adresse,
+						bio
+					},
+					update: { adresse, bio }
+				});
+			});
+			logActivity(locals.user, 'modification_eleve', 'Mise à jour du profil').catch(() => {});
+			return { success: true };
+		} catch {
+			return fail(500, { error: 'Erreur lors de la mise à jour du profil' });
+		}
+	},
+
 	changePassword: async ({ request, locals }) => {
 		if (!locals.user) {
 			return fail(401, { error: 'Non autorisé' });
@@ -124,7 +189,9 @@ export const actions: Actions = {
 
 		try {
 			await updateUserPassword(locals.user.userId, newPassword);
-			logActivity(locals.user, 'changement_mot_de_passe', 'Changement de mot de passe').catch(() => {});
+			logActivity(locals.user, 'changement_mot_de_passe', 'Changement de mot de passe').catch(
+				() => {}
+			);
 			return { success: true };
 		} catch {
 			return fail(500, { error: 'Erreur lors du changement de mot de passe' });

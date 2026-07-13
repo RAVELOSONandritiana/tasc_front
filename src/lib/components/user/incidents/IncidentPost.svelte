@@ -12,9 +12,11 @@
 		Heart,
 		Share2,
 		Send,
-		Trash2
+		Trash2,
+		Pencil,
+		Reply
 	} from '@lucide/svelte/icons';
-	import type { Incident, IncidentType } from '$lib/types/Incident.type';
+	import type { Incident, IncidentType, Comment } from '$lib/types/Incident.type';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
@@ -30,6 +32,33 @@
 
 	let showComments = $state(false);
 	let commentText = $state('');
+
+	let editingId = $state<string | null>(null);
+	let editText = $state('');
+	let replyingTo = $state<string | null>(null);
+	let replyText = $state('');
+
+	const topLevelComments = $derived((incident.comments || []).filter((c) => !c.parentId));
+
+	function repliesOf(parentId: string): Comment[] {
+		return (incident.comments || []).filter((c) => c.parentId === parentId);
+	}
+
+	function canEditComment(c: Comment): boolean {
+		return !!c.authorId && c.authorId === currentUserId;
+	}
+
+	function startEdit(c: Comment) {
+		editingId = c.id;
+		editText = c.text;
+		replyingTo = null;
+	}
+
+	function startReply(id: string) {
+		replyingTo = id;
+		replyText = '';
+		editingId = null;
+	}
 
 	const typeConfig: Record<IncidentType, { icon: typeof Info; color: string; bg: string }> = {
 		info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -92,6 +121,79 @@
 		});
 	}
 </script>
+
+{#snippet commentBlock(comment: Comment)}
+	<div class="text-sm">
+		<div class="flex flex-wrap items-baseline gap-2">
+			<span class="text-xs font-semibold">{comment.author}</span>
+			{#if comment.edited}
+				<span class="text-[10px] text-muted-foreground italic">modifié</span>
+			{/if}
+			<span class="text-xs text-muted-foreground">{comment.text}</span>
+		</div>
+
+		<div class="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+			<button type="button" class="hover:text-foreground" onclick={() => startReply(comment.id)}
+				>Répondre</button
+			>
+			{#if canEditComment(comment)}
+				<button type="button" class="hover:text-foreground" onclick={() => startEdit(comment)}
+					>Modifier</button
+				>
+			{/if}
+		</div>
+
+		{#if editingId === comment.id}
+			<form
+				method="POST"
+				action="?/editComment"
+				class="mt-1 flex items-center gap-2"
+				use:loadingForm
+			>
+				<input type="hidden" name="commentId" value={comment.id} />
+				<input
+					type="text"
+					name="text"
+					bind:value={editText}
+					class="flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none"
+				/>
+				<Button type="submit" size="sm" disabled={!editText.trim()}>Enregistrer</Button>
+				<Button type="button" variant="ghost" size="sm" onclick={() => (editingId = null)}
+					>Annuler</Button
+				>
+			</form>
+		{/if}
+
+		{#if replyingTo === comment.id}
+			<form
+				method="POST"
+				action="?/replyComment"
+				class="mt-1 flex items-center gap-2"
+				use:loadingForm
+			>
+				<input type="hidden" name="incidentId" value={incident.id} />
+				<input type="hidden" name="parentId" value={comment.id} />
+				<input
+					type="text"
+					name="text"
+					bind:value={replyText}
+					placeholder="Répondre..."
+					class="flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none"
+				/>
+				<Button type="submit" size="sm" disabled={!replyText.trim()}>Envoyer</Button>
+				<Button type="button" variant="ghost" size="sm" onclick={() => (replyingTo = null)}
+					>Annuler</Button
+				>
+			</form>
+		{/if}
+
+		{#each repliesOf(comment.id) as reply (reply.id)}
+			<div class="mt-2 ml-4 border-l border-sidebar-border pl-3">
+				{@render commentBlock(reply)}
+			</div>
+		{/each}
+	</div>
+{/snippet}
 
 <div class="mx-auto w-full max-w-2xl">
 	<div
@@ -239,12 +341,9 @@
 					</Button>
 				</form>
 				{#if incident.comments && incident.comments.length > 0}
-					<div class="max-h-60 space-y-2 overflow-y-auto">
-						{#each incident.comments as comment (comment.id)}
-							<div class="flex items-start gap-2 text-sm">
-								<span class="text-xs font-medium">{comment.author}</span>
-								<span class="text-xs text-muted-foreground">{comment.text}</span>
-							</div>
+					<div class="max-h-72 space-y-3 overflow-y-auto">
+						{#each topLevelComments as comment (comment.id)}
+							{@render commentBlock(comment)}
 						{/each}
 					</div>
 				{/if}

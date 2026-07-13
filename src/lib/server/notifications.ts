@@ -16,6 +16,7 @@ export type NotificationPayload = {
 	scope: NotificationScope;
 	actionType: string | null;
 	matricule: string | null;
+	userId: string | null;
 	createdAt: string;
 };
 
@@ -60,8 +61,18 @@ export function broadcastNotification(notif: NotificationPayload) {
 
 /**
  * Détermine si une notification d'une portée donnée est visible pour un rôle.
+ * Si la notification a un destinataire (userId), elle n'est visible que par ce
+ * dernier ; sinon la règle de portée s'applique (ALL / ADMIN).
  */
-export function canSeeNotification(scope: string, role: string | undefined): boolean {
+export function canSeeNotification(
+	scope: string,
+	role: string | undefined,
+	userId?: string | null,
+	currentUserId?: string | null
+): boolean {
+	if (userId) {
+		return userId === currentUserId;
+	}
 	if (scope === 'ADMIN') {
 		return role === 'ADMINISTRATEUR';
 	}
@@ -79,6 +90,7 @@ export async function createNotification(input: {
 	scope?: NotificationScope;
 	actionType?: string | null;
 	matricule?: string | null;
+	userId?: string | null;
 }): Promise<NotificationPayload> {
 	const notif = await prisma.notification.create({
 		data: {
@@ -87,7 +99,8 @@ export async function createNotification(input: {
 			time: input.time ?? new Date().toLocaleString('fr-FR'),
 			scope: input.scope ?? 'ALL',
 			actionType: input.actionType ?? null,
-			matricule: input.matricule ?? null
+			matricule: input.matricule ?? null,
+			userId: input.userId ?? null
 		}
 	});
 
@@ -100,6 +113,7 @@ export async function createNotification(input: {
 		scope: notif.scope as NotificationScope,
 		actionType: notif.actionType,
 		matricule: notif.matricule,
+		userId: notif.userId,
 		createdAt: notif.createdAt.toISOString()
 	};
 

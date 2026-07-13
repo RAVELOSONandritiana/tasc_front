@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import { CalendarDays } from '@lucide/svelte/icons';
 	import type { AnneeScolaire } from '@prisma/client';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
@@ -25,10 +24,11 @@
 				credentials: 'same-origin'
 			});
 			if (!res.ok) throw new Error('Échec changement année');
-			await invalidateAll();
+			// Recharge la page pour refléter la nouvelle année scolaire sur toutes les
+			// données (les listes copient les données serveur dans un état local).
+			window.location.reload();
 		} catch (e) {
 			console.error('Échec changement année', e);
-		} finally {
 			switching = false;
 		}
 	}

@@ -20,6 +20,19 @@
 
 	const demandesEnAttente = $derived(data.demandesReset.filter((d) => !d.done));
 
+	const DEMANDES_PAR_PAGE = 5;
+	let demandePage = $state(1);
+	const demandesPagesTotales = $derived(
+		Math.max(1, Math.ceil(data.demandesReset.length / DEMANDES_PAR_PAGE))
+	);
+	const demandePageCourante = $derived(Math.min(demandePage, demandesPagesTotales));
+	const demandesAffichees = $derived(
+		data.demandesReset.slice(
+			(demandePageCourante - 1) * DEMANDES_PAR_PAGE,
+			demandePageCourante * DEMANDES_PAR_PAGE
+		)
+	);
+
 	const comptesFiltres = $derived(
 		data.comptes.filter(
 			(c) =>
@@ -175,7 +188,7 @@
 					</p>
 				{:else}
 					<div class="space-y-2">
-						{#each data.demandesReset as demande (demande.id)}
+						{#each demandesAffichees as demande (demande.id)}
 							<div
 								class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 {demande.done
 									? 'bg-muted/40'
@@ -203,6 +216,40 @@
 							</div>
 						{/each}
 					</div>
+
+					{#if demandesPagesTotales > 1}
+						<div class="mt-3 flex items-center justify-center gap-2">
+							<Button
+								size="sm"
+								variant="outline"
+								type="button"
+								disabled={demandePageCourante === 1}
+								onclick={() => (demandePage = Math.max(1, demandePageCourante - 1))}
+							>
+								Précédent
+							</Button>
+							{#each Array(demandesPagesTotales) as _, i (i)}
+								<button
+									type="button"
+									class="size-8 rounded-md text-xs font-medium transition-colors {demandePage === i + 1
+										? 'bg-primary text-primary-foreground'
+										: 'border border-sidebar-border text-muted-foreground hover:bg-muted'}"
+									onclick={() => (demandePage = i + 1)}
+								>
+									{i + 1}
+								</button>
+							{/each}
+							<Button
+								size="sm"
+								variant="outline"
+								type="button"
+								disabled={demandePageCourante === demandesPagesTotales}
+								onclick={() => (demandePage = Math.min(demandesPagesTotales, demandePageCourante + 1))}
+							>
+								Suivant
+							</Button>
+						</div>
+					{/if}
 				{/if}
 			</Card>
 
