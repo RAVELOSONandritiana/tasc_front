@@ -15,6 +15,9 @@ import {
 	deleteNote,
 	updateNote,
 	updateMatiere,
+	createSousExamen,
+	deleteSousExamen,
+	getSousExamenById,
 	getActiveAnneeScolaire,
 	prisma
 } from '$lib/server/prisma';
@@ -53,7 +56,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		getCours(classe.anneeId),
 		prisma.examen.findMany({
 			where: { classeId: params.id },
-			orderBy: { date: 'asc' }
+			orderBy: { date: 'asc' },
+			include: { sousExamens: { orderBy: { createdAt: 'asc' } } }
 		}),
 		prisma.inscription.findMany({
 			where: { classeId: params.id, actif: true },
@@ -108,7 +112,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		nom: e.nom,
 		date: e.date.toISOString().split('T')[0],
 		classeId: e.classeId,
-		periode: e.periode || undefined
+		periode: e.periode || undefined,
+		sousExamens: (e.sousExamens || []).map((s: any) => ({
+			id: s.id,
+			nom: s.nom,
+			examenId: s.examenId
+		}))
 	}));
 
 	const elevesClasse: EleveCours[] = inscriptions.map((i) => ({
@@ -320,15 +329,73 @@ export const actions: Actions = {
 				periode
 			});
 
+			// Un examen contient toujours au moins un sous-examen par defaut.
+			const sousExamen = await createSousExamen({
+				examenId: examen.id,
+				nom: 'Composition'
+			});
+
 			logActivity(locals.user, 'creation_examen' as any, `Examen créé : ${examen.nom}`).catch(
 				() => {}
 			);
 
 			broadcastRealtime({ entity: 'examen', action: 'create', id: examen.id });
 
-			return { success: true, examen };
+			return {
+				success: true,
+				examen: {
+					id: examen.id,
+					nom: examen.nom,
+					date: examen.date.toISOString().split('T')[0],
+					classeId: examen.classeId,
+					periode: examen.periode || undefined,
+					sousExamens: [{ id: sousExamen.id, nom: sousExamen.nom, examenId: sousExamen.examenId }]
+				}
+			};
 		} catch (e: any) {
 			return fail(500, { error: e?.message || "Erreur lors de la création de l'examen" });
+		}
+	},
+
+	createSousExamen: async ({ request, locals }) => {
+		const data = await request.formData();
+		const examenId = (data.get('examenId') as string | null)?.trim() || '';
+		const nom = (data.get('nom') as string | null)?.trim() || '';
+
+		if (!examenId || !nom) {
+			return fail(400, { error: 'Examen et nom du sous-examen requis' });
+		}
+
+		try {
+			const sousExamen = await createSousExamen({ examenId, nom });
+			logActivity(locals.user, 'creation_examen' as any, `Sous-examen créé : ${nom}`).catch(
+				() => {}
+			);
+			broadcastRealtime({ entity: 'sousExamen', action: 'create', id: sousExamen.id });
+			return {
+				success: true,
+				sousExamen: { id: sousExamen.id, nom: sousExamen.nom, examenId: sousExamen.examenId }
+			};
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la création du sous-examen' });
+		}
+	},
+
+	deleteSousExamen: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = (data.get('id') as string | null)?.trim() || '';
+
+		if (!id) {
+			return fail(400, { error: 'id du sous-examen requis' });
+		}
+
+		try {
+			await deleteSousExamen(id);
+			logActivity(locals.user, 'suppression_examen' as any, 'Sous-examen supprimé').catch(() => {});
+			broadcastRealtime({ entity: 'sousExamen', action: 'delete', id });
+			return { success: true, id };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la suppression du sous-examen' });
 		}
 	},
 
@@ -338,7 +405,7 @@ export const actions: Actions = {
 		const libelle = (data.get('libelle') as string | null)?.trim() || '';
 		const eleveId = data.get('eleveId') as string;
 		const coursId = data.get('coursId') as string;
-		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+		const sousExamenId = (data.get('sousExamenId') as string | null)?.trim() || '';
 
 		const errors: Record<string, string> = {};
 		if (isNaN(valeur)) {
@@ -349,6 +416,9 @@ export const actions: Actions = {
 		}
 		if (!coursId) {
 			errors.coursId = 'Cours introuvable';
+		}
+		if (!sousExamenId) {
+			errors.sousExamenId = 'Veuillez sélectionner un sous-examen';
 		}
 		if (Object.keys(errors).length > 0) {
 			return fail(400, { errors, valeur, eleveId, libelle });
@@ -372,6 +442,12 @@ export const actions: Actions = {
 				});
 			}
 
+			const sousExamen = await getSousExamenById(sousExamenId);
+			if (!sousExamen) {
+				return fail(404, { errors: { sousExamenId: 'Sous-examen introuvable' } });
+			}
+			const examenId = sousExamen.examenId;
+
 			const coefficient = 1;
 
 			const annee = await getActiveAnneeScolaire();
@@ -389,36 +465,17 @@ export const actions: Actions = {
 				select: { id: true }
 			});
 
-			// Une seule note par élève et par examen : on ne peut pas en ajouter une
-			// deuxième, seule la modification est possible.
-			if (examenId) {
-				const noteExamen = await prisma.note.findFirst({
-					where: { eleveId, coursId, examenId }
-				});
-				if (noteExamen) {
-					const note = await updateNote(noteExamen.id, { valeur, libelle });
-					logActivity(
-						locals.user,
-						'modification_note' as any,
-						`Note modifiée : ${valeur}/20`
-					).catch(() => {});
-					broadcastRealtime({ entity: 'note', action: 'update', id: coursId });
-					return { success: true, note, updated: true };
-				}
-			}
-
+			// Une seule note par élève, par cours et par sous-examen.
 			const noteExistante = await prisma.note.findFirst({
-				where: {
-					eleveId,
-					coursId,
-					valeur,
-					coefficient,
-					examenId: examenId || null,
-					libelle: libelle || null
-				}
+				where: { eleveId, coursId, sousExamenId }
 			});
 			if (noteExistante) {
-				return { success: true, note: noteExistante, duplicate: true };
+				const note = await updateNote(noteExistante.id, { valeur, libelle });
+				logActivity(locals.user, 'modification_note' as any, `Note modifiée : ${valeur}/20`).catch(
+					() => {}
+				);
+				broadcastRealtime({ entity: 'note', action: 'update', id: coursId });
+				return { success: true, note, updated: true };
 			}
 
 			const note = await createNote({
@@ -427,7 +484,8 @@ export const actions: Actions = {
 				libelle: libelle || undefined,
 				eleveId,
 				coursId,
-				examenId: examenId || undefined,
+				examenId,
+				sousExamenId,
 				inscriptionId: inscription?.id || undefined
 			});
 
@@ -448,7 +506,7 @@ export const actions: Actions = {
 		const valeur = parseFloat((data.get('valeur') as string) || '0');
 		const libelle = (data.get('libelle') as string | null)?.trim() || '';
 		const coursId = data.get('coursId') as string;
-		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+		const sousExamenId = (data.get('sousExamenId') as string | null)?.trim() || '';
 
 		if (isNaN(valeur) || !coursId) {
 			return fail(400, { error: 'Valeur et cours requis' });
@@ -474,6 +532,9 @@ export const actions: Actions = {
 				return fail(500, { error: 'Aucune année scolaire active' });
 			}
 
+			const sousExamen = sousExamenId ? await getSousExamenById(sousExamenId) : null;
+			const examenId = sousExamen?.examenId || null;
+
 			const inscriptions = await prisma.inscription.findMany({
 				where: { classeId: cours.classeId, anneeId: annee.id, actif: true },
 				select: { id: true, eleveId: true }
@@ -481,35 +542,22 @@ export const actions: Actions = {
 
 			let creees = 0;
 			for (const ins of inscriptions) {
-				// Une seule note par élève et par examen : on met à jour si elle existe déjà.
-				if (examenId) {
-					const noteExamen = await prisma.note.findFirst({
-						where: { eleveId: ins.eleveId, coursId, examenId }
-					});
-					if (noteExamen) {
-						await updateNote(noteExamen.id, { valeur, libelle });
-						creees++;
-						continue;
-					}
-				}
-				const existante = await prisma.note.findFirst({
-					where: {
-						eleveId: ins.eleveId,
-						coursId,
-						valeur,
-						coefficient,
-						examenId: examenId || null,
-						libelle: libelle || null
-					}
+				const noteExistante = await prisma.note.findFirst({
+					where: { eleveId: ins.eleveId, coursId, sousExamenId: sousExamenId || null }
 				});
-				if (existante) continue;
+				if (noteExistante) {
+					await updateNote(noteExistante.id, { valeur, libelle });
+					creees++;
+					continue;
+				}
 				await createNote({
 					valeur,
 					coefficient,
 					libelle: libelle || undefined,
 					eleveId: ins.eleveId,
 					coursId,
-					examenId: examenId || undefined,
+					examenId,
+					sousExamenId: sousExamenId || undefined,
 					inscriptionId: ins.id
 				});
 				creees++;
@@ -557,12 +605,15 @@ export const actions: Actions = {
 	createNotesBatch: async ({ request, locals }) => {
 		const data = await request.formData();
 		const coursId = data.get('coursId') as string;
-		const examenId = (data.get('examenId') as string | null)?.trim() || undefined;
+		const sousExamenId = (data.get('sousExamenId') as string | null)?.trim() || undefined;
 		const libelle = (data.get('libelle') as string | null)?.trim() || '';
 		const notesRaw = data.get('notes') as string;
 
 		if (!coursId) {
 			return fail(400, { error: 'Cours introuvable' });
+		}
+		if (!sousExamenId) {
+			return fail(400, { error: 'Sous-examen requis' });
 		}
 		if (!notesRaw) {
 			return fail(400, { error: 'Aucune note à enregistrer' });
@@ -583,6 +634,12 @@ export const actions: Actions = {
 			if (!cours) {
 				return fail(404, { error: 'Cours introuvable' });
 			}
+
+			const sousExamen = await getSousExamenById(sousExamenId);
+			if (!sousExamen) {
+				return fail(404, { error: 'Sous-examen introuvable' });
+			}
+			const examenId = sousExamen.examenId;
 
 			const annee = await getActiveAnneeScolaire();
 			if (!annee) {
@@ -605,7 +662,7 @@ export const actions: Actions = {
 					where: {
 						eleveId,
 						coursId,
-						examenId: examenId || null
+						sousExamenId
 					}
 				});
 
@@ -618,7 +675,8 @@ export const actions: Actions = {
 						libelle: libelle || undefined,
 						eleveId,
 						coursId,
-						examenId: examenId || undefined,
+						examenId,
+						sousExamenId,
 						inscriptionId: inscriptionByEleve.get(eleveId) || undefined
 					});
 				}
@@ -676,6 +734,7 @@ export const actions: Actions = {
 					eleveNom: `${n.eleve.personne.name} ${n.eleve.personne.lastname}`,
 					coursId: n.coursId,
 					examenId: n.examenId || undefined,
+					sousExamenId: n.sousExamenId || undefined,
 					date: n.date.toISOString()
 				}))
 			};

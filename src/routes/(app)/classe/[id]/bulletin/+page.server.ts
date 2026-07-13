@@ -56,7 +56,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const examens = await prisma.examen.findMany({
 		where: { classeId: params.id },
-		orderBy: { date: 'asc' }
+		orderBy: { date: 'asc' },
+		include: { sousExamens: { orderBy: { createdAt: 'asc' } } }
 	});
 
 	const listeExamens: Examen[] = examens.map((e) => ({
@@ -64,7 +65,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		nom: e.nom,
 		date: e.date.toISOString().split('T')[0],
 		classeId: e.classeId,
-		periode: e.periode || undefined
+		periode: e.periode || undefined,
+		sousExamens: (e.sousExamens || []).map((s: any) => ({
+			id: s.id,
+			nom: s.nom,
+			examenId: s.examenId
+		}))
 	}));
 
 	const elevesClasse: EleveCours[] = (classe?.inscriptions || []).map((i: any) => ({
@@ -84,7 +90,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				date: n.date.toISOString(),
 				libelle: n.libelle || '',
 				coursId: n.coursId,
-				examenId: n.examenId || undefined
+				eleveId: n.eleveId,
+				examenId: n.examenId || undefined,
+				sousExamenId: n.sousExamenId || undefined
 			})) || []
 	}));
 

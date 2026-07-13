@@ -1,0 +1,160 @@
+import type { PageServerLoad } from './$types';
+import { prisma } from '$lib/server/prisma';
+import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
+
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const classe = await prisma.classe.findUnique({
+		where: { id: params.id },
+		include: {
+			anneeScolaire: true,
+			titulaire: {
+				include: {
+					personne: true
+				}
+			},
+			inscriptions: {
+				include: {
+					eleve: {
+						include: {
+							personne: true,
+							notes: true,
+							absences: true,
+							retards: true,
+							incidents: true
+						}
+					}
+				}
+			}
+		}
+	});
+
+	const coursList = await prisma.cours.findMany({
+		where: { classeId: params.id },
+		include: {
+			matiere: true,
+			professeur: {
+				include: {
+					personne: true
+				}
+			}
+		}
+	});
+
+	const listeCours: Cours[] = coursList.map((c) => ({
+		id: c.id,
+		nom: c.matiere.nom,
+		coefficient: c.coefficient,
+		professeur: c.professeur
+			? `${c.professeur.personne.name} ${c.professeur.personne.lastname}`
+			: '',
+		participants: c.participants || [],
+		matiereId: c.matiereId,
+		matiere: c.matiere
+			? { id: c.matiere.id, nom: c.matiere.nom, couleur: c.matiere.couleur || undefined }
+			: undefined
+	}));
+
+	const examens = await prisma.examen.findMany({
+		where: { classeId: params.id },
+		orderBy: { date: 'asc' },
+		include: { sousExamens: { orderBy: { createdAt: 'asc' } } }
+	});
+
+	const listeExamens: Examen[] = examens.map((e) => ({
+		id: e.id,
+		nom: e.nom,
+		date: e.date.toISOString().split('T')[0],
+		classeId: e.classeId,
+		periode: e.periode || undefined,
+		sousExamens: (e.sousExamens || []).map((s: any) => ({
+			id: s.id,
+			nom: s.nom,
+			examenId: s.examenId
+		}))
+	}));
+
+	// Justification des absences/retards (liées à un rapport)
+	const allAbsenceIds = (classe?.inscriptions || []).flatMap(
+		(i) => i.eleve.absences?.map((a) => a.id) ?? []
+	);
+	const allRetardIds = (classe?.inscriptions || []).flatMap(
+		(i) => i.eleve.retards?.map((r) => r.id) ?? []
+	);
+	const lignesJustifiees = await prisma.rapportLigne.findMany({
+		where: {
+			OR: [{ absenceId: { in: allAbsenceIds } }, { retardId: { in: allRetardIds } }]
+		},
+		select: { absenceId: true, retardId: true }
+	});
+	const justifiedAbsenceIds = new Set(
+		lignesJustifiees.filter((l) => l.absenceId).map((l) => l.absenceId as string)
+	);
+	const justifiedRetardIds = new Set(
+		lignesJustifiees.filter((l) => l.retardId).map((l) => l.retardId as string)
+	);
+
+	const elevesClasse: EleveCours[] = (classe?.inscriptions || [])
+		.filter((i: any) => i.actif)
+		.map((i: any) => ({
+			id: i.eleve.id,
+			nom: i.eleve.personne.name,
+			prenom: i.eleve.personne.lastname,
+			dateNaissance: i.eleve.dateNaissance?.toISOString().split('T')[0] || '',
+			domicile: i.eleve.personne.domicile || '',
+			im: i.eleve.im ?? null,
+			sexe: i.eleve.sexe ?? null,
+			redoublant: i.eleve.redoublant ?? false,
+			actif: i.actif,
+			url: i.eleve.personne.imageUrl || undefined,
+			notes:
+				i.eleve.notes?.map((n: any) => ({
+					id: n.id,
+					valeur: n.valeur,
+					coefficient: n.coefficient,
+					date: n.date.toISOString(),
+					libelle: n.libelle || '',
+					coursId: n.coursId,
+					eleveId: n.eleveId,
+					examenId: n.examenId || undefined,
+					sousExamenId: n.sousExamenId || undefined
+				})) || [],
+			incidents:
+				i.eleve.incidents?.map((inc: any) => ({
+					id: inc.id,
+					type: 'incident',
+					date: inc.date.toISOString(),
+					description: inc.motif || inc.message || ''
+				})) || [],
+			absences:
+				i.eleve.absences?.map((a: any) => ({
+					id: a.id,
+					date: a.date.toISOString(),
+					justifie: justifiedAbsenceIds.has(a.id)
+				})) || [],
+			retards:
+				i.eleve.retards?.map((r: any) => ({
+					id: r.id,
+					date: r.date.toISOString(),
+					duree: r.duree,
+					justifie: justifiedRetardIds.has(r.id)
+				})) || []
+		}));
+
+	// Tri alphabétique pour un défilement logique
+	elevesClasse.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'));
+
+	return {
+		classe,
+		listeCours,
+		listeExamens,
+		elevesClasse,
+		administrateurNom: locals.user
+			? await prisma.compte
+					.findUnique({
+						where: { id: locals.user.userId },
+						include: { personne: true }
+					})
+					.then((c) => (c ? `${c.personne.lastname} ${c.personne.name}` : null))
+			: null
+	};
+};

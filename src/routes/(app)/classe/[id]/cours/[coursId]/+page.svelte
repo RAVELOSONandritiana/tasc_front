@@ -4,10 +4,11 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Table from '$lib/components/ui/table';
+	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Plus, Calendar, Save, FileText, Lock } from '@lucide/svelte/icons';
-	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
+	import type { EleveCours, Note, Examen, Cours, SousExamen } from '$lib/types/Materiel.type';
 	import { page } from '$app/stores';
 	import type { PageProps } from './$types';
 	import { invalidateAll } from '$app/navigation';
@@ -36,11 +37,12 @@
 	}
 
 	async function sauvegarderNotes() {
-		if (!examenSelectionne || !coursInfo) return;
+		if (!examenSelectionne || !sousExamenSelectionne || !coursInfo) return;
 		saving = true;
 
 		const formData = new FormData();
 		formData.append('examenId', examenSelectionne.id);
+		formData.append('sousExamenId', sousExamenSelectionne.id);
 		formData.append('notes', JSON.stringify(notesTemp));
 
 		try {
@@ -50,7 +52,8 @@
 				credentials: 'same-origin'
 			});
 			const result = await res.json();
-			const isSuccess = result.success || result.type === 'success' || (result.status === 200 && !result.error);
+			const isSuccess =
+				result.success || result.type === 'success' || (result.status === 200 && !result.error);
 			if (isSuccess) {
 				notesTemp = {};
 				await invalidateAll();
@@ -68,17 +71,21 @@
 	function getNoteExistante(eleveId: string): number | undefined {
 		const eleve = elevesClasse.find((e) => e.id === eleveId);
 		return eleve?.notes?.find(
-			(n) => n.examenId === examenSelectionne?.id && n.coursId === coursInfo?.id
+			(n) =>
+				n.examenId === examenSelectionne?.id &&
+				n.sousExamenId === sousExamenSelectionne?.id &&
+				n.coursId === coursInfo?.id
 		)?.valeur;
 	}
 
 	const coursInfo = $derived(listeCours.find((c) => c.id === coursId));
 
-		const elevesParticipants = $derived(
-			elevesClasse.filter(
-				(e) => e.actif && (coursInfo?.participants?.length ? coursInfo.participants.includes(e.id) : false)
-			)
-		);
+	const elevesParticipants = $derived(
+		elevesClasse.filter(
+			(e) =>
+				e.actif && (coursInfo?.participants?.length ? coursInfo.participants.includes(e.id) : false)
+		)
+	);
 
 	let examenSelectionne = $derived<Examen | null>(
 		(() => {
@@ -87,22 +94,26 @@
 		})()
 	);
 
+	let sousExamenLocal = $state<string>('');
+	$effect(() => {
+		const se = examenSelectionne?.sousExamens || [];
+		sousExamenLocal = se.length ? se[0].id : '';
+	});
+
+	let sousExamenSelectionne = $derived<SousExamen | null>(
+		examenSelectionne?.sousExamens?.find((s) => s.id === sousExamenLocal) ||
+			(examenSelectionne?.sousExamens?.length ? examenSelectionne.sousExamens[0] : null)
+	);
+
 	function calculerMoyenne(eleve: EleveCours): number {
 		const notes =
 			eleve.notes?.filter(
 				(n) => n.coursId === coursInfo?.id && n.examenId === examenSelectionne?.id
 			) || [];
-		if (notes.length === 0) {
-			const notesTempVals = Object.entries(notesTemp)
-				.filter(([id]) => {
-					const e = elevesClasse.find((e) => e.id === id);
-					return e && notesTemp[id] > 0;
-				})
-				.map(([_, v]) => v);
-			if (notesTempVals.length === 0) return 0;
-			return notesTempVals[0];
-		}
-		return notes[0].valeur;
+		if (notes.length === 0) return 0;
+		// Moyenne des sous-examens de l'examen pour cette matiere.
+		const total = notes.reduce((s, n) => s + (n.valeur || 0), 0);
+		return Math.round((total / notes.length) * 100) / 100;
 	}
 </script>
 
@@ -117,6 +128,9 @@
 			{#if examenSelectionne}
 				<p class="mt-1 text-xs text-muted-foreground">
 					Examen : {formatExamenNom(examenSelectionne)} • {examenSelectionne.date}
+					{#if sousExamenSelectionne}
+						• {sousExamenSelectionne.nom}
+					{/if}
 				</p>
 			{/if}
 		</div>
@@ -143,7 +157,16 @@
 	{:else}
 		<CardUI>
 			<div class="p-4">
-				<h2 class="mb-4 font-semibold">Notes des élèves pour {formatExamenNom(examenSelectionne)}</h2>
+				<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+					<h2 class="font-semibold">Notes des élèves pour {formatExamenNom(examenSelectionne)}</h2>
+					{#if examenSelectionne?.sousExamens?.length}
+						<NativeSelect.Root class="w-48" bind:value={sousExamenLocal}>
+							{#each examenSelectionne.sousExamens as se (se.id)}
+								<NativeSelect.Option value={se.id}>{se.nom}</NativeSelect.Option>
+							{/each}
+						</NativeSelect.Root>
+					{/if}
+				</div>
 				<div class="overflow-x-auto">
 					<Table.Root>
 						<Table.Header>

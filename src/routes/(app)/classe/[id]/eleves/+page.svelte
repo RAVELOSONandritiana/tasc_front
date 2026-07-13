@@ -91,6 +91,7 @@
 	function numeroClasse(eleve: EleveCours): string {
 		const ordre =
 			[...elevesInscrits]
+				.filter((e) => e.sexe === eleve.sexe)
 				.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'))
 				.findIndex((e) => e.id === eleve.id) + 1;
 		const suffix = eleve.sexe === 'F' ? 'F' : 'G';

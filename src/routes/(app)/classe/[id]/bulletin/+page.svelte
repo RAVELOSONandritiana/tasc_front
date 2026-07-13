@@ -7,6 +7,7 @@
 	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
 	import { formatClasseNom, formatExamenNom } from '$lib/utils';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	const { data }: PageProps = $props();
 
@@ -15,26 +16,12 @@
 	let elevesClasse = $state<EleveCours[]>([...data.elevesClasse]);
 
 	let bulletinEleve = $state<EleveCours | null>(null);
-	let bulletinExamenIds = $state<string[]>([]);
 	let bulletinTousEleves = $state(false);
-	let examensActifs = $state<string[]>(data.listeExamens.map((e) => e.id));
 	let bulletinExamenRef = $state<string>(
 		data.listeExamens.length ? data.listeExamens[data.listeExamens.length - 1].id : ''
 	);
 	let anneeScolaireValue = $state<string>(data.classe?.anneeScolaire?.nom || '');
 	let titreBulletinValue = $state<string>("BULLETIN FIN D'ANNEE");
-
-	function toggleExamen(examenId: string) {
-		if (examensActifs.includes(examenId)) {
-			examensActifs = examensActifs.filter((id) => id !== examenId);
-		} else {
-			examensActifs = [...examensActifs, examenId];
-		}
-	}
-
-	function getExamen(examenId: string): Examen | undefined {
-		return listeExamens.find((e) => e.id === examenId);
-	}
 
 	function getCoefficientCours(coursId: string): number {
 		return listeCours.find((c) => c.id === coursId)?.coefficient ?? 0;
@@ -55,14 +42,17 @@
 
 	function getNotesEleveExamens(e: EleveCours | null, examenIds: string[]): Note[] {
 		if (!e) return [];
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const seen = new Set<string>();
+		// Une note doit appartenir a un sous-examen pour etre prise en compte.
+		const seen = new SvelteSet<string>();
 		return (
 			e.notes?.filter((n) => {
-				if (!(!n.examenId || examenIds.includes(n.examenId))) return false;
-				const key = `${n.coursId}|${n.valeur}|${n.coefficient}|${n.examenId ?? ''}|${n.libelle ?? ''}`;
-				if (seen.has(key)) return false;
-				seen.add(key);
+				if (!n.sousExamenId) return false;
+				if (n.examenId && examenIds.length > 0 && !examenIds.includes(n.examenId)) {
+					return false;
+				}
+				// Dedoublonnage par identifiant de note (un sous-examen = une note).
+				if (seen.has(n.id)) return false;
+				seen.add(n.id);
 				return true;
 			}) || []
 		);
@@ -145,6 +135,32 @@
 		return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
 	}
 
+	// Moyenne annuelle = moyenne de toutes les moyennes d'examens de l'eleve.
+	function moyenneAnnuelle(eleve: EleveCours): number {
+		if (listeExamens.length === 0) return 0;
+		const vals = listeExamens
+			.map((ex) => calculerMoyenneGenerale(eleve, [ex.id]))
+			.filter((m) => m > 0);
+		if (vals.length === 0) return 0;
+		return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
+	}
+
+	function rangAnnuel(eleveId: string): number {
+		const tries = elevesClasse
+			.map((e) => ({ id: e.id, moy: moyenneAnnuelle(e) }))
+			.sort((a, b) => b.moy - a.moy);
+		let rank = 0;
+		let prevMoy: number | null = null;
+		for (let i = 0; i < tries.length; i++) {
+			if (tries[i].moy !== prevMoy) {
+				rank = i + 1;
+				prevMoy = tries[i].moy;
+			}
+			if (tries[i].id === eleveId) return rank;
+		}
+		return 0;
+	}
+
 	function formatRang(rang: number): string {
 		if (rang <= 0) return '—';
 		return rang === 1 ? '1ᵉʳ' : `${rang}ᵉ`;
@@ -160,6 +176,7 @@
 	function numeroClasse(eleve: EleveCours): string {
 		const ordre =
 			[...elevesClasse]
+				.filter((e) => e.sexe === eleve.sexe)
 				.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'))
 				.findIndex((e) => e.id === eleve.id) + 1;
 		const suffix = eleve.sexe === 'F' ? 'F' : 'G';
@@ -173,36 +190,20 @@
 		elevesClasse = [...data.elevesClasse];
 	});
 
-	function getNomExamens(examenIds: string[]): string {
-		const noms = examenIds
-			.map((id) => formatExamenNom(getExamen(id)))
-			.filter((nom): nom is string => Boolean(nom));
-		return noms.length > 0 ? noms.join(', ') : '—';
-	}
-
 	function ouvrirBulletin(e: EleveCours) {
-		if (examensActifs.length === 0) return;
+		if (!bulletinExamenRef) return;
 		bulletinTousEleves = false;
 		bulletinEleve = e;
-		bulletinExamenIds = [...examensActifs];
-		if (!bulletinExamenRef || !examensActifs.includes(bulletinExamenRef)) {
-			bulletinExamenRef = examensActifs[examensActifs.length - 1];
-		}
 	}
 
 	function ouvrirTousBulletins() {
 		bulletinTousEleves = true;
 		bulletinEleve = null;
-		bulletinExamenIds = [...examensActifs];
-		if (!bulletinExamenRef || !examensActifs.includes(bulletinExamenRef)) {
-			bulletinExamenRef = examensActifs[examensActifs.length - 1];
-		}
 	}
 
 	function retourListe() {
 		bulletinTousEleves = false;
 		bulletinEleve = null;
-		bulletinExamenIds = [];
 	}
 
 	function imprimerBulletin() {
@@ -216,7 +217,8 @@
 			<div>
 				<h1 class="text-2xl font-bold tracking-tight">Bulletins de notes</h1>
 				<p class="text-sm text-muted-foreground">
-					Sélectionnez les examens pour calculer les moyennes de la classe.
+					Sélectionnez l'examen de référence dont les notes seront affichées. La moyenne annuelle
+					est calculée à partir de tous les examens.
 				</p>
 			</div>
 			{#if listeExamens.length > 0}
@@ -224,7 +226,7 @@
 					onclick={ouvrirTousBulletins}
 					class="gap-2"
 					variant="default"
-					disabled={examensActifs.length === 0}
+					disabled={listeExamens.length === 0}
 				>
 					<Printer class="size-4" />
 					Imprimer tous les bulletins
@@ -232,11 +234,11 @@
 			{/if}
 		</div>
 
-		<!-- EXAM SELECTION CARD -->
+		<!-- EXAMEN DE RÉFÉRENCE -->
 		<div class="rounded-xl border border-sidebar-border bg-card p-6 shadow-sm">
 			<h2 class="mb-4 flex items-center gap-2 font-semibold text-foreground">
 				<School class="size-4 text-primary" />
-				Examens à inclure
+				Examen de référence (notes affichées)
 			</h2>
 			{#if listeExamens.length === 0}
 				<p class="text-sm text-muted-foreground italic">
@@ -249,10 +251,12 @@
 							class="flex cursor-pointer items-center gap-3 rounded-lg border border-sidebar-border p-3 transition duration-200 hover:bg-muted/30"
 						>
 							<input
-								type="checkbox"
-								checked={examensActifs.includes(examen.id)}
-								onchange={() => toggleExamen(examen.id)}
-								class="size-4 rounded border-sidebar-border text-primary focus:ring-primary"
+								type="radio"
+								name="examenRef"
+								value={examen.id}
+								checked={bulletinExamenRef === examen.id}
+								onchange={() => (bulletinExamenRef = examen.id)}
+								class="size-4 rounded-full border-sidebar-border text-primary focus:ring-primary"
 							/>
 							<div class="flex flex-col">
 								<span class="text-sm font-medium text-foreground">{formatExamenNom(examen)}</span>
@@ -261,40 +265,10 @@
 						</label>
 					{/each}
 				</div>
-
-				<!-- EXAMEN DE RÉFÉRENCE -->
-				<div class="mt-6 border-t border-sidebar-border pt-4">
-					<h3 class="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-						<School class="size-4 text-primary" />
-						Examen de référence (notes affichées)
-					</h3>
-					{#if listeExamens.length === 0}
-						<p class="text-sm text-muted-foreground italic">Aucun examen disponible.</p>
-					{:else}
-						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-							{#each listeExamens as examen (examen.id)}
-								<label
-									class="flex cursor-pointer items-center gap-3 rounded-lg border border-sidebar-border p-3 transition duration-200 hover:bg-muted/30"
-								>
-									<input
-										type="radio"
-										name="examenRef"
-										value={examen.id}
-										checked={bulletinExamenRef === examen.id}
-										onchange={() => (bulletinExamenRef = examen.id)}
-										class="size-4 rounded-full border-sidebar-border text-primary focus:ring-primary"
-									/>
-									<div class="flex flex-col">
-										<span class="text-sm font-medium text-foreground"
-											>{formatExamenNom(examen)}</span
-										>
-										<span class="text-xs text-muted-foreground">{examen.date}</span>
-									</div>
-								</label>
-							{/each}
-						</div>
-					{/if}
-				</div>
+				<p class="mt-4 text-xs text-muted-foreground">
+					La moyenne annuelle affichée dans le bulletin est la moyenne de toutes les moyennes
+					d'examens.
+				</p>
 			{/if}
 		</div>
 
@@ -304,15 +278,15 @@
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>Élève</Table.Head>
-						<Table.Head class="text-center">Moyenne Générale</Table.Head>
-						<Table.Head class="text-center">Rang</Table.Head>
+						<Table.Head class="text-center">Moyenne annuelle</Table.Head>
+						<Table.Head class="text-center">Rang annuel</Table.Head>
 						<Table.Head class="text-right">Actions</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
 					{#each elevesClasse as eleve (eleve.id)}
-						{@const moyenne = calculerMoyenneGenerale(eleve, examensActifs)}
-						{@const rang = calculerRang(eleve.id, examensActifs)}
+						{@const moyenne = moyenneAnnuelle(eleve)}
+						{@const rang = rangAnnuel(eleve.id)}
 						<Table.Row class="hover:bg-muted/20">
 							<Table.Cell>
 								<div class="font-semibold text-foreground">{eleve.nom} {eleve.prenom}</div>
@@ -342,7 +316,7 @@
 								<Button
 									size="sm"
 									variant="outline"
-									disabled={examensActifs.length === 0}
+									disabled={!bulletinExamenRef}
 									onclick={() => ouvrirBulletin(eleve)}
 								>
 									Voir bulletin
@@ -388,26 +362,23 @@
 		</div>
 
 		{#if bulletinEleve}
-			<div class="bulletin-print-sheet">
-				{@render singleBulletin(bulletinEleve)}
-				{@render singleBulletin(bulletinEleve)}
-			</div>
+			{@render singleBulletin(bulletinEleve, false)}
+			{@render singleBulletin(bulletinEleve, true)}
 		{:else if bulletinTousEleves}
 			{#each elevesClasse as eleve (eleve.id)}
-				<div class="bulletin-print-sheet">
-					{@render singleBulletin(eleve)}
-					{@render singleBulletin(eleve)}
-				</div>
+				{@render singleBulletin(eleve, false)}
+				{@render singleBulletin(eleve, true)}
 			{/each}
 		{/if}
 	</div>
 {/if}
 
-{#snippet singleBulletin(eleve: EleveCours)}
-	{@const refIds = bulletinExamenRef ? [bulletinExamenRef] : bulletinExamenIds}
-	{@const moyenneG = calculerMoyenneGenerale(eleve, refIds)}
-	{@const rangG = calculerRang(eleve.id, refIds)}
-	{@const moyClasse = moyenneClasse(refIds)}
+{#snippet singleBulletin(eleve: EleveCours, doublure: boolean = false)}
+	{@const refIds = bulletinExamenRef ? [bulletinExamenRef] : []}
+	{@const rangG = refIds.length ? calculerRang(eleve.id, refIds) : 0}
+	{@const moyenneAnnuelleEleve = moyenneAnnuelle(eleve)}
+	{@const rangAnnuelEleve = rangAnnuel(eleve.id)}
+	{@const moyClasse = refIds.length ? moyenneClasse(refIds) : 0}
 	{@const totalCoef = listeCours.reduce((s, c) => s + (c.coefficient || 0), 0)}
 	{@const totalNDef = listeCours.reduce(
 		(s, c) =>
@@ -415,9 +386,9 @@
 		0
 	)}
 	{@const numero = numeroClasse(eleve)}
-	{@const mentionGenerale = appreciationScale(moyenneG)}
+	{@const mentionGenerale = appreciationScale(moyenneAnnuelleEleve)}
 
-	<div class="bulletin-page">
+	<div class="bulletin-page print:break-after-page {doublure ? 'bulletin-doublure' : ''}">
 		<!-- EN-TÊTE -->
 		<div class="bulletin-header">
 			<!-- Logo gauche -->
@@ -537,8 +508,8 @@
 		<table class="bulletin-table table-trimestres">
 			<thead>
 				<tr>
-					{#each bulletinExamenIds as exId (exId)}
-						<th>{formatExamenNom(getExamen(exId))}</th>
+					{#each listeExamens as ex (ex.id)}
+						<th>{formatExamenNom(ex)}</th>
 					{/each}
 					<th>MOYENNE ANNUELLE</th>
 					<th>RANG ANNUEL</th>
@@ -546,12 +517,16 @@
 			</thead>
 			<tbody>
 				<tr>
-					{#each bulletinExamenIds as exId (exId)}
-						{@const m = calculerMoyenneGenerale(eleve, [exId])}
+					{#each listeExamens as ex (ex.id)}
+						{@const m = calculerMoyenneGenerale(eleve, [ex.id])}
 						<td>{m > 0 ? formatFr(m) : '—'}</td>
 					{/each}
-					<td>{moyenneG > 0 ? formatFr(moyenneG) : '—'}</td>
-					<td>{rangG > 0 ? `${formatRang(rangG)} / ${elevesClasse.length} élèves` : '—'}</td>
+					<td>{moyenneAnnuelleEleve > 0 ? formatFr(moyenneAnnuelleEleve) : '—'}</td>
+					<td
+						>{rangAnnuelEleve > 0
+							? `${formatRang(rangAnnuelEleve)} / ${elevesClasse.length} élèves`
+							: '—'}</td
+					>
 				</tr>
 			</tbody>
 		</table>
@@ -565,7 +540,7 @@
 					<span class="valeur">{mentionGenerale || '—'}</span>
 				</div>
 				<div class="decision-col decision-decision">
-					<span class="valeur">{formatDecision(moyenneG)}</span>
+					<span class="valeur">{formatDecision(moyenneAnnuelleEleve)}</span>
 				</div>
 			</div>
 		</div>
@@ -784,11 +759,13 @@
 		padding-top: 6px;
 	}
 
+	/* Taille de page explicite pour l'impression : 1 bulletin par page A4 */
+	@page {
+		size: A4;
+		margin: 0;
+	}
+
 	@media print {
-		@page {
-			size: A4 landscape;
-			margin: 6mm;
-		}
 		:global(body) {
 			background: white !important;
 			color: black !important;
@@ -798,48 +775,20 @@
 		}
 		.bulletin-page {
 			width: 100%;
-			min-height: auto;
-			border: 1px solid #000;
-			page-break-inside: avoid;
-		}
-		/* Une feuille A4 paysage = 2 exemplaires superposés (haut/bas) */
-		.bulletin-print-sheet {
-			display: flex;
-			flex-direction: column;
-			height: 100%;
-		}
-		.bulletin-print-sheet .bulletin-page {
-			flex: 1 1 0;
-			min-height: 0;
-			width: 100%;
+			min-height: 297mm;
 			margin: 0;
-			overflow: hidden;
+			transform: scale(0.92);
+			transform-origin: top center;
+			border: 1px solid #000;
 			page-break-inside: avoid;
 			break-inside: avoid;
-			border: 1px solid #000;
-			font-size: 9px;
-			padding: 4mm 6mm 3mm;
 		}
-		.bulletin-print-sheet .bulletin-page + .bulletin-page {
-			border-top: 1px dashed #999;
-		}
-		.bulletin-print-sheet .bulletin-grand-titre {
-			font-size: 16px;
-		}
-		.bulletin-print-sheet .bulletin-table th,
-		.bulletin-print-sheet .bulletin-table td {
-			padding: 2px 4px;
-		}
-		.bulletin-print-sheet .logo-rond {
-			width: 48px;
-			height: 48px;
-		}
-		.bulletin-print-sheet .decision {
-			margin-bottom: 6px;
-		}
-		.bulletin-print-sheet .signatures {
-			margin-bottom: 6px;
-			gap: 8px;
+		.bulletin-table,
+		.bulletin-table tr,
+		.decision,
+		.signatures,
+		.infos-eleve {
+			break-inside: avoid;
 		}
 	}
 </style>

@@ -7,7 +7,7 @@
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import { Trash2, CheckCircle2 } from '@lucide/svelte';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
-	import type { Cours, EleveCours, Examen, Note } from '$lib/types/Materiel.type';
+	import type { Cours, EleveCours, Examen, Note, SousExamen } from '$lib/types/Materiel.type';
 	import { formatExamenNom } from '$lib/utils';
 
 	let {
@@ -17,7 +17,8 @@
 		listeExamens = [],
 		notesCours = [],
 		notesLoading = false,
-		onLoadNotes
+		onLoadNotes,
+		onManageSousExamens
 	}: {
 		open?: boolean;
 		cours: Cours | null;
@@ -26,16 +27,21 @@
 		notesCours: Note[];
 		notesLoading: boolean;
 		onLoadNotes?: (coursId: string) => void;
+		onManageSousExamens?: (examenId: string) => void;
 	} = $props();
 
 	let errorMsg = $state('');
 	let success = $state(false);
 	let selectedExamenId = $state('');
+	let selectedSousExamenId = $state('');
 	let libelleSaisi = $state('');
 	let batchNotes = $state<Record<string, string>>({});
 	let noteToDelete = $state<string | null>(null);
 	let noteConfirmOpen = $state(false);
 	let deletingNote = $state(false);
+
+	const examenSelectionne = $derived(listeExamens.find((e) => e.id === selectedExamenId));
+	const sousExamensDispo = $derived<SousExamen[]>(examenSelectionne?.sousExamens || []);
 
 	$effect(() => {
 		if (open) {
@@ -43,8 +49,15 @@
 		}
 	});
 
+	// Quand l'examen change, on (re)selectionne le premier sous-examen disponible.
+	$effect(() => {
+		const sous = examenSelectionne?.sousExamens || [];
+		selectedSousExamenId = sous.length ? sous[0].id : '';
+	});
+
 	function resetForm() {
 		selectedExamenId = '';
+		selectedSousExamenId = '';
 		libelleSaisi = '';
 		errorMsg = '';
 		success = false;
@@ -56,22 +69,24 @@
 		}
 	});
 
-	// Note existante par élève pour l'examen sélectionné
+	// Note existante par élève pour le sous-examen sélectionné
 	const noteParEleve = $derived(
 		new Map<string, Note | undefined>(
 			elevesClasse.map((e) => [
 				e.id,
-				notesCours.find((n) => n.eleveId === e.id && (n.examenId || '') === selectedExamenId)
+				notesCours.find(
+					(n) => n.eleveId === e.id && (n.sousExamenId || '') === selectedSousExamenId
+				)
 			])
 		)
 	);
 
-	// Préremplir les champs quand l'examen ou les notes chargées changent
+	// Préremplir les champs quand le sous-examen ou les notes chargées changent
 	$effect(() => {
 		const map: Record<string, string> = {};
 		for (const eleve of elevesClasse) {
 			const note = notesCours.find(
-				(n) => n.eleveId === eleve.id && (n.examenId || '') === selectedExamenId
+				(n) => n.eleveId === eleve.id && (n.sousExamenId || '') === selectedSousExamenId
 			);
 			map[eleve.id] = note ? String(note.valeur) : '';
 		}
@@ -155,6 +170,7 @@
 			>
 				<input type="hidden" name="coursId" value={cours?.id || ''} />
 				<input type="hidden" name="examenId" value={selectedExamenId} />
+				<input type="hidden" name="sousExamenId" value={selectedSousExamenId} />
 				<input type="hidden" name="libelle" value={libelleSaisi} />
 				<input type="hidden" name="notes" value={notesJson} />
 
@@ -175,13 +191,36 @@
 						{/if}
 					</div>
 					<div class="grid gap-2">
-						<Label for="libelle">Libellé</Label>
-						<Input
-							placeholder="Devoir, Interrogation..."
-							bind:value={libelleSaisi}
-							class="w-full"
-						/>
+						<Label for="sousExamenId">Sous-examen</Label>
+						{#if sousExamensDispo.length > 0}
+							<NativeSelect.Root class="w-full" bind:value={selectedSousExamenId}>
+								{#each sousExamensDispo as se (se.id)}
+									<NativeSelect.Option value={se.id}>{se.nom}</NativeSelect.Option>
+								{/each}
+							</NativeSelect.Root>
+						{:else if selectedExamenId}
+							<div class="flex flex-col gap-2">
+								<p class="text-xs text-muted-foreground">
+									Aucun sous-examen. Créez-en un pour cet examen.
+								</p>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onclick={() => onManageSousExamens?.(selectedExamenId)}
+								>
+									Gérer les sous-examens
+								</Button>
+							</div>
+						{:else}
+							<p class="text-xs text-muted-foreground">Sélectionnez d'abord un examen</p>
+						{/if}
 					</div>
+				</div>
+
+				<div class="grid gap-2">
+					<Label for="libelle">Libellé</Label>
+					<Input placeholder="Devoir, Interrogation..." bind:value={libelleSaisi} class="w-full" />
 				</div>
 
 				<div class="space-y-1">
@@ -236,7 +275,12 @@
 					{/if}
 				</div>
 
-				<Button type="submit" size="sm" class="w-full" disabled={elevesClasse.length === 0}>
+				<Button
+					type="submit"
+					size="sm"
+					class="w-full"
+					disabled={elevesClasse.length === 0 || !selectedSousExamenId}
+				>
 					Enregistrer les notes
 				</Button>
 			</form>

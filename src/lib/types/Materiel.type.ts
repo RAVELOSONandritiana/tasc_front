@@ -41,6 +41,7 @@ export type EleveCours = {
 	nom: string;
 	prenom: string;
 	dateNaissance: string;
+	domicile?: string;
 	im?: string | null;
 	sexe?: string | null;
 	redoublant?: boolean;
@@ -61,7 +62,14 @@ export type Note = {
 	coursId: string;
 	eleveId: string;
 	examenId?: string;
+	sousExamenId?: string;
 	eleveNom?: string;
+};
+
+export type SousExamen = {
+	id: string;
+	nom: string;
+	examenId: string;
 };
 
 export type Incident = {
@@ -90,6 +98,7 @@ export type Examen = {
 	date: string;
 	classeId: string;
 	periode?: string;
+	sousExamens?: SousExamen[];
 };
 
 export type SeanceEDT = {

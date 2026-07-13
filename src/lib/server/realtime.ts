@@ -23,6 +23,7 @@ export type RealtimeEntity =
 	| 'surveillant'
 	| 'incident'
 	| 'examen'
+	| 'sousExamen'
 	| 'note'
 	| 'compte'
 	| 'annee';

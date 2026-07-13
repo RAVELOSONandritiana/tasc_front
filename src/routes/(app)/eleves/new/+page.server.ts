@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { createEleve, getActiveAnneeScolaire } from '$lib/server/prisma';
+import { createEleve, getActiveAnneeScolaire, updateEleveInfos, prisma } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
 
@@ -80,6 +80,75 @@ export const actions: Actions = {
 			return fail(400, { errors });
 		}
 
+		// Re-inscription : si un eleve avec le meme IM existe deja, on met a jour
+		// sa fiche et on cree une nouvelle inscription pour l'annee active, au lieu
+		// de dupliquer la personne (l'email est unique et provoquerait une erreur).
+		if (im) {
+			const existant = await prisma.eleve.findFirst({
+				where: { im: { equals: im, mode: 'insensitive' as const } },
+				include: { personne: true }
+			});
+
+			if (existant) {
+				const annee = await getActiveAnneeScolaire();
+				await updateEleveInfos(existant.id, {
+					name: nom,
+					lastname: prenom,
+					email: emailEleve || undefined,
+					phone: telephoneEleve || undefined,
+					domicile: domicile || null,
+					fokontany: fokontany || null,
+					commune: communeResidence || null,
+					dateNaissance,
+					im: im || null,
+					sexe: sexe || null,
+					redoublant,
+					cin: cin || null,
+					lieuNaissance: lieuNaissance || null,
+					communeNaissance: communeNaissance || null,
+					regionNaissance: regionNaissance || null,
+					provinceNaissance: provinceNaissance || null,
+					regionResidence: regionResidence || null,
+					provinceResidence: provinceResidence || null,
+					nomPere: nomPere || null,
+					prenomPere: prenomPere || null,
+					telephonePere: telephonePere || null,
+					nomMere: nomMere || null,
+					prenomMere: prenomMere || null,
+					telephoneMere: telephoneMere || null,
+					nomTuteur: nomTuteur || null,
+					prenomTuteur: prenomTuteur || null,
+					telephoneTuteur: telephoneTuteur || null
+				});
+
+				if (annee) {
+					const inscription = await prisma.inscription.findFirst({
+						where: { eleveId: existant.id, anneeId: annee.id }
+					});
+					if (!inscription) {
+						await prisma.inscription.create({
+							data: { eleveId: existant.id, anneeId: annee.id, actif: true }
+						});
+					} else {
+						await prisma.inscription.update({
+							where: { id: inscription.id },
+							data: { actif: true }
+						});
+					}
+				}
+
+				broadcastRealtime({ entity: 'eleve', action: 'update', id: existant.id });
+				broadcastRealtime({ entity: 'personne', action: 'update', id: existant.personneId });
+				logActivity(
+					locals.user,
+					'creation_eleve',
+					`Ré-inscription de l'élève ${nom} ${prenom}`
+				).catch(() => {});
+
+				return { success: true };
+			}
+		}
+
 		try {
 			const annee = await getActiveAnneeScolaire();
 			const cree = await createEleve(
@@ -117,7 +186,11 @@ export const actions: Actions = {
 			broadcastRealtime({ entity: 'eleve', action: 'create', id: cree.eleve.id });
 			broadcastRealtime({ entity: 'personne', action: 'create', id: cree.eleve.personneId });
 		} catch (e: unknown) {
-			return fail(500, { errors: { _form: 'Erreur lors de la création', error: e } });
+			console.error('ERREUR create eleve:', e);
+			const msg = (e as Error)?.message || 'Erreur inconnue';
+			return fail(500, {
+				errors: { _form: `Erreur lors de la création : ${msg}`, error: msg }
+			});
 		}
 
 		logActivity(locals.user, 'creation_eleve', `Création de l'élève ${nom} ${prenom}`).catch(

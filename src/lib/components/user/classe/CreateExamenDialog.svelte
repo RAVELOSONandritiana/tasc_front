@@ -53,7 +53,9 @@
 				handler: () => {
 					errors = {};
 					return async ({ result }) => {
-						const data = result.data as { examen?: Examen; error?: string; _form?: string } | undefined;
+						const data = result.data as
+							| { examen?: Examen; error?: string; _form?: string }
+							| undefined;
 						if (result.type === 'success') {
 							const examen = data?.examen;
 							if (examen && onCreate) {
@@ -62,7 +64,8 @@
 									nom: examen.nom,
 									date: new Date(examen.date).toISOString().split('T')[0],
 									classeId: examen.classeId,
-									periode: examen.periode || undefined
+									periode: examen.periode || undefined,
+									sousExamens: examen.sousExamens || []
 								});
 							}
 							open = false;
@@ -88,7 +91,9 @@
 				<Input id="examen_periode" name="periode" placeholder="Semestre 1" />
 			</div>
 			<Dialog.Footer class="gap-2 sm:justify-end">
-				<Button type="button" variant="outline" size="sm" onclick={() => (open = false)}>Annuler</Button>
+				<Button type="button" variant="outline" size="sm" onclick={() => (open = false)}
+					>Annuler</Button
+				>
 				<Button type="submit" size="sm">Créer</Button>
 			</Dialog.Footer>
 		</form>

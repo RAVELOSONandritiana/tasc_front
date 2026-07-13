@@ -59,14 +59,14 @@ export async function getEleveById(id: string) {
 		where: { id },
 		include: {
 			personne: true,
-		inscriptions: {
-			include: {
-				classe: true
+			inscriptions: {
+				include: {
+					classe: true
+				},
+				orderBy: {
+					dateInscription: 'desc'
+				}
 			},
-			orderBy: {
-				dateInscription: 'desc'
-			}
-		},
 			incidents: true
 		}
 	});
@@ -184,7 +184,11 @@ export async function getAllPersonnesForSurveillant() {
 	return sortByLower(personnes, (p) => p.name);
 }
 
-export async function createSurveillantFromPersonne(personneId: string, matricule: string, poste: string) {
+export async function createSurveillantFromPersonne(
+	personneId: string,
+	matricule: string,
+	poste: string
+) {
 	const motDePasseDefaut = await import('./auth').then((m) => m.hashPassword('123456'));
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
@@ -370,7 +374,10 @@ export async function createMatiere(
 	});
 }
 
-export async function updateMatiere(id: string, data: { nom?: string; couleur?: string | null; icone?: string | null; imageUrl?: string | null }) {
+export async function updateMatiere(
+	id: string,
+	data: { nom?: string; couleur?: string | null; icone?: string | null; imageUrl?: string | null }
+) {
 	return prisma.matiere.update({
 		where: { id },
 		data: {
@@ -458,14 +465,18 @@ export async function createPersonnel(data: {
 	});
 }
 
-export async function createProfesseurFromPersonne(personneId: string, matricule: string, matiere: string[]) {
+export async function createProfesseurFromPersonne(
+	personneId: string,
+	matricule: string,
+	matiere: string[]
+) {
 	const motDePasseDefaut = await import('./auth').then((m) => m.hashPassword('123456'));
 	return prisma.$transaction(async (tx) => {
 		const personne = await tx.personne.findUniqueOrThrow({
 			where: { id: personneId },
-			include: { 
+			include: {
 				compte: true,
-				professeur: true 
+				professeur: true
 			}
 		});
 
@@ -562,20 +573,20 @@ export async function createEleve(
 				nomMere: data.nomMere || null,
 				prenomMere: data.prenomMere || null,
 				telephoneMere: data.telephoneMere || null,
-		nomTuteur: data.nomTuteur || null,
-		prenomTuteur: data.prenomTuteur || null,
-		telephoneTuteur: data.telephoneTuteur || null,
-		im: data.im || null,
-		sexe: data.sexe || null,
-		redoublant: data.redoublant ?? false,
-		cin: data.cin || null,
-		lieuNaissance: data.lieuNaissance ? data.lieuNaissance.toUpperCase() : null,
-		communeNaissance: data.communeNaissance ? data.communeNaissance.toUpperCase() : null,
-		regionNaissance: data.regionNaissance ? data.regionNaissance.toUpperCase() : null,
-		provinceNaissance: data.provinceNaissance || null,
-		regionResidence: data.regionResidence ? data.regionResidence.toUpperCase() : null,
-		provinceResidence: data.provinceResidence || null
-	}
+				nomTuteur: data.nomTuteur || null,
+				prenomTuteur: data.prenomTuteur || null,
+				telephoneTuteur: data.telephoneTuteur || null,
+				im: data.im || null,
+				sexe: data.sexe || null,
+				redoublant: data.redoublant ?? false,
+				cin: data.cin || null,
+				lieuNaissance: data.lieuNaissance ? data.lieuNaissance.toUpperCase() : null,
+				communeNaissance: data.communeNaissance ? data.communeNaissance.toUpperCase() : null,
+				regionNaissance: data.regionNaissance ? data.regionNaissance.toUpperCase() : null,
+				provinceNaissance: data.provinceNaissance || null,
+				regionResidence: data.regionResidence ? data.regionResidence.toUpperCase() : null,
+				provinceResidence: data.provinceResidence || null
+			}
 		});
 
 		if (anneeId) {
@@ -602,6 +613,7 @@ export async function updateEleveInfos(
 		domicile?: string | null;
 		fokontany?: string | null;
 		commune?: string | null;
+		dateNaissance?: string;
 		redoublant?: boolean;
 		im?: string | null;
 		sexe?: string | null;
@@ -627,11 +639,11 @@ export async function updateEleveInfos(
 		where: { id },
 		data: {
 			redoublant: data.redoublant,
+			dateNaissance: data.dateNaissance === undefined ? undefined : new Date(data.dateNaissance),
 			im: data.im === undefined ? undefined : data.im || null,
 			sexe: data.sexe === undefined ? undefined : data.sexe || null,
 			cin: data.cin === undefined ? undefined : data.cin || null,
-			lieuNaissance:
-				data.lieuNaissance === undefined ? undefined : data.lieuNaissance || null,
+			lieuNaissance: data.lieuNaissance === undefined ? undefined : data.lieuNaissance || null,
 			communeNaissance:
 				data.communeNaissance === undefined ? undefined : data.communeNaissance || null,
 			regionNaissance:
@@ -650,7 +662,8 @@ export async function updateEleveInfos(
 			telephoneMere: data.telephoneMere === undefined ? undefined : data.telephoneMere || null,
 			nomTuteur: data.nomTuteur === undefined ? undefined : data.nomTuteur || null,
 			prenomTuteur: data.prenomTuteur === undefined ? undefined : data.prenomTuteur || null,
-			telephoneTuteur: data.telephoneTuteur === undefined ? undefined : data.telephoneTuteur || null,
+			telephoneTuteur:
+				data.telephoneTuteur === undefined ? undefined : data.telephoneTuteur || null,
 			personne: {
 				update: {
 					name: data.name,
@@ -711,7 +724,9 @@ export async function createClasse(data: {
 	}
 	return prisma.classe.create({
 		data: {
-			nom: data.nom || `${data.niveau === 0 ? '2nde' : data.niveau === 1 ? '1ère' : 'Terminale'}${data.serie ? ' ' + data.serie.toUpperCase() : ''}`,
+			nom:
+				data.nom ||
+				`${data.niveau === 0 ? '2nde' : data.niveau === 1 ? '1ère' : 'Terminale'}${data.serie ? ' ' + data.serie.toUpperCase() : ''}`,
 			niveau: data.niveau,
 			serie: data.serie || null,
 			titulaireId: data.titulaireId || null,
@@ -727,12 +742,15 @@ export async function createClasse(data: {
 	});
 }
 
-export async function updateClasse(id: string, data: {
-	nom?: string;
-	niveau?: number;
-	serie?: string;
-	titulaireId?: string | null;
-}) {
+export async function updateClasse(
+	id: string,
+	data: {
+		nom?: string;
+		niveau?: number;
+		serie?: string;
+		titulaireId?: string | null;
+	}
+) {
 	return prisma.classe.update({
 		where: { id },
 		data: {
@@ -943,7 +961,7 @@ export function isForeignKeyError(e: unknown): boolean {
 }
 
 export const FOREIGN_KEY_MESSAGE =
-	'Suppression impossible : cet élément est encore lié à d\'autres données (cours, notes, présences, etc.). Retirez d\'abord ces liens avant de le supprimer.';
+	"Suppression impossible : cet élément est encore lié à d'autres données (cours, notes, présences, etc.). Retirez d'abord ces liens avant de le supprimer.";
 
 export async function getUserActivities(compteId: string, limit = 20) {
 	const activities = await prisma.activite.findMany({
@@ -1031,12 +1049,15 @@ export async function createCours(data: {
 	});
 }
 
-export async function updateCours(id: string, data: {
-	matiereId?: string;
-	coefficient?: number;
-	participants?: string[];
-	professeurId?: string;
-}) {
+export async function updateCours(
+	id: string,
+	data: {
+		matiereId?: string;
+		coefficient?: number;
+		participants?: string[];
+		professeurId?: string;
+	}
+) {
 	return prisma.cours.update({
 		where: { id },
 		data,
@@ -1072,13 +1093,34 @@ export async function createExamen(data: {
 	});
 }
 
+export async function createSousExamen(data: { examenId: string; nom: string }) {
+	return prisma.sousExamen.create({
+		data: {
+			examenId: data.examenId,
+			nom: data.nom
+		}
+	});
+}
+
+export async function getSousExamensByExamenId(examenId: string) {
+	return prisma.sousExamen.findMany({
+		where: { examenId },
+		orderBy: { createdAt: 'asc' }
+	});
+}
+
+export async function deleteSousExamen(id: string) {
+	return prisma.sousExamen.delete({ where: { id } });
+}
+
 export async function createNote(data: {
 	valeur: number;
 	coefficient?: number;
 	libelle?: string;
 	eleveId: string;
 	coursId: string;
-	examenId?: string;
+	examenId?: string | null;
+	sousExamenId?: string;
 	inscriptionId?: string;
 }) {
 	return prisma.note.create({
@@ -1089,45 +1131,47 @@ export async function createNote(data: {
 			eleveId: data.eleveId,
 			coursId: data.coursId,
 			examenId: data.examenId || null,
+			sousExamenId: data.sousExamenId || null,
 			inscriptionId: data.inscriptionId || null
 		}
 	});
 }
 
 export async function getNotesByCoursId(coursId: string) {
-  return prisma.note.findMany({
-    where: { coursId },
-    include: {
-      eleve: { include: { personne: true } },
-      cours: { include: { matiere: true } }
-    }
-  });
+	return prisma.note.findMany({
+		where: { coursId },
+		include: {
+			eleve: { include: { personne: true } },
+			cours: { include: { matiere: true } }
+		}
+	});
 }
 
 export async function getNotesByCoursIdSorted(coursId: string) {
-  return prisma.note.findMany({
-    where: { coursId },
-    orderBy: { date: 'desc' },
-    include: {
-      eleve: { include: { personne: true } },
-      cours: { include: { matiere: true } }
-    }
-  });
+	return prisma.note.findMany({
+		where: { coursId },
+		orderBy: { date: 'desc' },
+		include: {
+			eleve: { include: { personne: true } },
+			cours: { include: { matiere: true } }
+		}
+	});
+}
+
+export async function getSousExamenById(id: string) {
+	return prisma.sousExamen.findUnique({ where: { id } });
 }
 
 export async function deleteNote(id: string) {
-  return prisma.note.delete({ where: { id } });
+	return prisma.note.delete({ where: { id } });
 }
 
-export async function updateNote(
-  id: string,
-  data: { valeur?: number; libelle?: string | null }
-) {
-  return prisma.note.update({
-    where: { id },
-    data: {
-      ...(data.valeur !== undefined ? { valeur: data.valeur } : {}),
-      ...(data.libelle !== undefined ? { libelle: data.libelle || null } : {})
-    }
-  });
+export async function updateNote(id: string, data: { valeur?: number; libelle?: string | null }) {
+	return prisma.note.update({
+		where: { id },
+		data: {
+			...(data.valeur !== undefined ? { valeur: data.valeur } : {}),
+			...(data.libelle !== undefined ? { libelle: data.libelle || null } : {})
+		}
+	});
 }

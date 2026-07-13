@@ -79,15 +79,6 @@ export const load: PageServerLoad = async ({ url }) => {
 		{} as Record<string, number>
 	);
 
-	const activites = await prisma.activite.findMany({
-		where: {
-			action: 'creation_incident',
-			createdAt: { gte: rangeStart, lte: rangeEnd }
-		},
-		select: { createdAt: true },
-		orderBy: { createdAt: 'asc' }
-	});
-
 	const inscriptions = await prisma.inscription.findMany({
 		where: anneeId ? { anneeId, actif: true } : { actif: true },
 		include: {
@@ -148,7 +139,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		idx++;
 	}
 
-	const incidentsByDay = countByDayKey(activites);
+	// La tendance des incidents est calculee a partir des incidents de l'annee
+	// scolaire active (deja filtres par anneeId), et non plus a partir des
+	// activites de creation qui ne portent pas l'annee scolaire.
+	const incidentsByDay = countByDayKey(incidents);
 	const absencesByDay = countByDayKey(allAbsences);
 	const retardsByDay = countByDayKey(allRetards);
 

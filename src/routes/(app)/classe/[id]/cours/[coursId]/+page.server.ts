@@ -16,7 +16,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		getCours(classe.anneeId),
 		prisma.examen.findMany({
 			where: { classeId },
-			orderBy: { date: 'asc' }
+			orderBy: { date: 'asc' },
+			include: { sousExamens: { orderBy: { createdAt: 'asc' } } }
 		}),
 		prisma.inscription.findMany({
 			where: { classeId, actif: true },
@@ -57,7 +58,12 @@ export const load: PageServerLoad = async ({ params }) => {
 		nom: e.nom,
 		date: e.date.toISOString().split('T')[0],
 		classeId: e.classeId,
-		periode: e.periode || undefined
+		periode: e.periode || undefined,
+		sousExamens: (e.sousExamens || []).map((s: any) => ({
+			id: s.id,
+			nom: s.nom,
+			examenId: s.examenId
+		}))
 	}));
 
 	const elevesClasse = inscriptions.map((i) => ({
@@ -73,7 +79,9 @@ export const load: PageServerLoad = async ({ params }) => {
 			date: n.date.toISOString().split('T')[0],
 			libelle: n.libelle || '',
 			coursId: n.coursId,
-			examenId: n.examenId || undefined
+			eleveId: n.eleveId,
+			examenId: n.examenId || undefined,
+			sousExamenId: n.sousExamenId || undefined
 		}))
 	}));
 
@@ -89,9 +97,10 @@ export const actions: Actions = {
 	sauvegarderNotes: async ({ request, params, locals }) => {
 		const formData = await request.formData();
 		const examenId = formData.get('examenId') as string;
+		const sousExamenId = (formData.get('sousExamenId') as string | null)?.trim() || '';
 		const notesData = formData.get('notes') as string;
 
-		if (!examenId || !notesData) {
+		if (!examenId || !sousExamenId || !notesData) {
 			return fail(400, { error: 'Données manquantes' });
 		}
 
@@ -100,7 +109,13 @@ export const actions: Actions = {
 			const result = await prisma.$transaction(async (tx) => {
 				const createdOrUpdated = [];
 				for (const [eleveId, valeur] of Object.entries(notes)) {
-					if (valeur === null || valeur === undefined || isNaN(valeur) || valeur < 0 || valeur > 20) {
+					if (
+						valeur === null ||
+						valeur === undefined ||
+						isNaN(valeur) ||
+						valeur < 0 ||
+						valeur > 20
+					) {
 						continue;
 					}
 
@@ -119,7 +134,7 @@ export const actions: Actions = {
 						where: {
 							eleveId,
 							coursId: params.coursId,
-							examenId
+							sousExamenId
 						}
 					});
 
@@ -138,6 +153,7 @@ export const actions: Actions = {
 								eleveId,
 								coursId: params.coursId,
 								examenId,
+								sousExamenId,
 								inscriptionId: inscription?.id || null
 							}
 						});
@@ -147,7 +163,11 @@ export const actions: Actions = {
 				return createdOrUpdated;
 			});
 
-			logActivity(locals.user, 'modification_eleve' as any, `Sauvegarde des notes de l'examen`).catch(() => {});
+			logActivity(
+				locals.user,
+				'modification_eleve' as any,
+				`Sauvegarde des notes de l'examen`
+			).catch(() => {});
 			return { success: true, notes: result };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la sauvegarde' });

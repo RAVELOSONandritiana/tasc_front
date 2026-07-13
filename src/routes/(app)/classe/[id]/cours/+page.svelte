@@ -6,12 +6,13 @@
 	import CoefficientDialog from '$lib/components/user/classe/CoefficientDialog.svelte';
 	import ParticipantsDialog from '$lib/components/user/classe/ParticipantsDialog.svelte';
 	import NotesDialog from '$lib/components/user/classe/NotesDialog.svelte';
+	import SousExamenDialog from '$lib/components/user/classe/SousExamenDialog.svelte';
 	import DeleteCourseDialog from '$lib/components/user/classe/DeleteCourseDialog.svelte';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import { page } from '$app/stores';
 	import { deserialize } from '$app/forms';
 	import { BookOpen } from '@lucide/svelte/icons';
-	import type { Cours, Examen, EleveCours, Note } from '$lib/types/Materiel.type';
+	import type { Cours, Examen, EleveCours, Note, SousExamen } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
 	import pb, { auth } from '$lib/pocketbase/pocketbase';
 
@@ -38,6 +39,29 @@
 	let openDeleteDialog = $state(false);
 	let selectedCoursForDelete: Cours | null = $state(null);
 
+	let openSousExamenDialog = $state(false);
+	let examenPourSousExamens = $state<Examen | null>(null);
+
+	function ouvrirSousExamens(examenId: string) {
+		examenPourSousExamens = listeExamens.find((e) => e.id === examenId) || null;
+		openSousExamenDialog = true;
+	}
+
+	function ajouterSousExamen(examenId: string, se: SousExamen) {
+		listeExamens = listeExamens.map((e) =>
+			e.id === examenId ? { ...e, sousExamens: [...(e.sousExamens || []), se] } : e
+		);
+		examenPourSousExamens = listeExamens.find((e) => e.id === examenId) || null;
+	}
+
+	function supprimerSousExamen(id: string) {
+		listeExamens = listeExamens.map((e) => ({
+			...e,
+			sousExamens: (e.sousExamens || []).filter((s) => s.id !== id)
+		}));
+		examenPourSousExamens = listeExamens.find((e) => e.id === examenPourSousExamens?.id) || null;
+	}
+
 	let selectedCours: Cours | null = $state(null);
 
 	let notesCours = $state<Note[]>([]);
@@ -50,10 +74,13 @@
 	const DEFAULT_MATIERE_COLOR = '#3b82f6';
 
 	const matiereMap = $derived(
-		matieres.reduce((acc, m) => {
-			acc[m.id] = m;
-			return acc;
-		}, {} as Record<string, { id: string; nom: string; couleur?: string }>)
+		matieres.reduce(
+			(acc, m) => {
+				acc[m.id] = m;
+				return acc;
+			},
+			{} as Record<string, { id: string; nom: string; couleur?: string }>
+		)
 	);
 
 	async function loadNotes(coursId: string) {
@@ -110,7 +137,13 @@
 		openParticipantsDialog = true;
 	}
 
-	function sauvegarderCoefficient(coursId: string, coefficient: number, matiereId: string, matiereNom: string, matiereCouleur: string) {
+	function sauvegarderCoefficient(
+		coursId: string,
+		coefficient: number,
+		matiereId: string,
+		matiereNom: string,
+		matiereCouleur: string
+	) {
 		listeCours = listeCours.map((c) => {
 			if (c.id === coursId && matiereId && matiereNom) {
 				return {
@@ -128,9 +161,7 @@
 		}
 	}
 	function sauvegarderParticipants(coursId: string, participants: string[]) {
-		listeCours = listeCours.map((c) =>
-			c.id === coursId ? { ...c, participants } : c
-		);
+		listeCours = listeCours.map((c) => (c.id === coursId ? { ...c, participants } : c));
 	}
 
 	function onCreateCours(cours: Cours) {
@@ -171,7 +202,10 @@
 						const segments = oldImageUrl.split('/');
 						const recordId = segments[segments.length - 2];
 						if (recordId) {
-							await pb.collection('tasc_statics').delete(recordId).catch(() => {});
+							await pb
+								.collection('tasc_statics')
+								.delete(recordId)
+								.catch(() => {});
 						}
 					}
 				} catch (e) {
@@ -199,9 +233,15 @@
 	<div class="sticky top-16 z-50 border-b border-sidebar-border bg-sidebar p-4">
 		<CoursePageHeader
 			classe={data.classe}
-			listeExamens={listeExamens.map((e) => ({ id: e.id, nom: e.nom, date: e.date, periode: e.periode }))}
+			listeExamens={listeExamens.map((e) => ({
+				id: e.id,
+				nom: e.nom,
+				date: e.date,
+				periode: e.periode
+			}))}
 			bind:openCreateCours={openCoursDialog}
 			bind:openCreateExamen={openExamenDialog}
+			onManageSousExamens={ouvrirSousExamens}
 		/>
 	</div>
 
@@ -280,6 +320,14 @@
 		{notesCours}
 		{notesLoading}
 		onLoadNotes={loadNotes}
+		onManageSousExamens={ouvrirSousExamens}
+	/>
+
+	<SousExamenDialog
+		bind:open={openSousExamenDialog}
+		examen={examenPourSousExamens}
+		onCreated={ajouterSousExamen}
+		onDeleted={supprimerSousExamen}
 	/>
 
 	<DeleteCourseDialog
@@ -288,5 +336,10 @@
 		onDeleted={supprimerCours}
 	/>
 
-	<UploadFile bind:open={openImageDialog} bind:files={coursImageFiles} header="Image du cours" onSubmit={handleUploadCoursImage} />
+	<UploadFile
+		bind:open={openImageDialog}
+		bind:files={coursImageFiles}
+		header="Image du cours"
+		onSubmit={handleUploadCoursImage}
+	/>
 </div>

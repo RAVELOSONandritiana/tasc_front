@@ -123,14 +123,32 @@ model Note {
   inscriptionId String?
   coursId       String
   examenId      String?
+  sousExamenId  String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   cours         Cours        @relation(fields: [coursId], references: [id], onDelete: Cascade)
   eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
   examen        Examen?      @relation(fields: [examenId], references: [id])
+  sousExamen     SousExamen?  @relation(fields: [sousExamenId], references: [id])
   inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
 
+  @@index([sousExamenId])
   @@map("notes")
+}
+
+/// Sous-examen = epreuve constituant un examen (ex: Devoir 1, Interrogation).
+/// Les notes sont saisies par sous-examen, puis moyennees pour l'examen.
+model SousExamen {
+  id        String   @id @default(uuid())
+  nom       String
+  examenId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  examen    Examen   @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  notes     Note[]
+
+  @@index([examenId])
+  @@map("sous_examens")
 }
 
 /// Examen = evaluation planifiee pour une classe.
@@ -147,6 +165,7 @@ model Examen {
   anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
   classe        Classe        @relation(fields: [classeId], references: [id], onDelete: Cascade)
   notes         Note[]
+  sousExamens   SousExamen[]
 
   @@map("examens")
 }
