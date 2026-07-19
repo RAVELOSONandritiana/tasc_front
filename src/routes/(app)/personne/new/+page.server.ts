@@ -3,6 +3,7 @@ import { fail } from '@sveltejs/kit';
 import { createPersonnel } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { capitalizeWords } from '$lib/utils';
 
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
@@ -69,8 +70,8 @@ export const actions: Actions = {
 		try {
 			console.log('Creating personnel in DB...');
 			const result = await createPersonnel({
-				name: nom.trim(),
-				lastname: prenom.trim(),
+				name: nom.trim().toUpperCase(),
+				lastname: capitalizeWords(prenom),
 				email: email.trim() || `${Date.now()}@tmp.com`,
 				phone: telephone.trim(),
 				domicile: domicile.trim().toUpperCase(),

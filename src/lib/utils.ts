@@ -12,6 +12,19 @@ export function formatClasseNom(niveau: number | undefined | null, nom: string |
 }
 
 /**
+ * Met la première lettre de chaque mot en majuscule (ex: « jean pierre » →
+ * « Jean Pierre »). Ne touche pas au reste de la casse des mots.
+ */
+export function capitalizeWords(value: string | null | undefined): string {
+	if (!value) return '';
+	return value
+		.trim()
+		.split(/\s+/)
+		.map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : ''))
+		.join(' ');
+}
+
+/**
  * Calcule l'âge (en années révolues) à partir d'une date de naissance et de la
  * date actuelle. Le résultat est dynamique : il n'est jamais sauvegardé.
  * Retourne `null` si la date est absente ou invalide.
