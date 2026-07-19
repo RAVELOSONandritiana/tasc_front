@@ -148,13 +148,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		listeCours,
 		listeExamens,
 		elevesClasse,
-		administrateurNom: locals.user
-			? await prisma.compte
-					.findUnique({
-						where: { id: locals.user.userId },
-						include: { personne: true }
-					})
-					.then((c) => (c ? `${c.personne.name} ${c.personne.lastname}` : null))
+		administrateurNom: await prisma.compte
+			.findFirst({
+				where: { role: 'ADMINISTRATEUR', statut: 'ACTIF' },
+				include: { personne: true }
+			})
+			.then((c) => (c ? `${c.personne.lastname} ${c.personne.name}` : null))
 			: null
 	};
 };
