@@ -85,7 +85,7 @@
 
 	function getEleveName(id: string) {
 		const e = eleves.find((el: { id: string; nom: string; prenom: string }) => el.id === id);
-		return e ? `${e.prenom} ${e.nom}` : 'Inconnu';
+		return e ? `${e.nom} ${e.prenom}` : 'Inconnu';
 	}
 
 	function getEleveImage(id: string) {

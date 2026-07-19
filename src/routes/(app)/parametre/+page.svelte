@@ -96,8 +96,8 @@
 						<Table.Body>
 							{#each comptesFiltres as compte (compte.id)}
 								<Table.Row class="transition-colors hover:bg-muted/50">
-									<Table.Cell class="font-medium">{compte.nom}</Table.Cell>
-									<Table.Cell>{compte.prenom}</Table.Cell>
+									<Table.Cell class="font-medium">{compte.prenom}</Table.Cell>
+									<Table.Cell>{compte.nom}</Table.Cell>
 									<Table.Cell class="text-xs">{compte.email}</Table.Cell>
 									<Table.Cell>{compte.role}</Table.Cell>
 									<Table.Cell class="text-xs">{compte.dateCreation}</Table.Cell>
@@ -328,9 +328,9 @@
 							l'activer.
 						</p>
 					</div>
-							<div class="mt-4 grid gap-3">
+							<div class="mt-4 grid gap-3 w-full">
 								<Label>Nom de l'année scolaire</Label>
-								<Input placeholder="Ex: 2026-2027" name="nom" bind:value={nouvelleAnnee} form="form-creer-annee" />
+								<Input class="w-full" placeholder="Ex: 2026-2027" name="nom" bind:value={nouvelleAnnee} form="form-creer-annee" />
 							</div>
 						</AlertDialog.Header>
 						<AlertDialog.Footer>

@@ -29,7 +29,7 @@
 
 	const { data }: PageProps = $props();
 	const user = data.user;
-	const initial = $derived((user.prenom?.charAt(0) || '') + (user.nom?.charAt(0) || ''));
+	const initial = $derived((user.nom?.charAt(0) || '') + (user.prenom?.charAt(0) || ''));
 
 	const roleColors: Record<string, string> = {
 		Administrateur: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -179,7 +179,7 @@
 							<AvatarFallback class="text-xl font-bold">{initial || '?'}</AvatarFallback>
 						</Avatar>
 						<div class="pb-1">
-							<h1 class="text-2xl font-bold">{user.prenom} {user.nom}</h1>
+							<h1 class="text-2xl font-bold">{user.nom} {user.prenom}</h1>
 							<div class="mt-1 flex items-center gap-2">
 								<Badge
 									variant="outline"

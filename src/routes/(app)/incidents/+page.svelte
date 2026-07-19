@@ -8,13 +8,15 @@
 	import { AlertCircle, Shield, X } from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 	import IncidentPost from '$lib/components/user/incidents/IncidentPost.svelte';
-	import { loadingForm } from '$lib/actions/loadingForm';
+						import { loadingForm } from '$lib/actions/loadingForm';
+	import { page } from '$app/stores';
+	import { formatAge } from '$lib/utils';
 
-	const { data }: PageProps = $props();
-
+	const { data, form }: PageProps = $props();
 	const incidents = $derived(data.incidents);
 	const eleves = $derived(data.eleves);
 	const currentUserId = $derived(data.currentUserId);
+	const anneeSelectionnee = $derived(Boolean($page.data.anneeActiveId));
 
 	let newMessage = $state('');
 	let selectedEleveId = $state<string>('');
@@ -42,7 +44,7 @@
 
 	function selectEleve(e: (typeof eleves)[0]) {
 		selectedEleveId = e.id;
-		searchQuery = `${e.prenom} ${e.nom}`;
+		searchQuery = `${e.nom} ${e.prenom}`;
 	}
 
 	function resetSelection() {
@@ -66,7 +68,13 @@
 				</p>
 			</div>
 		</div>
-		<Button onclick={openNewIncident} size="sm" class="gap-2">
+		<Button
+			onclick={openNewIncident}
+			size="sm"
+			class="gap-2"
+			disabled={!anneeSelectionnee}
+			title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+		>
 			<AlertCircle class="size-3.5" />
 			Nouvelle note
 		</Button>
@@ -83,7 +91,14 @@
 					<p class="mb-6 text-center text-xs text-muted-foreground/70">
 						Les incidents apparaîtront ici une fois créés.
 					</p>
-					<Button onclick={openNewIncident} variant="outline" size="sm">Créer un incident</Button>
+					<Button
+						onclick={openNewIncident}
+						variant="outline"
+						size="sm"
+						disabled={!anneeSelectionnee}
+						title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+						>Créer un incident</Button
+					>
 				</div>
 			{:else}
 				{#each incidents as incident (incident.id)}
@@ -101,6 +116,11 @@
 			</Dialog.Header>
 			<form method="POST" action="?/create" use:loadingForm>
 				<div class="grid gap-4 py-4">
+					{#if form?.error}
+						<div class="rounded-md border border-destructive/50 bg-destructive/10 p-3">
+							<p class="text-sm text-destructive">{form.error}</p>
+						</div>
+					{/if}
 					<div class="grid gap-2">
 						<Label>Type</Label>
 						<ToggleGroup.Root
@@ -130,9 +150,12 @@
 										class="flex w-full flex-col rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted"
 										onclick={() => selectEleve(e)}
 									>
-										<p class="text-sm font-medium">{e.prenom} {e.nom}</p>
-										<p class="text-xs text-muted-foreground">{e.classe || ''}</p>
-										<p class="text-xs text-muted-foreground">{e.dateNaissance || ''}</p>
+									<p class="text-sm font-medium">{e.nom} {e.prenom}</p>
+									<p class="text-xs text-muted-foreground">{e.classe || ''}</p>
+									<p class="text-xs text-muted-foreground">
+										{e.dateNaissance ? new Date(e.dateNaissance).toLocaleDateString() : ''}
+										{formatAge(e.dateNaissance) ? ` · ${formatAge(e.dateNaissance)}` : ''}
+									</p>
 									</button>
 								{/each}
 							</div>
@@ -141,9 +164,16 @@
 							{@const selectedEleve = eleves.find((e) => e.id === selectedEleveId)}
 							<div class="mt-2 flex items-center justify-between gap-2 rounded-md border p-3">
 								<div>
-									<p class="text-sm font-medium">{selectedEleve?.prenom} {selectedEleve?.nom}</p>
+									<p class="text-sm font-medium">{selectedEleve?.nom} {selectedEleve?.prenom}</p>
 									<p class="text-xs text-muted-foreground">{selectedEleve?.classe || ''}</p>
-									<p class="text-xs text-muted-foreground">{selectedEleve?.dateNaissance || ''}</p>
+									<p class="text-xs text-muted-foreground">
+										{selectedEleve?.dateNaissance
+											? new Date(selectedEleve.dateNaissance).toLocaleDateString()
+											: ''}
+										{formatAge(selectedEleve?.dateNaissance)
+											? ` · ${formatAge(selectedEleve?.dateNaissance)}`
+											: ''}
+									</p>
 								</div>
 								<button
 									type="button"

@@ -3,6 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Trash2, Plus } from '@lucide/svelte/icons';
+	import { deserialize } from '$app/forms';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 	import type { Examen, SousExamen } from '$lib/types/Materiel.type';
 	import { formatExamenNom } from '$lib/utils';
@@ -40,13 +41,14 @@
 				body: fd,
 				credentials: 'same-origin'
 			});
-			const result = await res.json();
-			const data = result?.data ?? result;
-			if (data?.success && data?.sousExamen) {
-				onCreated?.(examen.id, data.sousExamen);
+			const result = deserialize(await res.text());
+			if (result.type === 'success' && (result.data as any)?.success) {
+				onCreated?.(examen.id, (result.data as any).sousExamen);
 				nouveauNom = '';
+			} else if (result.type === 'failure') {
+				errorMsg = (result.data as any)?.error || 'Erreur lors de la création';
 			} else {
-				errorMsg = data?.error || 'Erreur lors de la création';
+				errorMsg = 'Erreur lors de la création';
 			}
 		} catch {
 			errorMsg = 'Erreur réseau';

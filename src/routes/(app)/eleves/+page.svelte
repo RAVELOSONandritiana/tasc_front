@@ -6,9 +6,12 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { GraduationCap, UserPlus } from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
+
+	const anneeSelectionnee = $derived(Boolean($page.data.anneeActiveId));
 
 	// svelte-ignore state_referenced_locally
 	let listEleve = $state([...data.list_eleve]);
@@ -52,7 +55,13 @@
 							</p>
 						</div>
 					</div>
-					<Button size="sm" onclick={() => goto('/eleves/new')} class="gap-2">
+					<Button
+						size="sm"
+						onclick={() => goto('/eleves/new')}
+						disabled={!anneeSelectionnee}
+						title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+						class="gap-2"
+					>
 						<UserPlus class="size-3.5" />
 						Nouvel élève
 					</Button>
@@ -96,7 +105,12 @@
 					<GraduationCap class="size-12 text-muted-foreground/30" />
 					<p class="mt-4 text-sm font-medium">Aucun élève trouvé</p>
 					<p class="mt-1 text-xs">Essayez de modifier vos critères de recherche.</p>
-					<Button class="mt-4" variant="outline" onclick={() => goto('/eleves/new')}
+					<Button
+						class="mt-4"
+						variant="outline"
+						onclick={() => goto('/eleves/new')}
+						disabled={!anneeSelectionnee}
+						title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
 						>Ajouter un élève</Button
 					>
 				</div>

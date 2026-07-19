@@ -6,6 +6,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import Profil from '$lib/components/user/Profil.svelte';
 	import LoadingBar from '$lib/components/ui/loading-bar/loading-bar.svelte';
+	import PageLoader from '$lib/components/ui/page-loader/page-loader.svelte';
 	import YearSwitcher from '$lib/components/YearSwitcher.svelte';
 	import { enhance } from '$app/forms';
 	import { loadingForm } from '$lib/actions/loadingForm';
@@ -89,6 +90,7 @@
 
 <Sidebar.Provider>
 	<LoadingBar />
+	<PageLoader />
 	<div class="flex min-h-screen w-full">
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">

@@ -52,6 +52,11 @@ export const actions: Actions = {
 			return fail(400, { errors });
 		}
 
+		const annee = await getActiveAnneeScolaire();
+		if (!annee) {
+			return fail(400, { errors: { _form: "Aucune année scolaire n'est sélectionnée" } });
+		}
+
 		try {
 			const classe = await createClasse({
 				nom: nom || undefined,

@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 type ElevePresence = {
 	id: string;
@@ -145,7 +146,7 @@ export const actions: Actions = {
 		}
 
 		const annee = await getActiveAnneeScolaire();
-		if (!annee) return fail(400, { error: 'Aucune année scolaire active' });
+		if (!annee) return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
 
 		const cours = await prisma.cours.findUnique({
 			where: { id: coursId },
@@ -200,6 +201,7 @@ export const actions: Actions = {
 					where: { id: seanceEDT.salleId },
 					data: { occupe: true }
 				});
+				broadcastRealtime({ entity: 'salle', action: 'update', id: seanceEDT.salleId });
 			}
 		} catch (e) {
 			console.error('Erreur mise à jour occupation salle (start):', e);
@@ -316,6 +318,7 @@ export const actions: Actions = {
 					where: { id: seanceEDT.salleId },
 					data: { occupe: false }
 				});
+				broadcastRealtime({ entity: 'salle', action: 'update', id: seanceEDT.salleId });
 			}
 		} catch (e) {
 			console.error('Erreur mise à jour occupation salle (stop):', e);

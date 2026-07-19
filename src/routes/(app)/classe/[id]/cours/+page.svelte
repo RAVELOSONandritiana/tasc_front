@@ -8,6 +8,7 @@
 	import NotesDialog from '$lib/components/user/classe/NotesDialog.svelte';
 	import SousExamenDialog from '$lib/components/user/classe/SousExamenDialog.svelte';
 	import DeleteCourseDialog from '$lib/components/user/classe/DeleteCourseDialog.svelte';
+	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 	import UploadFile from '$lib/components/user/form/UploadFile.svelte';
 	import { page } from '$app/stores';
 	import { deserialize } from '$app/forms';
@@ -60,6 +61,31 @@
 			sousExamens: (e.sousExamens || []).filter((s) => s.id !== id)
 		}));
 		examenPourSousExamens = listeExamens.find((e) => e.id === examenPourSousExamens?.id) || null;
+	}
+
+	let openDeleteExamenDialog = $state(false);
+	let selectedExamenForDelete: Examen | null = $state(null);
+
+	function demanderSuppressionExamen(examenId: string) {
+		selectedExamenForDelete = listeExamens.find((e) => e.id === examenId) || null;
+		openDeleteExamenDialog = true;
+	}
+
+	async function supprimerExamen() {
+		if (!selectedExamenForDelete) return;
+		const fd = new FormData();
+		fd.append('id', selectedExamenForDelete.id);
+		const res = await fetch('?/deleteExamen', { method: 'POST', body: fd, credentials: 'same-origin' });
+		const result = deserialize(await res.text());
+		if (result.type === 'success') {
+			listeExamens = listeExamens.filter((e) => e.id !== selectedExamenForDelete!.id);
+			if (examenPourSousExamens?.id === selectedExamenForDelete.id) {
+				examenPourSousExamens = null;
+				openSousExamenDialog = false;
+			}
+			openDeleteExamenDialog = false;
+		}
+		selectedExamenForDelete = null;
 	}
 
 	let selectedCours: Cours | null = $state(null);
@@ -230,7 +256,7 @@
 </script>
 
 <div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 z-50 border-b border-sidebar-border bg-sidebar p-4">
+	<div class="sticky top-16 border-b border-sidebar-border bg-sidebar/80 p-4 backdrop-blur-sm">
 		<CoursePageHeader
 			classe={data.classe}
 			listeExamens={listeExamens.map((e) => ({
@@ -242,6 +268,7 @@
 			bind:openCreateCours={openCoursDialog}
 			bind:openCreateExamen={openExamenDialog}
 			onManageSousExamens={ouvrirSousExamens}
+			onDeleteExamen={demanderSuppressionExamen}
 		/>
 	</div>
 
@@ -334,6 +361,14 @@
 		bind:open={openDeleteDialog}
 		cours={selectedCoursForDelete}
 		onDeleted={supprimerCours}
+	/>
+
+	<ConfirmDeleteDialog
+		bind:open={openDeleteExamenDialog}
+		title="Supprimer l'examen"
+		description="Toutes les notes et sous-examens de cet examen seront supprimés. Cette action est irréversible."
+		confirmLabel="Supprimer"
+		onConfirm={supprimerExamen}
 	/>
 
 	<UploadFile

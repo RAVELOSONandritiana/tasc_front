@@ -19,6 +19,20 @@ function sortByLower<T>(items: T[], getKey: (item: T) => string | null | undefin
 	);
 }
 
+const STAFF_ROLES = ['ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'ADMINISTRATEUR'] as const;
+
+// Une personne est un élève uniquement si elle n'est liée à aucun profil
+// personnel / professeur / surveillant, et si son compte (s'il existe) n'a
+// pas un rôle de membre du personnel.
+function elevePersonneFilter() {
+	return {
+		personnel: null,
+		professeur: null,
+		surveillant: null,
+		OR: [{ compte: null }, { compte: { role: { notIn: [...STAFF_ROLES] } } }]
+	};
+}
+
 export async function initDb() {
 	try {
 		const { ensureAdmin } = await import('./ensureAdmin');
@@ -32,11 +46,7 @@ export async function getEleves(anneeId?: string) {
 	const eleves = await prisma.eleve.findMany({
 		where: {
 			...(anneeId ? { inscriptions: { some: { anneeId, actif: true } } } : {}),
-			personne: {
-				personnel: null,
-				professeur: null,
-				surveillant: null
-			}
+			personne: elevePersonneFilter()
 		},
 		include: {
 			personne: true,
@@ -784,14 +794,10 @@ export async function getElevesDisponiblesForClasse(classeId: string) {
 
 	// Un eleve dont la personne est aussi un personnel / professeur /
 	// surveillant ne doit jamais etre proposable pour une inscription en classe.
-	const eleves = await prisma.eleve.findMany({
+		const eleves = await prisma.eleve.findMany({
 		where: {
 			id: { notIn: [...inscritsIds] },
-			personne: {
-				personnel: null,
-				professeur: null,
-				surveillant: null
-			}
+			personne: elevePersonneFilter()
 		},
 		include: { personne: true }
 	});
@@ -1099,6 +1105,24 @@ export async function createSousExamen(data: { examenId: string; nom: string }) 
 			examenId: data.examenId,
 			nom: data.nom
 		}
+	});
+}
+
+export async function deleteExamen(id: string) {
+	return prisma.$transaction(async (tx) => {
+		const sousExamens = await tx.sousExamen.findMany({
+			where: { examenId: id },
+			select: { id: true }
+		});
+		const sousExamenIds = sousExamens.map((s) => s.id);
+		// Supprime d'abord les notes liees a l'examen ou a ses sous-examens
+		await tx.note.deleteMany({
+			where: {
+				OR: [{ examenId: id }, ...(sousExamenIds.length ? [{ sousExamenId: { in: sousExamenIds } }] : [])]
+			}
+		});
+		// La suppression de l'examen supprime ses sous-examens en cascade
+		return tx.examen.delete({ where: { id } });
 	});
 }
 

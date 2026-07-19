@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { buttonVariants } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Plus, Calendar, Layers } from '@lucide/svelte/icons';
+	import { Plus, Calendar, Layers, Trash2 } from '@lucide/svelte/icons';
 	import type { Classe } from '$lib/types/Materiel.type';
 	import { formatExamenNom } from '$lib/utils';
 
@@ -10,13 +10,15 @@
 		listeExamens = [],
 		openCreateCours = $bindable(false),
 		openCreateExamen = $bindable(false),
-		onManageSousExamens
+		onManageSousExamens,
+		onDeleteExamen
 	}: {
 		classe: Classe | undefined;
 		listeExamens: { id: string; nom: string; date: string; periode?: string }[];
 		openCreateCours?: boolean;
 		openCreateExamen?: boolean;
 		onManageSousExamens?: (examenId: string) => void;
+		onDeleteExamen?: (examenId: string) => void;
 	} = $props();
 </script>
 
@@ -58,6 +60,16 @@
 							onclick={() => onManageSousExamens(examen.id)}
 						>
 							<Layers class="size-3.5" />
+						</button>
+					{/if}
+					{#if onDeleteExamen}
+						<button
+							type="button"
+							class="ml-0.5 inline-flex items-center text-muted-foreground hover:text-destructive"
+							title="Supprimer l'examen"
+							onclick={() => onDeleteExamen(examen.id)}
+						>
+							<Trash2 class="size-3.5" />
 						</button>
 					{/if}
 				</span>

@@ -127,13 +127,17 @@ export const actions: Actions = {
 			return fail(400, { error: 'Type invalide' });
 		}
 
+		const annee = await getActiveAnneeScolaire();
+		if (!annee) {
+			return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
+		}
+
 		try {
-			const annee = await getActiveAnneeScolaire();
 			await prisma.$transaction(async (tx) => {
 				const incident = await tx.incident.create({
 					data: {
 						eleveId,
-						anneeId: annee?.id || '',
+						anneeId: annee.id,
 						type: type as (typeof validTypes)[number],
 						message: message.trim(),
 						auteur: author,

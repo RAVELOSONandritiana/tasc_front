@@ -80,6 +80,13 @@ export const actions: Actions = {
 			return fail(400, { errors });
 		}
 
+		const anneeActive = await getActiveAnneeScolaire();
+		if (!anneeActive) {
+			return fail(400, {
+				errors: { _form: "Aucune année scolaire n'est sélectionnée" }
+			});
+		}
+
 		// Re-inscription : si un eleve avec le meme IM existe deja, on met a jour
 		// sa fiche et on cree une nouvelle inscription pour l'annee active, au lieu
 		// de dupliquer la personne (l'email est unique et provoquerait une erreur).
@@ -90,7 +97,7 @@ export const actions: Actions = {
 			});
 
 			if (existant) {
-				const annee = await getActiveAnneeScolaire();
+				const annee = anneeActive;
 				await updateEleveInfos(existant.id, {
 					name: nom,
 					lastname: prenom,
@@ -150,7 +157,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			const annee = await getActiveAnneeScolaire();
+			const annee = anneeActive;
 			const cree = await createEleve(
 				{
 					name: nom,

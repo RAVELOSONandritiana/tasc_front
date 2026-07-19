@@ -26,9 +26,10 @@
 	let endDate = $state(data.rangeEnd);
 
 	function applyRange() {
-		const params = new URLSearchParams();
-		if (startDate) params.set('start', startDate);
-		if (endDate) params.set('end', endDate);
+		const params = new URLSearchParams({
+			...(startDate ? { start: startDate } : {}),
+			...(endDate ? { end: endDate } : {}),
+		});
 		goto(`?${params.toString()}`, { invalidateAll: true, keepFocus: true, noScroll: true });
 	}
 
@@ -38,7 +39,6 @@
 	});
 
 	const incidentsByType = $derived(chartData?.incidentsByType || []);
-	const attendanceData = $derived(chartData?.attendanceData || []);
 	const delaysByClass = $derived(chartData?.delaysByClass || []);
 	const incidentsTrend = $derived(chartData?.incidentsTrend || []);
 	const teacherAbsences = $derived(chartData?.teacherAbsences || 0);
@@ -112,7 +112,6 @@
 	const trendArea = $derived(
 		`${trendPath} L ${trendPoints[trendPoints.length - 1]?.x ?? 0} ${190} L ${trendPoints[0]?.x ?? 0} ${190} Z`
 	);
-	const donutColors = ['#10b981', '#ef4444'];
 	const incidentColors = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b'];
 	const delayColors = ['#f59e0b', '#f97316', '#ef4444'];
 	const classColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -329,7 +328,7 @@
 		</div>
 
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			<Card class="animate-slide-up opacity-0 p-5 lg:col-span-2">
+			<Card class="animate-slide-up opacity-0 p-5 lg:col-span-3">
 				<div class="flex items-center gap-2 mb-4">
 					<BarChart3 class="size-5 text-primary" />
 					<h2 class="font-semibold">Élèves par classe</h2>
@@ -365,54 +364,6 @@
 				{/if}
 			</Card>
 
-			<Card class="animate-slide-up opacity-0 p-5">
-				<div class="flex items-center gap-2 mb-4">
-					<PieChart class="size-5 text-primary" />
-					<h2 class="font-semibold">Présence</h2>
-				</div>
-			{#if attendanceData.length === 0}
-				<p class="text-sm text-muted-foreground">Aucune donnée</p>
-			{:else}
-				{@const total = attendanceData.reduce((sum, d) => sum + d.count, 0)}
-				{@const radius = 70}
-				{@const cx = 100}
-				{@const cy = 110}
-				{@const circumference = 2 * Math.PI * radius}
-				<div class="h-64 w-full">
-					<svg viewBox="0 0 200 220" class="h-full w-full">
-						{#each attendanceData as item, i (item.label) }
-							{@const percent = total > 0 ? item.count / total : 0}
-							{@const dashArray = `${percent * circumference} ${circumference}`}
-							{@const dashOffset = -(attendanceData.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
-							{@const labelAngle = (attendanceData.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0) + percent / 2) * 2 * Math.PI - Math.PI / 2}
-				{@const labelX = cx + (radius + 30) * Math.cos(labelAngle)}
-				{@const labelY = cy + (radius + 30) * Math.sin(labelAngle)}
-				<circle
-					cx={cx}
-					cy={cy}
-					r={radius}
-					fill="transparent"
-					stroke={donutColors[i % donutColors.length]}
-					stroke-width="35"
-					stroke-dasharray={dashArray}
-					stroke-dashoffset={dashOffset}
-					class="hover:opacity-80 transition-opacity"
-				/>
-				<text x={labelX} y={labelY} text-anchor="middle" class="fill-foreground text-[10px] font-medium">
-					{item.label}: {item.count}
-				</text>
-			{/each}
-			<circle cx={cx} cy={cy} r={radius - 15} fill="var(--color-background)" />
-			<text x={cx} y={cy - 2} text-anchor="middle" class="fill-foreground text-lg font-bold">
-				{total}
-			</text>
-			<text x={cx} y={cy + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">
-				total
-			</text>
-					</svg>
-				</div>
-			{/if}
-			</Card>
 		</div>
 
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -467,7 +418,7 @@
 							</text>
 							<path d={trendArea} fill="rgb(59 130 246 / 0.1)" stroke="none" />
 							<path d={trendPath} fill="none" stroke="rgb(59 130 246 / 0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							{#each trendPoints as p (p.date)}
+							{#each trendPoints as p, i (i)}
 								<circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="white" stroke-width="2" />
 								{#if p.showLabel}
 									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
@@ -675,7 +626,7 @@
 							<path d={incPath} fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
 							<path d={absPath} fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 							<path d={retPath} fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							{#each absLine as p (p.date)}
+							{#each absLine as p, i (i)}
 								<circle cx={p.x} cy={p.y} r="3" fill="#ef4444" stroke="white" stroke-width="1.5" />
 								{#if p.showLabel}
 									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">{p.date}</text>

@@ -12,9 +12,12 @@
 	import type { Personne } from '$lib/types/Personne.type';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import { page } from '$app/stores';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
+
+	const anneeSelectionnee = $derived(Boolean($page.data.anneeActiveId));
 
 	let listClasse = $state(data.listClasse);
 	const enseignants = $state<Personne[]>(data.enseignants || []);
@@ -74,7 +77,18 @@
 					</div>
 					<div class="ml-auto">
 						<Dialog.Root bind:open={openDialog}>
-							<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default', size: 'sm', class: 'gap-2' })}>
+							<Dialog.Trigger
+								type="button"
+								disabled={!anneeSelectionnee}
+								title={anneeSelectionnee
+									? undefined
+									: "Aucune année scolaire n'est sélectionnée"}
+								class={buttonVariants({
+									variant: 'default',
+									size: 'sm',
+									class: 'gap-2 disabled:pointer-events-none disabled:opacity-50'
+								})}
+							>
 								<Plus class="size-4" />
 								Nouvelle classe
 							</Dialog.Trigger>

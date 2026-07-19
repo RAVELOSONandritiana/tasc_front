@@ -7,6 +7,15 @@ CREATE TYPE "StatutCompte" AS ENUM ('EN_ATTENTE', 'ACTIF', 'BLOQUE');
 -- CreateEnum
 CREATE TYPE "TypeIncident" AS ENUM ('INFO', 'ERREUR', 'NOTE', 'ABSENT');
 
+-- CreateEnum
+CREATE TYPE "TypeRapport" AS ENUM ('RETARD', 'ABSENCE');
+
+-- CreateEnum
+CREATE TYPE "StatutSeance" AS ENUM ('EN_COURS', 'TERMINE');
+
+-- CreateEnum
+CREATE TYPE "StatutPresence" AS ENUM ('PRESENT', 'ABSENT', 'RETARD');
+
 -- CreateTable
 CREATE TABLE "annees_scolaires" (
     "id" TEXT NOT NULL,
@@ -25,6 +34,8 @@ CREATE TABLE "matieres" (
     "nom" TEXT NOT NULL,
     "couleur" TEXT,
     "icone" TEXT,
+    "imageUrl" TEXT,
+    "anneeId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -34,7 +45,7 @@ CREATE TABLE "matieres" (
 -- CreateTable
 CREATE TABLE "classes" (
     "id" TEXT NOT NULL,
-    "nom" TEXT NOT NULL,
+    "nom" TEXT,
     "niveau" INTEGER NOT NULL,
     "serie" TEXT,
     "capacite" INTEGER,
@@ -54,7 +65,7 @@ CREATE TABLE "inscriptions" (
     "actif" BOOLEAN NOT NULL DEFAULT true,
     "dateInscription" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "eleveId" TEXT NOT NULL,
-    "classeId" TEXT NOT NULL,
+    "classeId" TEXT,
     "anneeId" TEXT NOT NULL,
 
     CONSTRAINT "inscriptions_pkey" PRIMARY KEY ("id")
@@ -69,6 +80,7 @@ CREATE TABLE "cours" (
     "professeurId" TEXT NOT NULL,
     "anneeId" TEXT NOT NULL,
     "participants" TEXT[],
+    "imageUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -86,10 +98,22 @@ CREATE TABLE "notes" (
     "inscriptionId" TEXT,
     "coursId" TEXT NOT NULL,
     "examenId" TEXT,
+    "sousExamenId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "notes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sous_examens" (
+    "id" TEXT NOT NULL,
+    "nom" TEXT NOT NULL,
+    "examenId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sous_examens_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -117,6 +141,7 @@ CREATE TABLE "personnes" (
     "commune" TEXT,
     "phone" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "imageUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -173,9 +198,32 @@ CREATE TABLE "eleves" (
     "id" TEXT NOT NULL,
     "personneId" TEXT NOT NULL,
     "dateNaissance" TIMESTAMP(3) NOT NULL,
+    "im" TEXT,
+    "sexe" TEXT,
+    "redoublant" BOOLEAN NOT NULL DEFAULT false,
+    "cin" TEXT,
+    "lieuNaissance" TEXT,
+    "communeNaissance" TEXT,
+    "regionNaissance" TEXT,
+    "provinceNaissance" TEXT,
+    "regionResidence" TEXT,
+    "provinceResidence" TEXT,
     "photoUrl" TEXT,
+    "incidentsCount" INTEGER NOT NULL DEFAULT 0,
+    "notesPositives" INTEGER NOT NULL DEFAULT 0,
+    "notesNegatives" INTEGER NOT NULL DEFAULT 0,
+    "coursTermines" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "nomMere" TEXT,
+    "nomPere" TEXT,
+    "nomTuteur" TEXT,
+    "prenomMere" TEXT,
+    "prenomPere" TEXT,
+    "prenomTuteur" TEXT,
+    "telephoneMere" TEXT,
+    "telephonePere" TEXT,
+    "telephoneTuteur" TEXT,
 
     CONSTRAINT "eleves_pkey" PRIMARY KEY ("id")
 );
@@ -267,6 +315,36 @@ CREATE TABLE "seances_edt" (
 );
 
 -- CreateTable
+CREATE TABLE "seances_cours" (
+    "id" TEXT NOT NULL,
+    "coursId" TEXT NOT NULL,
+    "professeurId" TEXT NOT NULL,
+    "anneeId" TEXT NOT NULL,
+    "statut" "StatutSeance" NOT NULL DEFAULT 'EN_COURS',
+    "dateDebut" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "dateFin" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "seances_cours_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "presences_eleve" (
+    "id" TEXT NOT NULL,
+    "seanceId" TEXT NOT NULL,
+    "eleveId" TEXT NOT NULL,
+    "inscriptionId" TEXT,
+    "statut" "StatutPresence" NOT NULL DEFAULT 'PRESENT',
+    "heureMarquage" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "commentaire" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "presences_eleve_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "absences" (
     "id" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -286,12 +364,45 @@ CREATE TABLE "retards" (
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "duree" TEXT NOT NULL,
     "motif" TEXT,
+    "justifie" BOOLEAN NOT NULL DEFAULT false,
     "eleveId" TEXT NOT NULL,
     "inscriptionId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "retards_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "rapports" (
+    "id" TEXT NOT NULL,
+    "type" "TypeRapport" NOT NULL DEFAULT 'RETARD',
+    "message" TEXT,
+    "auteur" TEXT NOT NULL,
+    "compteId" TEXT,
+    "eleveId" TEXT NOT NULL,
+    "inscriptionId" TEXT,
+    "anneeId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "rapports_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "rapport_lignes" (
+    "id" TEXT NOT NULL,
+    "rapportId" TEXT NOT NULL,
+    "type" "TypeRapport" NOT NULL,
+    "eleveId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "motif" TEXT,
+    "absenceId" TEXT,
+    "retardId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "rapport_lignes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -302,9 +413,11 @@ CREATE TABLE "incidents" (
     "auteur" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "eleveId" TEXT NOT NULL,
+    "anneeId" TEXT NOT NULL,
     "inscriptionId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "compteId" TEXT,
 
     CONSTRAINT "incidents_pkey" PRIMARY KEY ("id")
 );
@@ -324,9 +437,12 @@ CREATE TABLE "reactions" (
 CREATE TABLE "comments" (
     "id" TEXT NOT NULL,
     "author" TEXT NOT NULL,
+    "authorId" TEXT,
     "text" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "incidentId" TEXT NOT NULL,
+    "parentId" TEXT,
+    "edited" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "comments_pkey" PRIMARY KEY ("id")
@@ -339,6 +455,10 @@ CREATE TABLE "notifications" (
     "description" TEXT NOT NULL,
     "time" TEXT NOT NULL,
     "read" BOOLEAN NOT NULL DEFAULT false,
+    "scope" TEXT NOT NULL DEFAULT 'ALL',
+    "actionType" TEXT,
+    "matricule" TEXT,
+    "userId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
@@ -360,10 +480,16 @@ CREATE TABLE "media" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "matieres_nom_key" ON "matieres"("nom");
+CREATE UNIQUE INDEX "matieres_nom_anneeId_key" ON "matieres"("nom", "anneeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "inscriptions_eleveId_classeId_anneeId_key" ON "inscriptions"("eleveId", "classeId", "anneeId");
+CREATE UNIQUE INDEX "inscriptions_eleveId_anneeId_key" ON "inscriptions"("eleveId", "anneeId");
+
+-- CreateIndex
+CREATE INDEX "notes_sousExamenId_idx" ON "notes"("sousExamenId");
+
+-- CreateIndex
+CREATE INDEX "sous_examens_examenId_idx" ON "sous_examens"("examenId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "personnes_email_key" ON "personnes"("email");
@@ -389,6 +515,30 @@ CREATE UNIQUE INDEX "comptes_personneId_key" ON "comptes"("personneId");
 -- CreateIndex
 CREATE UNIQUE INDEX "profils_compteId_key" ON "profils"("compteId");
 
+-- CreateIndex
+CREATE INDEX "seances_cours_coursId_statut_idx" ON "seances_cours"("coursId", "statut");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "presences_eleve_seanceId_eleveId_key" ON "presences_eleve"("seanceId", "eleveId");
+
+-- CreateIndex
+CREATE INDEX "rapports_eleveId_idx" ON "rapports"("eleveId");
+
+-- CreateIndex
+CREATE INDEX "rapports_anneeId_idx" ON "rapports"("anneeId");
+
+-- CreateIndex
+CREATE INDEX "rapport_lignes_rapportId_idx" ON "rapport_lignes"("rapportId");
+
+-- CreateIndex
+CREATE INDEX "rapport_lignes_absenceId_idx" ON "rapport_lignes"("absenceId");
+
+-- CreateIndex
+CREATE INDEX "rapport_lignes_retardId_idx" ON "rapport_lignes"("retardId");
+
+-- AddForeignKey
+ALTER TABLE "matieres" ADD CONSTRAINT "matieres_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE "classes" ADD CONSTRAINT "classes_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -396,13 +546,16 @@ ALTER TABLE "classes" ADD CONSTRAINT "classes_anneeId_fkey" FOREIGN KEY ("anneeI
 ALTER TABLE "classes" ADD CONSTRAINT "classes_titulaireId_fkey" FOREIGN KEY ("titulaireId") REFERENCES "professeurs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inscriptions" ADD CONSTRAINT "inscriptions_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inscriptions" ADD CONSTRAINT "inscriptions_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "inscriptions" ADD CONSTRAINT "inscriptions_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "inscriptions" ADD CONSTRAINT "inscriptions_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inscriptions" ADD CONSTRAINT "inscriptions_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "cours" ADD CONSTRAINT "cours_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "cours" ADD CONSTRAINT "cours_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -414,25 +567,28 @@ ALTER TABLE "cours" ADD CONSTRAINT "cours_matiereId_fkey" FOREIGN KEY ("matiereI
 ALTER TABLE "cours" ADD CONSTRAINT "cours_professeurId_fkey" FOREIGN KEY ("professeurId") REFERENCES "professeurs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "cours" ADD CONSTRAINT "cours_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "notes" ADD CONSTRAINT "notes_coursId_fkey" FOREIGN KEY ("coursId") REFERENCES "cours"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "notes" ADD CONSTRAINT "notes_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "notes" ADD CONSTRAINT "notes_inscriptionId_fkey" FOREIGN KEY ("inscriptionId") REFERENCES "inscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "notes" ADD CONSTRAINT "notes_coursId_fkey" FOREIGN KEY ("coursId") REFERENCES "cours"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "notes" ADD CONSTRAINT "notes_examenId_fkey" FOREIGN KEY ("examenId") REFERENCES "examens"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "examens" ADD CONSTRAINT "examens_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "notes" ADD CONSTRAINT "notes_sousExamenId_fkey" FOREIGN KEY ("sousExamenId") REFERENCES "sous_examens"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notes" ADD CONSTRAINT "notes_inscriptionId_fkey" FOREIGN KEY ("inscriptionId") REFERENCES "inscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sous_examens" ADD CONSTRAINT "sous_examens_examenId_fkey" FOREIGN KEY ("examenId") REFERENCES "examens"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "examens" ADD CONSTRAINT "examens_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "examens" ADD CONSTRAINT "examens_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "professeurs" ADD CONSTRAINT "professeurs_personneId_fkey" FOREIGN KEY ("personneId") REFERENCES "personnes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -456,19 +612,37 @@ ALTER TABLE "profils" ADD CONSTRAINT "profils_compteId_fkey" FOREIGN KEY ("compt
 ALTER TABLE "activites" ADD CONSTRAINT "activites_compteId_fkey" FOREIGN KEY ("compteId") REFERENCES "comptes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "emplois_du_temps" ADD CONSTRAINT "emplois_du_temps_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "emplois_du_temps" ADD CONSTRAINT "emplois_du_temps_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "seances_edt" ADD CONSTRAINT "seances_edt_edtId_fkey" FOREIGN KEY ("edtId") REFERENCES "emplois_du_temps"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "emplois_du_temps" ADD CONSTRAINT "emplois_du_temps_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "classes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "seances_edt" ADD CONSTRAINT "seances_edt_coursId_fkey" FOREIGN KEY ("coursId") REFERENCES "cours"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "seances_edt" ADD CONSTRAINT "seances_edt_edtId_fkey" FOREIGN KEY ("edtId") REFERENCES "emplois_du_temps"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "seances_edt" ADD CONSTRAINT "seances_edt_salleId_fkey" FOREIGN KEY ("salleId") REFERENCES "salles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "seances_cours" ADD CONSTRAINT "seances_cours_coursId_fkey" FOREIGN KEY ("coursId") REFERENCES "cours"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "seances_cours" ADD CONSTRAINT "seances_cours_professeurId_fkey" FOREIGN KEY ("professeurId") REFERENCES "professeurs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "seances_cours" ADD CONSTRAINT "seances_cours_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "presences_eleve" ADD CONSTRAINT "presences_eleve_seanceId_fkey" FOREIGN KEY ("seanceId") REFERENCES "seances_cours"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "presences_eleve" ADD CONSTRAINT "presences_eleve_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "presences_eleve" ADD CONSTRAINT "presences_eleve_inscriptionId_fkey" FOREIGN KEY ("inscriptionId") REFERENCES "inscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "absences" ADD CONSTRAINT "absences_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -483,7 +657,28 @@ ALTER TABLE "retards" ADD CONSTRAINT "retards_eleveId_fkey" FOREIGN KEY ("eleveI
 ALTER TABLE "retards" ADD CONSTRAINT "retards_inscriptionId_fkey" FOREIGN KEY ("inscriptionId") REFERENCES "inscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "rapports" ADD CONSTRAINT "rapports_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "rapports" ADD CONSTRAINT "rapports_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "rapports" ADD CONSTRAINT "rapports_inscriptionId_fkey" FOREIGN KEY ("inscriptionId") REFERENCES "inscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "rapport_lignes" ADD CONSTRAINT "rapport_lignes_rapportId_fkey" FOREIGN KEY ("rapportId") REFERENCES "rapports"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "rapport_lignes" ADD CONSTRAINT "rapport_lignes_absenceId_fkey" FOREIGN KEY ("absenceId") REFERENCES "absences"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "rapport_lignes" ADD CONSTRAINT "rapport_lignes_retardId_fkey" FOREIGN KEY ("retardId") REFERENCES "retards"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "incidents" ADD CONSTRAINT "incidents_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "eleves"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "incidents" ADD CONSTRAINT "incidents_anneeId_fkey" FOREIGN KEY ("anneeId") REFERENCES "annees_scolaires"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "incidents" ADD CONSTRAINT "incidents_inscriptionId_fkey" FOREIGN KEY ("inscriptionId") REFERENCES "inscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -493,3 +688,6 @@ ALTER TABLE "reactions" ADD CONSTRAINT "reactions_incidentId_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "comments" ADD CONSTRAINT "comments_incidentId_fkey" FOREIGN KEY ("incidentId") REFERENCES "incidents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "comments" ADD CONSTRAINT "comments_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "comments"("id") ON DELETE CASCADE ON UPDATE CASCADE;

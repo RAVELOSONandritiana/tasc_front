@@ -24,8 +24,11 @@
 	import type { ActionResult } from '@sveltejs/kit';
 	import type { TypeRapport, Rapport } from '$lib/types/Rapport.type';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
+	import { page } from '$app/stores';
 
 	const { data }: PageProps = $props();
+
+	const anneeSelectionnee = $derived(Boolean($page.data.anneeActiveId));
 
 	const rapports = $derived(data.rapports);
 	const eleves = $derived(data.eleves);
@@ -103,7 +106,7 @@
 
 	function selectEleve(e: (typeof eleves)[0]) {
 		selectedEleveId = e.id;
-		searchQuery = `${e.prenom} ${e.nom}`;
+		searchQuery = `${e.nom} ${e.prenom}`;
 	}
 
 	function resetSelection() {
@@ -143,7 +146,13 @@
 			</div>
 		</div>
 		{#if canEdit}
-			<Button onclick={openNew} size="sm" class="gap-2">
+			<Button
+				onclick={openNew}
+				size="sm"
+				class="gap-2"
+				disabled={!anneeSelectionnee}
+				title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+			>
 				<Plus class="size-4" />
 				Nouveau rapport
 			</Button>
@@ -217,7 +226,14 @@
 						: "Aucun rapport de retard ou d'absence n'a encore été enregistré."}
 				</p>
 				{#if canEdit}
-					<Button onclick={openNew} variant="outline" size="sm">Créer un rapport</Button>
+					<Button
+						onclick={openNew}
+						variant="outline"
+						size="sm"
+						disabled={!anneeSelectionnee}
+						title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+						>Créer un rapport</Button
+					>
 				{/if}
 			</div>
 		{:else}
@@ -363,13 +379,13 @@
 											}}
 										>
 											<Avatar.Root class="size-9 shrink-0">
-												<Avatar.Image src={e.imageUrl || ''} alt={`${e.prenom} ${e.nom}`} />
+												<Avatar.Image src={e.imageUrl || ''} alt={`${e.nom} ${e.prenom}`} />
 												<Avatar.Fallback class="text-xs font-bold"
-													>{e.prenom[0]}{e.nom[0]}</Avatar.Fallback
+													>{e.nom[0]}{e.prenom[0]}</Avatar.Fallback
 												>
 											</Avatar.Root>
 											<div class="min-w-0">
-												<p class="truncate text-sm font-medium">{e.prenom} {e.nom}</p>
+												<p class="truncate text-sm font-medium">{e.nom} {e.prenom}</p>
 												<p class="truncate text-xs text-muted-foreground">{e.classe}</p>
 											</div>
 										</button>
@@ -385,14 +401,14 @@
 										<Avatar.Root class="size-10">
 											<Avatar.Image
 												src={selected?.imageUrl || ''}
-												alt={`${selected?.prenom} ${selected?.nom}`}
+												alt={`${selected?.nom} ${selected?.prenom}`}
 											/>
 											<Avatar.Fallback class="text-xs font-bold"
-												>{selected?.prenom[0]}{selected?.nom[0]}</Avatar.Fallback
+												>{selected?.nom[0]}{selected?.prenom[0]}</Avatar.Fallback
 											>
 										</Avatar.Root>
 										<div>
-											<p class="text-sm font-medium">{selected?.prenom} {selected?.nom}</p>
+											<p class="text-sm font-medium">{selected?.nom} {selected?.prenom}</p>
 											<p class="text-xs text-muted-foreground">{selected?.classe}</p>
 										</div>
 									</div>

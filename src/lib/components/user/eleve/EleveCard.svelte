@@ -8,6 +8,7 @@
 	import type { Eleve } from '$lib/types/Personne.type';
 	import PersonAvatar from '$lib/components/user/PersonAvatar.svelte';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
+	import { formatAge } from '$lib/utils';
 
 	let {
 		eleve,
@@ -25,6 +26,7 @@
 	const initials = $derived(
 		`${eleve.prenom?.[0] || ''}${eleve.nom?.[0] || ''}`.toUpperCase() || '?'
 	);
+	const age = $derived(formatAge(eleve.dateNaissance));
 </script>
 
 <CardUI
@@ -74,7 +76,7 @@
 	<ConfirmDeleteDialog
 		bind:open={confirmOpen}
 		title="Supprimer l'élève"
-		description="Êtes-vous sûr de vouloir supprimer {eleve.prenom} {eleve.nom} ? Cette action est irréversible."
+		description="Êtes-vous sûr de vouloir supprimer {eleve.nom} {eleve.prenom} ? Cette action est irréversible."
 		loading={submittingDelete}
 		onConfirm={() => deleteForm?.requestSubmit()}
 	/>
@@ -84,7 +86,7 @@
 			<!-- svelte-ignore a11y_img_redundant_alt -->
 			<img
 				src={eleve.imageUrl}
-				alt="{eleve.prenom} {eleve.nom}"
+				alt="{eleve.nom} {eleve.prenom}"
 				class="h-full w-full object-cover transition-all duration-300 hover:scale-105 hover:grayscale-75"
 				onerror={() => (imageError = true)}
 			/>
@@ -106,9 +108,12 @@
 			<span class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
 				>ELEVE -</span
 			>
-			<span class="text-sm font-bold">{eleve.prenom} {eleve.nom}</span>
+			<span class="text-sm font-bold">{eleve.nom} {eleve.prenom}</span>
 		</div>
 		<span class="text-xs text-muted-foreground">Classe - {eleve.classe}</span>
+		{#if age}
+			<span class="text-xs text-muted-foreground">Âge - {age}</span>
+		{/if}
 		<div class="flex w-full items-center justify-between gap-2">
 			<Button
 				variant="outline"

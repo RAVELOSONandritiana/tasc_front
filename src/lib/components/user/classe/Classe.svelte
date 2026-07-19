@@ -364,7 +364,10 @@
 						<Button
 							type="button"
 							variant="outline"
-							onclick={resetEditForm}
+							onclick={() => {
+								resetEditForm();
+								openEdit = false;
+							}}
 							disabled={editSubmitting || editSuccess}
 						>
 							Annuler

@@ -154,7 +154,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 						where: { id: locals.user.userId },
 						include: { personne: true }
 					})
-					.then((c) => (c ? `${c.personne.lastname} ${c.personne.name}` : null))
+					.then((c) => (c ? `${c.personne.name} ${c.personne.lastname}` : null))
 			: null
 	};
 };

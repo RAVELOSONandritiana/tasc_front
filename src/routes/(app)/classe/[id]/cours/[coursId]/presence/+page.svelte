@@ -5,6 +5,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { PageProps } from './$types';
+	import { formatAge } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -157,19 +158,22 @@
 							<Avatar.Root class="size-20 shrink-0 ring-2 ring-background">
 								<Avatar.Image
 									src={eleve.imageUrl || eleve.photoUrl || ''}
-									alt={`${eleve.prenom} ${eleve.nom}`}
+									alt={`${eleve.nom} ${eleve.prenom}`}
 									class="object-cover"
 								/>
 								<Avatar.Fallback class="text-xl font-bold">
-									{eleve.prenom[0]}{eleve.nom[0]}
+									{eleve.nom[0]}{eleve.prenom[0]}
 								</Avatar.Fallback>
 							</Avatar.Root>
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-base font-semibold">{eleve.prenom} {eleve.nom}</p>
+								<p class="truncate text-base font-semibold">{eleve.nom} {eleve.prenom}</p>
 								<p class="text-xs text-muted-foreground">
 									Date : {eleve.dateNaissance
 										? new Date(eleve.dateNaissance).toLocaleDateString('fr-FR')
 										: '—'}
+									{formatAge(eleve.dateNaissance)
+										? ` · ${formatAge(eleve.dateNaissance)}`
+										: ''}
 								</p>
 								<span
 									class="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium {statut ===

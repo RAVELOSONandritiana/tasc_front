@@ -10,6 +10,7 @@ import {
 	updateCoursImage,
 	deleteCours,
 	createExamen,
+	deleteExamen,
 	createNote,
 	getNotesByCoursIdSorted,
 	deleteNote,
@@ -357,6 +358,24 @@ export const actions: Actions = {
 		}
 	},
 
+	deleteExamen: async ({ request, locals }) => {
+		const data = await request.formData();
+		const id = (data.get('id') as string | null)?.trim() || '';
+
+		if (!id) {
+			return fail(400, { error: "id de l'examen requis" });
+		}
+
+		try {
+			await deleteExamen(id);
+			logActivity(locals.user, 'suppression_examen' as any, 'Examen supprimé').catch(() => {});
+			broadcastRealtime({ entity: 'examen', action: 'delete', id });
+			return { success: true, id };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || "Erreur lors de la suppression de l'examen" });
+		}
+	},
+
 	createSousExamen: async ({ request, locals }) => {
 		const data = await request.formData();
 		const examenId = (data.get('examenId') as string | null)?.trim() || '';
@@ -452,7 +471,7 @@ export const actions: Actions = {
 
 			const annee = await getActiveAnneeScolaire();
 			if (!annee) {
-				return fail(500, { errors: { _form: 'Aucune année scolaire active' } });
+				return fail(400, { errors: { _form: "Aucune année scolaire n'est sélectionnée" } });
 			}
 
 			const inscription = await prisma.inscription.findFirst({
@@ -529,7 +548,7 @@ export const actions: Actions = {
 
 			const annee = await getActiveAnneeScolaire();
 			if (!annee) {
-				return fail(500, { error: 'Aucune année scolaire active' });
+				return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
 			}
 
 			const sousExamen = sousExamenId ? await getSousExamenById(sousExamenId) : null;
@@ -643,7 +662,7 @@ export const actions: Actions = {
 
 			const annee = await getActiveAnneeScolaire();
 			if (!annee) {
-				return fail(500, { error: 'Aucune année scolaire active' });
+				return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
 			}
 
 			const inscriptions = await prisma.inscription.findMany({

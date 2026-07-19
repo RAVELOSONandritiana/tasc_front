@@ -99,7 +99,7 @@
 		searchError = '';
 		foundEleve = false;
 		try {
-			const res = await fetch(`/eleves/new?im=${encodeURIComponent(im)}`);
+			const res = await fetch(`/eleves/by-im?im=${encodeURIComponent(im)}`);
 			const data = await res.json();
 			if (!res.ok || !data.found) {
 				searchError = data.error || 'Aucun élève trouvé avec cet IM';

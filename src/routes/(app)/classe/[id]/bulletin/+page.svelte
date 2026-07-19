@@ -6,7 +6,7 @@
 	import { Printer, School } from '@lucide/svelte/icons';
 	import type { EleveCours, Note, Examen, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
-	import { formatClasseNom, formatExamenNom } from '$lib/utils';
+	import { formatClasseNom, formatExamenNom, formatAge } from '$lib/utils';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	const { data }: PageProps = $props();
@@ -293,6 +293,9 @@
 								<div class="text-xs text-muted-foreground">
 									{#if eleve.dateNaissance}
 										Né(e) le {new Date(eleve.dateNaissance).toLocaleDateString('fr-FR')}
+										{formatAge(eleve.dateNaissance)
+											? ` (${formatAge(eleve.dateNaissance)})`
+											: ''}
 									{:else}
 										—
 									{/if}

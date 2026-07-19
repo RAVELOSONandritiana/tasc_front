@@ -90,7 +90,7 @@
 							class="h-10 w-10 rounded-full object-cover"
 						/>
 						<div>
-							<p class="font-medium">{eleve.prenom} {eleve.nom}</p>
+							<p class="font-medium">{eleve.nom} {eleve.prenom}</p>
 							<p class="text-xs text-muted-foreground">
 								{eleve.dateNaissance ? new Date(eleve.dateNaissance).toLocaleDateString() : ''}
 							</p>

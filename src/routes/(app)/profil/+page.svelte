@@ -9,7 +9,6 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Badge } from '$lib/components/ui/badge';
 	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
-	import * as Dialog from '$lib/components/ui/dialog';
 	import {
 		User,
 		Mail,
@@ -22,11 +21,9 @@
 		Building,
 		Clock,
 		CheckCircle2,
-		BookOpen,
 		CalendarDays,
 		Users,
 		TrendingUp,
-		TrendingDown,
 		History
 	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
@@ -164,12 +161,12 @@
 							<ProfileImage
 								personneId={data.profil.personneId}
 								imageUrl={photo}
-								initials={`${data.profil.prenom[0] ?? ''}${data.profil.nom[0] ?? ''}`}
+								initials={`${data.profil.nom[0] ?? ''}${data.profil.prenom[0] ?? ''}`}
 								sizeClass="size-20"
 							/>
 						</div>
 						<div class="pb-1">
-							<h2 class="text-xl font-bold">{data.profil.prenom} {data.profil.nom}</h2>
+							<h2 class="text-xl font-bold">{data.profil.nom} {data.profil.prenom}</h2>
 							<div class="mt-1 flex items-center gap-2">
 								<Badge
 									variant="outline"
@@ -216,7 +213,7 @@
 
 		<!-- Stats -->
 		<div class="grid grid-cols-3 gap-3">
-			{#each stats as stat, i}
+			{#each stats as stat, i (stat.label)}
 				<Card
 					class="animate-slide-up stagger-{i +
 						2} p-4 text-center opacity-0 transition-all duration-200 hover:shadow-sm"
@@ -233,7 +230,7 @@
 			<div class="space-y-3">
 				<h3 class="text-lg font-semibold">Statistiques de travail</h3>
 				<div class="grid grid-cols-2 gap-3 md:grid-cols-3">
-					{#each statCards as stat, i}
+					{#each statCards as stat, i (stat.label)}
 						<Card
 							class="animate-slide-up stagger-{i +
 								2} p-4 opacity-0 transition-all duration-200 hover:shadow-sm"
@@ -281,6 +278,20 @@
 				</h3>
 				{#if !isEditing}
 					<div class="space-y-4">
+						<div class="flex items-start gap-3">
+							<User class="mt-0.5 size-4 text-muted-foreground" />
+							<div>
+								<Label class="text-xs text-muted-foreground">Nom</Label>
+								<p class="text-sm font-medium">{data.profil.nom}</p>
+							</div>
+						</div>
+						<div class="flex items-start gap-3">
+							<User class="mt-0.5 size-4 text-muted-foreground" />
+							<div>
+								<Label class="text-xs text-muted-foreground">Prénom</Label>
+								<p class="text-sm font-medium">{data.profil.prenom}</p>
+							</div>
+						</div>
 						<div class="flex items-start gap-3">
 							<Mail class="mt-0.5 size-4 text-muted-foreground" />
 							<div>

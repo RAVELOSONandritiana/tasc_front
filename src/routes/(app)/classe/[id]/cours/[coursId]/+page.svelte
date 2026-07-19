@@ -12,7 +12,7 @@
 	import { page } from '$app/stores';
 	import type { PageProps } from './$types';
 	import { invalidateAll } from '$app/navigation';
-	import { formatExamenNom } from '$lib/utils';
+	import { formatExamenNom, formatAge } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -185,6 +185,9 @@
 											{eleve.dateNaissance
 												? new Date(eleve.dateNaissance).toLocaleDateString()
 												: '—'}
+											{formatAge(eleve.dateNaissance)
+												? ` · ${formatAge(eleve.dateNaissance)}`
+												: ''}
 										</div>
 									</Table.Cell>
 									<Table.Cell class="text-center">

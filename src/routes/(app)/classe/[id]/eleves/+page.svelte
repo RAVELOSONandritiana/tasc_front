@@ -12,8 +12,12 @@
 	import { Trash, Plus, UserCheck, X, Printer } from '@lucide/svelte';
 	import { formatClasseNom } from '$lib/utils';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
+	import { page } from '$app/stores';
+	import { formatAge } from '$lib/utils';
 
 	const { data }: PageProps = $props();
+
+	const anneeSelectionnee = $derived(Boolean($page.data.anneeActiveId));
 
 	let searchEleve = $state('');
 	let elevesInscrits = $state<EleveCours[]>([...data.elevesInscrits]);
@@ -118,7 +122,15 @@
 					if (!open) resetAddDialog();
 				}}
 			>
-				<Dialog.Trigger type="button" class={buttonVariants({ variant: 'default' })}>
+				<Dialog.Trigger
+					type="button"
+					disabled={!anneeSelectionnee}
+					title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+					class={buttonVariants({
+						variant: 'default',
+						class: 'disabled:pointer-events-none disabled:opacity-50'
+					})}
+				>
 					<Plus class="mr-2 size-4" />
 					Nouvel élève
 				</Dialog.Trigger>
@@ -155,6 +167,7 @@
 												<p class="text-sm font-medium">{e.nom} {e.prenom}</p>
 												<p class="text-xs text-muted-foreground">
 													{e.dateNaissance ? new Date(e.dateNaissance).toLocaleDateString() : ''}
+													{formatAge(e.dateNaissance) ? ` · ${formatAge(e.dateNaissance)}` : ''}
 												</p>
 											</button>
 										{/each}
@@ -253,6 +266,7 @@
 						<Table.Head>Nom</Table.Head>
 						<Table.Head>Prénom</Table.Head>
 						<Table.Head>Date naissance</Table.Head>
+						<Table.Head class="text-center">Âge</Table.Head>
 						<Table.Head>Domicile</Table.Head>
 						<Table.Head class="text-center">Incidents</Table.Head>
 						<Table.Head class="text-center">Absences</Table.Head>
@@ -272,6 +286,9 @@
 								{:else}
 									<span class="text-muted-foreground/50">—</span>
 								{/if}
+							</Table.Cell>
+							<Table.Cell class="text-center">
+								{formatAge(eleve.dateNaissance) || '—'}
 							</Table.Cell>
 							<Table.Cell>
 								{#if eleve.domicile}
@@ -337,7 +354,7 @@
 		bind:open={confirmOpen}
 		title="Retirer l'élève de la classe"
 		description={eleveToDelete
-			? `Êtes-vous sûr de vouloir retirer ${eleveToDelete.prenom} ${eleveToDelete.nom} de cette classe ? Cette action est irréversible.`
+			? `Êtes-vous sûr de vouloir retirer ${eleveToDelete.nom} ${eleveToDelete.prenom} de cette classe ? Cette action est irréversible.`
 			: ''}
 		loading={submittingDelete}
 		onConfirm={() => deleteForm?.requestSubmit()}

@@ -25,6 +25,7 @@
 	import type { EleveIncident } from '$lib/types/Incident.type';
 	import ProfileImage from '$lib/components/user/ProfileImage.svelte';
 	import * as NativeSelect from '$lib/components/ui/native-select/index.js';
+	import { formatAge } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 	const eleve = data.eleve;
@@ -108,7 +109,7 @@
 					onChange={(url) => (photo = url)}
 				/>
 				<div>
-					<h2 class="text-2xl font-semibold">{eleve.prenom} {eleve.nom}</h2>
+					<h2 class="text-2xl font-semibold">{eleve.nom} {eleve.prenom}</h2>
 					<Badge variant="secondary" class="text-xs">{eleve.classe}</Badge>
 				</div>
 			</div>
@@ -125,6 +126,11 @@
 							{eleve.dateNaissance
 								? new Date(eleve.dateNaissance).toLocaleDateString('fr-FR')
 								: '—'}
+							{#if formatAge(eleve.dateNaissance)}
+								<span class="ml-1 text-xs font-normal text-muted-foreground"
+									>({formatAge(eleve.dateNaissance)})</span
+								>
+							{/if}
 						</p>
 					</div>
 				</div>
@@ -427,7 +433,7 @@
 							{responsable.titre}
 						</p>
 						{#if responsable.nom || responsable.prenom}
-							<p class="text-sm font-medium">{responsable.prenom || ''} {responsable.nom || ''}</p>
+							<p class="text-sm font-medium">{responsable.nom || ''} {responsable.prenom || ''}</p>
 							<p class="mt-1 flex items-center gap-2 text-sm">
 								<Phone class="size-3.5 text-muted-foreground" />
 								{responsable.tel || '—'}
