@@ -161,6 +161,10 @@
 		selectedNotification = null;
 	}
 
+	$effect(() => {
+		if (!notificationOpen) selectedNotification = null;
+	});
+
 	let unreadCount = $derived(notifications.filter((n) => !n.read).length);
 	let selectedNotif = $derived(notifications.find((n) => n.id === selectedNotification));
 </script>
