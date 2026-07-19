@@ -40,7 +40,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		id: prismaEleve.id,
 		nom: prismaEleve.personne.name,
 		prenom: prismaEleve.personne.lastname,
-		dateNaissance: prismaEleve.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
+		dateNaissance: prismaEleve.dateNaissance?.toISOString().split('T')[0] || '',
 		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
 		email: prismaEleve.personne.email,
 		telephone: prismaEleve.personne.phone || null,

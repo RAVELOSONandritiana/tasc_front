@@ -17,7 +17,7 @@ function mapEleve(prismaEleve: EleveWithInscriptions): Eleve {
 		id: prismaEleve.id,
 		nom: prismaEleve.personne.name,
 		prenom: prismaEleve.personne.lastname,
-		dateNaissance: prismaEleve.personne.dateNaissance?.toISOString().split('T')[0] || '2008-05-15',
+		dateNaissance: prismaEleve.dateNaissance?.toISOString().split('T')[0] || '',
 		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
 		imageUrl: prismaEleve.personne.imageUrl || null,
 		stats: {

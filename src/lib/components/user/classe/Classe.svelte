@@ -405,7 +405,7 @@
 			<span class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
 				>CLASSE -</span
 			>
-			<span class="text-sm font-bold">{niveau} {c.nom ? c.nom.toUpperCase() : ''}</span>
+			<span class="text-sm font-bold">{c.nom ? c.nom.toUpperCase() : niveau}</span>
 		</div>
 		<Label>Nombre d'eleves - {c.eleves}</Label>
 		{#if c.titulaireId}
