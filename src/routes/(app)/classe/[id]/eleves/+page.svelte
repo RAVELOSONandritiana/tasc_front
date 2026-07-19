@@ -10,7 +10,6 @@
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { Trash, Plus, UserCheck, X, Printer } from '@lucide/svelte';
-	import { formatClasseNom } from '$lib/utils';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 	import { page } from '$app/stores';
 	import { formatAge } from '$lib/utils';
@@ -370,12 +369,12 @@
 			</div>
 
 			<h1 class="mb-3 text-left text-xl font-bold uppercase">
-				{formatClasseNom(data.classe?.niveau, data.classe?.nom)} — Liste de présence
+				{data.classe?.nom || `Niveau ${data.classe?.niveau}`} — Liste de présence
 			</h1>
 
 			<div class="mb-4 flex items-center gap-2 text-sm">
 				<span class="font-semibold">Date :</span>
-				<span>{new Date(datePresence).toLocaleDateString('fr-FR')}</span>
+				<span class="inline-block min-w-[160px]"></span>
 			</div>
 
 			<table class="w-full border-collapse border border-black text-sm">
