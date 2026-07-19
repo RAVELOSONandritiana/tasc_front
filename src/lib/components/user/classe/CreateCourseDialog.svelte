@@ -117,7 +117,7 @@
 		>
 			<div class="grid gap-2">
 				<Label>Matière *</Label>
-				<NativeSelect.Root bind:value={matiereSelection}>
+				<NativeSelect.Root bind:value={matiereSelection} class="w-full">
 					<option value="">Choisir une matière</option>
 					{#each matieres as matiere (matiere.id)}
 						<NativeSelect.Option value={matiere.id}>{matiere.nom}</NativeSelect.Option>
@@ -125,7 +125,7 @@
 					<NativeSelect.Option value="__new__">+ Nouvelle matière</NativeSelect.Option>
 				</NativeSelect.Root>
 				{#if matiereSelection === '__new__'}
-					<Input name="matiereNom" placeholder="Nom de la nouvelle matière" required />
+					<Input class="w-full" name="matiereNom" placeholder="Nom de la nouvelle matière" required />
 				{:else if matiereSelection}
 					<input type="hidden" name="matiereId" value={matiereSelection} />
 				{/if}
@@ -133,7 +133,7 @@
 
 			<div class="grid gap-2">
 				<Label for="professeurId">Professeur *</Label>
-				<NativeSelect.Root name="professeurId" required>
+				<NativeSelect.Root name="professeurId" required class="w-full">
 					<option value="">Choisir un professeur</option>
 					{#each enseignants as prof (prof.id)}
 						<NativeSelect.Option value={prof.id}>
@@ -152,6 +152,7 @@
 					min="1"
 					max="20"
 					value="1"
+					class="w-full"
 				/>
 			</div>
 
