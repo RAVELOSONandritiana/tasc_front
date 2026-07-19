@@ -478,7 +478,7 @@ export async function createPersonnel(data: {
 export async function createProfesseurFromPersonne(
 	personneId: string,
 	matricule: string,
-	matiere: string[]
+	matiere: string[] = []
 ) {
 	const motDePasseDefaut = await import('./auth').then((m) => m.hashPassword('123456'));
 	return prisma.$transaction(async (tx) => {

@@ -29,7 +29,6 @@
 	import { UserCog, Plus, X } from '@lucide/svelte/icons';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import type { ActionResult } from '@sveltejs/kit';
-	import { matiere as matiereList } from '$lib/variables/territoire';
 
 	const { data }: PageProps = $props();
 
@@ -56,7 +55,6 @@
 	let success = $state(false);
 	let searchQuery = $state('');
 	let selectedPersonne = $state<Personne | null>(null);
-	let matieres = $state<string[]>([]);
 	let matricule = $state('');
 
 	const listFiltered = $derived(
@@ -73,15 +71,10 @@
 			: []
 	);
 
-	function removeMatiere(m: string) {
-		matieres = matieres.filter((x) => x !== m);
-	}
-
 	function resetForm() {
 		searchQuery = '';
 		selectedPersonne = null;
 		matricule = '';
-		matieres = [];
 	}
 
 	function onSearchChange(value: string) {
@@ -92,15 +85,6 @@
 		selectedPersonne = p;
 		searchQuery = p.name;
 		matricule = p.compte?.matricule || '';
-		matieres = [];
-	}
-
-	function toggleMatiere(m: string) {
-		if (matieres.includes(m)) {
-			matieres = matieres.filter((x) => x !== m);
-		} else {
-			matieres = [...matieres, m];
-		}
 	}
 </script>
 
@@ -247,7 +231,7 @@
 						<button
 							type="button"
 							class="rounded-full p-1 hover:bg-muted"
-							onclick={() => { selectedPersonne = null; searchQuery = ''; matricule = ''; matieres = []; }}
+							onclick={() => { selectedPersonne = null; searchQuery = ''; matricule = ''; }}
 						>
 							<X class="size-4 text-muted-foreground" />
 						</button>
@@ -260,41 +244,9 @@
 						<Input id="matricule" name="matricule" bind:value={matricule} placeholder="Ex: ENS-047" />
 					</div>
 				{/if}
-
-				{#if selectedPersonne}
-					<div class="grid gap-2">
-						<Label>Matières</Label>
-						<div class="flex flex-wrap gap-2 rounded-md border p-2">
-							{#each matiereList as m (m)}
-								<button
-									type="button"
-									class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
-									class:bg-primary={matieres.includes(m)}
-									class:text-primary-foreground={matieres.includes(m)}
-									onclick={() => toggleMatiere(m)}
-								>
-									{m}
-								</button>
-							{/each}
-						</div>
-						{#if matieres.length > 0}
-							<div class="flex flex-wrap gap-2 mt-2">
-								{#each matieres as m (m)}
-									<span class="inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold">
-										{m}
-										<button type="button" onclick={() => removeMatiere(m)} class="ml-1 text-muted-foreground hover:text-foreground">
-											<X class="size-3" />
-										</button>
-									</span>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{/if}
 			</div>
 
 			<input type="hidden" name="personneId" value={selectedPersonne?.id || ''} />
-			<input type="hidden" name="matiere" value={matieres.join(',')} />
 			<input type="hidden" name="matricule" value={matricule} />
 
 			<Dialog.Footer class="mt-2 gap-2 sm:justify-end">

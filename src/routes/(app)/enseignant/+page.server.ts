@@ -81,20 +81,17 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const personneId = data.get('personneId') as string;
 		const matricule = (data.get('matricule') as string | null)?.trim() || '';
-		const matiere = (data.get('matiere') as string | null)?.trim() || '';
-		const matieres = matiere ? matiere.split(',').map((m) => m.trim()).filter(Boolean) : [];
 
 		const errors: Record<string, string> = {};
 		if (!personneId) errors.personneId = 'Personne requise';
 		if (!matricule) errors.matricule = 'Matricule requise';
-		if (matieres.length === 0) errors.matiere = 'Matière requise';
 
 		if (Object.keys(errors).length > 0) {
 			return fail(400, { errors });
 		}
 
 		try {
-			const result = await createProfesseurFromPersonne(personneId, matricule, matieres);
+			const result = await createProfesseurFromPersonne(personneId, matricule);
 
 			logActivity(
 				locals.user,
