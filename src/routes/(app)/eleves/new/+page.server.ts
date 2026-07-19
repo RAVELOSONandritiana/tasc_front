@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { createEleve, getActiveAnneeScolaire, updateEleveInfos, prisma } from '$lib/server/prisma';
+import { createEleve, getActiveAnneeScolaire, updateEleveInfos, prisma, nextIm } from '$lib/server/prisma';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
 
@@ -90,9 +90,10 @@ export const actions: Actions = {
 		// Re-inscription : si un eleve avec le meme IM existe deja, on met a jour
 		// sa fiche et on cree une nouvelle inscription pour l'annee active, au lieu
 		// de dupliquer la personne (l'email est unique et provoquerait une erreur).
-		if (im) {
+		const imEffectif = im || (await nextIm()) || '';
+		if (imEffectif) {
 			const existant = await prisma.eleve.findFirst({
-				where: { im: { equals: im, mode: 'insensitive' as const } },
+				where: { im: { equals: imEffectif, mode: 'insensitive' as const } },
 				include: { personne: true }
 			});
 
@@ -107,7 +108,7 @@ export const actions: Actions = {
 					fokontany: fokontany || null,
 					commune: communeResidence || null,
 					dateNaissance,
-					im: im || null,
+					im: imEffectif || null,
 					sexe: sexe || null,
 					redoublant,
 					cin: cin || null,
@@ -184,7 +185,7 @@ export const actions: Actions = {
 					nomTuteur: nomTuteur || null,
 					prenomTuteur: prenomTuteur || null,
 					telephoneTuteur: telephoneTuteur || null,
-					im: im || null,
+					im: imEffectif || null,
 					sexe: sexe || null,
 					redoublant
 				},

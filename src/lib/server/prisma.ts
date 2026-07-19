@@ -549,6 +549,24 @@ export async function createProfesseurFromPersonne(
 	});
 }
 
+export async function nextIm(): Promise<string | null> {
+	const imStart = process.env.IM_START ? parseInt(process.env.IM_START, 10) : NaN;
+	if (Number.isNaN(imStart)) return null;
+
+	const dernier = await prisma.eleve.findFirst({
+		where: { im: { not: null } },
+		orderBy: { im: 'desc' },
+		select: { im: true }
+	});
+
+	if (!dernier?.im) return String(imStart);
+
+	const dernierNum = parseInt(dernier.im, 10);
+	if (Number.isNaN(dernierNum)) return String(imStart);
+
+	return String(Math.max(imStart, dernierNum + 1));
+}
+
 export async function createEleve(
 	data: {
 		name: string;
@@ -582,6 +600,11 @@ export async function createEleve(
 	anneeId?: string
 ) {
 	return prisma.$transaction(async (tx) => {
+		let im = data.im || null;
+		if (!im) {
+			im = await nextIm();
+		}
+
 		const personne = await tx.personne.create({
 			data: {
 				name: data.name,
@@ -607,7 +630,7 @@ export async function createEleve(
 				nomTuteur: data.nomTuteur || null,
 				prenomTuteur: data.prenomTuteur || null,
 				telephoneTuteur: data.telephoneTuteur || null,
-				im: data.im || null,
+				im: im,
 				sexe: data.sexe || null,
 				redoublant: data.redoublant ?? false,
 				cin: data.cin || null,
