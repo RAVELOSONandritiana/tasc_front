@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { capitalize } from '$lib/actions/capitalize';
+import { formatClasseNom } from '$lib/utils';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -420,6 +421,26 @@ export async function getCours(anneeId?: string) {
 		}
 	});
 	return sortByLower(cours, (c) => c.matiere?.nom);
+}
+
+export type CoursProfesseur = {
+	id: string;
+	matiereNom: string;
+	classeNom: string;
+	coefficient: number;
+};
+
+export async function getCoursByProfesseurId(professeurId: string): Promise<CoursProfesseur[]> {
+	const cours = await prisma.cours.findMany({
+		where: { professeurId },
+		include: { matiere: true, classe: true }
+	});
+	return cours.map((c) => ({
+		id: c.id,
+		matiereNom: c.matiere?.nom || 'Matière',
+		classeNom: c.classe ? formatClasseNom(c.classe.niveau, c.classe.nom) : '',
+		coefficient: c.coefficient
+	}));
 }
 
 export async function getNotifications() {

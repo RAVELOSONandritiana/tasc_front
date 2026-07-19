@@ -260,6 +260,28 @@
 			</Card>
 		</div>
 
+		{#if user.cours && user.cours.length > 0}
+			<Card class="space-y-3 p-4">
+				<h3 class="flex items-center gap-2 font-semibold">
+					<BookOpen class="size-4 text-primary" />
+					Cours ({user.cours.length})
+				</h3>
+				<div class="space-y-2">
+					{#each user.cours as c (c.id)}
+						<div class="flex items-center justify-between gap-3 rounded-md border border-sidebar-border p-3">
+							<div class="min-w-0">
+								<p class="truncate text-sm font-medium">{c.matiereNom}</p>
+								<p class="text-xs text-muted-foreground">{c.classeNom}</p>
+							</div>
+							<span class="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-semibold">
+								Coef. {c.coefficient}
+							</span>
+						</div>
+					{/each}
+				</div>
+			</Card>
+		{/if}
+
 		{#if data.presence}
 			<Card class="space-y-4 p-4">
 				<div class="flex items-center justify-between gap-2">

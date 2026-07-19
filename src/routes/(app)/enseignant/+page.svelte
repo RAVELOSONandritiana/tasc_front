@@ -131,7 +131,7 @@
 						<PersonCard
 						personne={prof}
 						role="ENSEIGNANT"
-						detail={`Matière - ${prof.matiere?.join(', ') || '—'}`}
+						detail={`Matière - ${[...new Set(prof.cours?.map((c) => c.matiereNom) || [])].join(', ') || '—'}`}
 						email={prof.email}
 						phone={prof.phone}
 						domicile={prof.domicile}

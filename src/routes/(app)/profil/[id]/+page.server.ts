@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { prisma } from '$lib/server/prisma';
+import { prisma, getCoursByProfesseurId } from '$lib/server/prisma';
 
 export const load: PageServerLoad = async ({ params }) => {
 	let compte = await prisma.compte.findUnique({
@@ -81,6 +81,10 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const stats = await buildStats();
 
+	const cours = personne?.professeur
+		? await getCoursByProfesseurId(personne.professeur.id)
+		: [];
+
 	return {
 		user: {
 			id: compte.id,
@@ -97,7 +101,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			bio: compte.profil?.bio || '',
 			adresse: compte.profil?.adresse || compte.personne.domicile || '',
 			photoUrl: compte.personne.imageUrl || null,
-			stats
+			stats,
+			cours
 		},
 		presence
 	};

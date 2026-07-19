@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur, isForeignKeyError, FOREIGN_KEY_MESSAGE } from '$lib/server/prisma';
+import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur, isForeignKeyError, FOREIGN_KEY_MESSAGE, getCoursByProfesseurId } from '$lib/server/prisma';
 import type { Professeur } from '$lib/types/Personne.type';
 import type { Personne } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
@@ -43,6 +43,7 @@ function mapProfesseur(prismaProf: PrismaProfesseurShape): Professeur {
 		compte: prismaProf.personne.compte as { id: string; role: string; matricule: string } | undefined,
 		personneId: prismaProf.personne.id,
 		matiere: prismaProf.matiere,
+		cours: [],
 		stats: {
 			retards: prismaProf.retards,
 			absences: prismaProf.absences,
@@ -56,7 +57,13 @@ function mapProfesseur(prismaProf: PrismaProfesseurShape): Professeur {
 
 export const load: PageServerLoad = async () => {
 	const profs = await getProfesseurs();
-	const listProfesseur: Professeur[] = profs.map(mapProfesseur);
+	const listProfesseur: Professeur[] = await Promise.all(
+		profs.map(async (p) => {
+			const prof = mapProfesseur(p);
+			prof.cours = await getCoursByProfesseurId(p.id);
+			return prof;
+		})
+	);
 	const personnel = await getAllPersonnes();
 	const personnelList: Personne[] = personnel.map((personne) => ({
 		id: personne.id,

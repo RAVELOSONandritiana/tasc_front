@@ -28,6 +28,7 @@ export type Professeur = Personne & {
 	matiere: string[];
 	stats?: EmployeeStats;
 	personneId?: string;
+	cours?: { id: string; matiereNom: string; classeNom: string; coefficient: number }[];
 };
 
 export type Surveillant = Personne & {
