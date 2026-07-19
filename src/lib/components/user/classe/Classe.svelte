@@ -393,8 +393,7 @@
 		{:else}
 			<div class="flex h-full w-full items-center justify-center bg-muted/30">
 				<span class="text-lg font-bold text-muted-foreground">
-					CLASSE - {niveau}
-					{c.nom ? c.nom.toUpperCase() : ''}
+					CLASSE - {c.nom ? c.nom.toUpperCase() : niveau}
 				</span>
 			</div>
 		{/if}
