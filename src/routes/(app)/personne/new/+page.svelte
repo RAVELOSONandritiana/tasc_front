@@ -126,7 +126,9 @@
 									name="nom"
 									bind:value={form.nom}
 									placeholder="Entrer le nom"
-									class={errors.nom ? 'border-destructive' : ''}
+									class={errors.nom ? 'border-destructive capitalize' : 'capitalize'}
+									oninput={(e) =>
+										(form.nom = (e.target as HTMLInputElement).value.toUpperCase())}
 								/>
 								{#if errors.nom}
 									<span class="text-xs text-destructive">{errors.nom}</span>
@@ -139,7 +141,7 @@
 									name="prenom"
 									bind:value={form.prenom}
 									placeholder="Entrer le prénom"
-									class={errors.prenom ? 'border-destructive' : ''}
+									class={errors.prenom ? 'border-destructive capitalize' : 'capitalize'}
 								/>
 								{#if errors.prenom}
 									<span class="text-xs text-destructive">{errors.prenom}</span>
