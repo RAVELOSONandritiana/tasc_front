@@ -44,6 +44,15 @@
 		`${personne.name?.[0] || ''}${personne.lastname?.[0] || ''}`.toUpperCase() || '?'
 	);
 
+	const roleLabel = $derived(
+		{
+			ADMINISTRATEUR: 'Administrateur',
+			ENSEIGNANT: 'Enseignant',
+			SURVEILLANT: 'Surveillant',
+			PERSONNEL: 'Personnel'
+		}[role] || role
+	);
+
 	const hasContact = $derived(Boolean(email || phone || domicile));
 </script>
 
@@ -126,7 +135,7 @@
 	<div class="flex flex-1 flex-col gap-3 bg-white/5 p-4">
 		<div class="flex items-center gap-2">
 			<span class="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
-				>{role} -</span
+				>{roleLabel} -</span
 			>
 			<span class="text-sm font-bold">{personne.name} {personne.lastname}</span>
 		</div>

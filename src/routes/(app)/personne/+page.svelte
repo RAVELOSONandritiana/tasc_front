@@ -69,13 +69,13 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<PersonCard
-							personne={p}
-							role="PERSONNEL"
-							detail={p.commune ? `Commune - ${p.commune}` : p.domicile ? `Domicile - ${p.domicile}` : ''}
-							hrefProfil={`/profil/${p.compte?.id || p.id}`}
-							onDelete={supprimerPersonne}
-						/>
+					<PersonCard
+						personne={p}
+						role={p.compte?.role || 'PERSONNEL'}
+						detail={p.commune ? `Commune - ${p.commune}` : p.domicile ? `Domicile - ${p.domicile}` : ''}
+						hrefProfil={`/profil/${p.compte?.id || p.id}`}
+						onDelete={supprimerPersonne}
+					/>
 					</div>
 				{/each}
 			</div>
