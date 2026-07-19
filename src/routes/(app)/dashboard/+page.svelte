@@ -14,6 +14,7 @@
 		Clock,
 		UserX,
 		Activity,
+		DoorOpen,
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
@@ -266,6 +267,18 @@
 
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
 				<div class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-cyan-500/10">
+						<DoorOpen class="size-6 text-cyan-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{stats.salles}</p>
+						<p class="text-xs text-muted-foreground">Salles</p>
+					</div>
+				</div>
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
+				<div class="flex items-center gap-3">
 					<div class="flex size-12 items-center justify-center rounded-lg bg-purple-500/10">
 						<Bell class="size-6 text-purple-500" />
 					</div>
@@ -277,7 +290,7 @@
 			</Card>
 		</div>
 
-		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+		<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
 				<div class="flex items-center gap-3">
 					<div class="flex size-12 items-center justify-center rounded-lg bg-red-500/10">
@@ -327,8 +340,8 @@
 		</Card>
 		</div>
 
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			<Card class="animate-slide-up opacity-0 p-5 lg:col-span-3">
+		<div class="grid grid-cols-1 gap-6">
+			<Card class="animate-slide-up opacity-0 p-5">
 				<div class="flex items-center gap-2 mb-4">
 					<BarChart3 class="size-5 text-primary" />
 					<h2 class="font-semibold">Élèves par classe</h2>

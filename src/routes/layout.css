@@ -136,6 +136,10 @@
 	html {
 		@apply font-sans;
 	}
+	html,
+	body {
+		@apply overflow-x-hidden;
+	}
 }
 
 @layer utilities {

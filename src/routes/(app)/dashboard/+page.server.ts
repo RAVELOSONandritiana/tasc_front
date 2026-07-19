@@ -39,13 +39,14 @@ export const load: PageServerLoad = async ({ url }) => {
 	const anneeStartISO = toISODate(annee?.dateCreation ?? rangeStart);
 	const todayISO = toISODate(today);
 
-	const [eleves, profs, surveillants, classes, incidents, notifications] = await Promise.all([
+	const [eleves, profs, surveillants, classes, incidents, notifications, salles] = await Promise.all([
 		anneeId ? getEleves(anneeId) : Promise.resolve([]),
 		getProfesseurs(),
 		getSurveillants(),
 		anneeId ? getClasses(anneeId) : Promise.resolve([]),
 		anneeId ? getIncidents(anneeId, rangeStart, rangeEnd) : Promise.resolve([]),
-		getNotifications()
+		getNotifications(),
+		prisma.salle.count()
 	]);
 
 	const stats = {
@@ -53,6 +54,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		professeurs: profs.length,
 		surveillants: surveillants.length,
 		classes: classes.length,
+		salles,
 		incidents: incidents.length,
 		recentIncidents: incidents.slice(0, 5).map((i) => ({
 			id: i.id,
