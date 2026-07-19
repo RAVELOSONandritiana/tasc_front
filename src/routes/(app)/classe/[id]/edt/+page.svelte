@@ -38,6 +38,7 @@
 						classeId={data.classe.id}
 						cours={data.cours}
 						currentProfesseurId={data.currentProfesseurId}
+						professeurs={data.professeurs}
 					/>
 					</div>
 				</div>

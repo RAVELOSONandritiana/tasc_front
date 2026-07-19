@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Plus, Play } from '@lucide/svelte/icons';
+	import { Plus, Play, Trash2, Pencil, UserCog } from '@lucide/svelte/icons';
 	import type { SeanceEDT } from '$lib/types/Materiel.type';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
@@ -8,7 +8,7 @@
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { goto } from '$app/navigation';
 
-	const { jour, seances, salles, heures, classeId, cours = [], currentProfesseurId = null }: {
+	const { jour, seances, salles, heures, classeId, cours = [], currentProfesseurId = null, professeurs = [] }: {
 		jour: string;
 		seances: SeanceEDT[];
 		salles: { id: string; num: number; name: string; place: number }[];
@@ -16,6 +16,7 @@
 		classeId: string;
 		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string; professeurId?: string | null }[];
 		currentProfesseurId?: string | null;
+		professeurs?: { id: string; nom: string }[];
 	} = $props();
 
 	const professeurParCours = $derived(
@@ -45,6 +46,16 @@
 	function handleClose() {
 		dialogOpen = false;
 		nouvelleSeance = { heureDebut: '', heureFin: '', coursId: '', salleId: null };
+	}
+
+	let editDialogOpen = $state(false);
+	let editSeance = $state<SeanceEDT | null>(null);
+	let editProfesseurId = $state<string | null>(null);
+
+	function openEditSeance(seance: SeanceEDT) {
+		editSeance = seance;
+		editProfesseurId = professeurParCours[seance.coursId] ?? null;
+		editDialogOpen = true;
 	}
 </script>
 
@@ -132,23 +143,87 @@
 								</p>
 							{/if}
 						</div>
-					<Button
-						variant="default"
-						size="sm"
-						class="h-6 px-2"
-						disabled={!estTitulaire(seance.coursId)}
-						title={estTitulaire(seance.coursId) ? undefined : 'Réservé au professeur titulaire du cours'}
-						onclick={() => {
-							if (estTitulaire(seance.coursId)) {
-								goto(`/classe/${classeId}/cours/${seance.coursId}/presence`);
-							}
-						}}
-					>
-						<Play class="size-3" />
-					</Button>
+						<div class="flex items-center gap-1">
+							<Button
+								variant="default"
+								size="sm"
+								class="h-6 px-2"
+								disabled={!estTitulaire(seance.coursId)}
+								title={estTitulaire(seance.coursId) ? undefined : 'Réservé au professeur titulaire du cours'}
+								onclick={() => {
+									if (estTitulaire(seance.coursId)) {
+										goto(`/classe/${classeId}/cours/${seance.coursId}/presence`);
+									}
+								}}
+							>
+								<Play class="size-3" />
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-6 px-2"
+								disabled={!estTitulaire(seance.coursId)}
+								title={estTitulaire(seance.coursId) ? 'Modifier le cours' : 'Réservé au professeur titulaire du cours'}
+								onclick={() => openEditSeance(seance)}
+							>
+								<Pencil class="size-3" />
+							</Button>
+							<form method="POST" action="?/deleteSeance" use:loadingForm>
+								<input type="hidden" name="id" value={seance.id} />
+								<Button
+									variant="destructive"
+									size="sm"
+									class="h-6 px-2"
+									disabled={!estTitulaire(seance.coursId)}
+									title={estTitulaire(seance.coursId)
+										? 'Retirer de l’emploi du temps (le cours et les notes sont conservés)'
+										: 'Réservé au professeur titulaire du cours'}
+								>
+									<Trash2 class="size-3" />
+								</Button>
+							</form>
+						</div>
 					</div>
 				</div>
 			{/each}
 		{/if}
 	</div>
+
+	<Dialog.Root bind:open={editDialogOpen}>
+		<Dialog.Content class="sm:max-w-100">
+			<Dialog.Header>
+				<Dialog.Title>Modifier le cours</Dialog.Title>
+				<Dialog.Description>
+					Changer le professeur de « {editSeance?.coursNom} ». Le cours, les notes et les retards
+					existants sont conservés ; seule la liaison professeur est mise à jour.
+				</Dialog.Description>
+			</Dialog.Header>
+			{#if editSeance}
+				<form method="POST" action="?/updateCoursProfesseur" use:loadingForm>
+					<input type="hidden" name="coursId" value={editSeance.coursId} />
+					<div class="grid gap-4 py-4">
+						<div class="grid gap-2">
+							<Label for="edit-professeur">Professeur</Label>
+							<NativeSelect.Root
+								bind:value={editProfesseurId}
+								class="w-full"
+								name="professeurId"
+							>
+								<NativeSelect.Option value="">Aucun</NativeSelect.Option>
+								{#each professeurs as p (p.id)}
+									<NativeSelect.Option value={p.id}>{p.nom}</NativeSelect.Option>
+								{/each}
+							</NativeSelect.Root>
+						</div>
+					</div>
+					<Dialog.Footer>
+						<Button variant="outline" size="sm" type="button" onclick={() => (editDialogOpen = false)}
+							>Annuler</Button
+						>
+						<Button variant="default" size="sm" type="submit">Enregistrer</Button>
+					</Dialog.Footer>
+				</form>
+			{/if}
+		</Dialog.Content>
+	</Dialog.Root>
 </div>

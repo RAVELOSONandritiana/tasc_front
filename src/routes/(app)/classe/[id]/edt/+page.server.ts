@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
-import { prisma } from '$lib/server/prisma';
-import { redirect } from '@sveltejs/kit';
+import { prisma, getProfesseurs, updateCours } from '$lib/server/prisma';
+import { redirect, fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const classeId = params.id;
@@ -87,6 +87,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			}))?.personne?.professeur?.id ?? null)
 		: null;
 
+	const profs = await getProfesseurs();
+
 	return {
 		classe,
 		seances,
@@ -100,6 +102,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		jours,
 		heures,
 		cours,
+		professeurs: profs.map((p) => ({
+			id: p.id,
+			nom: `${p.personne?.name || ''} ${p.personne?.lastname || ''}`.trim() || 'Professeur'
+		})),
 		currentProfesseurId
 	};
 };
@@ -169,6 +175,28 @@ export const actions: Actions = {
 		await prisma.seanceEDT.delete({
 			where: { id }
 		});
+
+		throw redirect(303, `/classe/${params.id}/edt`);
+	},
+
+	// Change le professeur d'un cours. Cela ne supprime ni le cours, ni les
+	// notes/retards associés : seule la liaison professeur du cours est mise à
+	// jour, ce qui synchronise automatiquement les profils et la page enseignant
+	// (qui lisent les cours par professeurId).
+	updateCoursProfesseur: async ({ request, params }) => {
+		const formData = await request.formData();
+		const coursId = formData.get('coursId') as string;
+		const professeurId = (formData.get('professeurId') as string) || null;
+
+		if (!coursId) {
+			return fail(400, { error: 'Cours requis' });
+		}
+
+		try {
+			await updateCours(coursId, { professeurId: professeurId || undefined });
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || 'Erreur lors du changement de professeur' });
+		}
 
 		throw redirect(303, `/classe/${params.id}/edt`);
 	}
