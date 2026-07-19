@@ -15,4 +15,18 @@ export async function auth() {
 	}
 }
 
+export async function deletePbImage(url: string | null | undefined): Promise<void> {
+	if (!url) return;
+	try {
+		const segments = url.split('/');
+		const recordId = segments[segments.length - 2];
+		const collection = segments[segments.length - 3];
+		if (!recordId || !collection) return;
+		await auth();
+		await pb.collection(collection).delete(recordId).catch(() => {});
+	} catch {
+		// Best-effort cleanup : on ignore les echecs pour ne pas bloquer l'appelant.
+	}
+}
+
 export default pb;

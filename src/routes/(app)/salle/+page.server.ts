@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
 import { broadcastRealtime } from '$lib/server/realtime';
-
+import { deletePbImage } from '$lib/pocketbase/pocketbase';
 export const load: PageServerLoad = async ({ url }) => {
 	const status = url.searchParams.get('status') || 'all';
 
@@ -116,8 +116,13 @@ export const actions: Actions = {
 			data: { imageUrl }
 		});
 
+		const oldImageUrl = oldSalle?.imageUrl || null;
+		if (oldImageUrl && oldImageUrl !== imageUrl) {
+			await deletePbImage(oldImageUrl);
+		}
+
 		broadcastRealtime({ entity: 'salle', action: 'update', id });
 
-		return { success: true, oldImageUrl: oldSalle?.imageUrl || null };
+		return { success: true, oldImageUrl };
 	}
 };

@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
-import { updatePersonneImage } from '$lib/server/prisma';
+import { updatePersonneImage, prisma } from '$lib/server/prisma';
+import { deletePbImage } from '$lib/pocketbase/pocketbase';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -16,7 +17,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	try {
+		const oldPersonne = await prisma.personne.findUnique({
+			where: { id: personneId },
+			select: { imageUrl: true }
+		});
+		const oldImageUrl = oldPersonne?.imageUrl || null;
 		await updatePersonneImage(personneId, imageUrl);
+		if (oldImageUrl && oldImageUrl !== imageUrl) {
+			await deletePbImage(oldImageUrl);
+		}
 		return json({ success: true, url: imageUrl });
 	} catch (e: unknown) {
 		return json({ error: (e as Error)?.message || 'Erreur lors de la mise à jour' }, { status: 500 });

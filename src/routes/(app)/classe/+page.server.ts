@@ -3,6 +3,7 @@ import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseIma
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { deletePbImage } from '$lib/pocketbase/pocketbase';
 
 export const load: PageServerLoad = async () => {
 	const annee = await getActiveAnneeScolaire();
@@ -90,9 +91,13 @@ export const actions: Actions = {
 				where: { id },
 				select: { imageUrl: true }
 			});
+			const oldImageUrl = oldClasse?.imageUrl || null;
 			await updateClasseImage(id, imageUrl);
+			if (oldImageUrl && oldImageUrl !== imageUrl) {
+				await deletePbImage(oldImageUrl);
+			}
 			broadcastRealtime({ entity: 'classe', action: 'update', id });
-			return { success: true, oldImageUrl: oldClasse?.imageUrl || null };
+			return { success: true, oldImageUrl };
 		} catch (e: unknown) {
 			return fail(500, { error: (e as Error)?.message || "Erreur lors de la mise à jour de l'image" });
 		}

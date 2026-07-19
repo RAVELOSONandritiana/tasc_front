@@ -25,6 +25,7 @@ import {
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { deletePbImage } from '$lib/pocketbase/pocketbase';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -794,7 +795,15 @@ export const actions: Actions = {
 		}
 
 		try {
+			const oldCours = await prisma.cours.findUnique({
+				where: { id: coursId },
+				select: { imageUrl: true }
+			});
+			const oldImageUrl = oldCours?.imageUrl || null;
 			await updateCoursImage(coursId, imageUrl);
+			if (oldImageUrl && oldImageUrl !== imageUrl) {
+				await deletePbImage(oldImageUrl);
+			}
 			broadcastRealtime({ entity: 'cours', action: 'update', id: coursId });
 			return { success: true, url: imageUrl };
 		} catch (e: any) {
