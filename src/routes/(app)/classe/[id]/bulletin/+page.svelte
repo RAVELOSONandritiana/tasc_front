@@ -35,6 +35,35 @@
 		return Number.isInteger(valeur) ? valeur.toString() : valeur.toFixed(2);
 	}
 
+	function getExamenPeriodeLabel(examen: Examen): string {
+		return formatExamenNom(examen);
+	}
+
+	function normaliserPourFichier(valeur: string): string {
+		return valeur
+			.toLowerCase()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.replace(/\s+/g, '_')
+			.replace(/[^a-z0-9_]/g, '')
+			.replace(/^_|_$/g, '');
+	}
+
+	function getBulletinFilename(forSingleEleve: boolean): string {
+		const examen = listeExamens.find((e) => e.id === bulletinExamenRef);
+		const rawPeriode = examen ? getExamenPeriodeLabel(examen) : 'bulletin';
+		const periode = normaliserPourFichier(rawPeriode);
+		const annee = normaliserPourFichier(anneeScolaireValue || '');
+
+		if (forSingleEleve && bulletinEleve) {
+			const nomComplet = normaliserPourFichier(`${bulletinEleve.nom} ${bulletinEleve.prenom}`);
+			return `${nomComplet}_${annee}_${periode}.pdf`;
+		}
+
+		const classe = normaliserPourFichier(formatClasseNom(data.classe?.niveau, data.classe?.nom));
+		return `${classe}_${annee}_${periode}.pdf`;
+	}
+
 	// Format décimal français (virgule)
 	function formatFr(valeur: number): string {
 		return formatNombre(valeur).replace('.', ',');
@@ -207,7 +236,14 @@
 	}
 
 	function imprimerBulletin() {
+		const originalTitle = document.title;
+		const isSingle = bulletinEleve !== null;
+		const filename = getBulletinFilename(isSingle).replace(/\.pdf$/i, '');
+		document.title = filename;
 		window.print();
+		setTimeout(() => {
+			document.title = originalTitle;
+		}, 100);
 	}
 </script>
 
