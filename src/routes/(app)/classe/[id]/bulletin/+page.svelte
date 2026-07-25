@@ -338,9 +338,11 @@
 		</div>
 	</div>
 {:else}
-	<div class="space-y-6 p-6 print:m-0 print:max-w-none print:p-0">
+	<div
+		class="flex min-h-[calc(100vh-4rem)] flex-col items-center space-y-6 p-6 print:block print:p-0"
+	>
 		<div
-			class="mb-4 flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between print:hidden"
+			class="mb-4 flex w-full flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between print:hidden"
 		>
 			<Button variant="outline" onclick={retourListe}>Retour à la liste</Button>
 			<div class="flex flex-wrap items-end gap-3">
@@ -364,15 +366,21 @@
 			</div>
 		</div>
 
-		{#if bulletinEleve}
-			{@render singleBulletin(bulletinEleve, false)}
-			{@render singleBulletin(bulletinEleve, true)}
-		{:else if bulletinTousEleves}
-			{#each elevesClasse as eleve (eleve.id)}
-				{@render singleBulletin(eleve, false)}
-				{@render singleBulletin(eleve, true)}
-			{/each}
-		{/if}
+		<div class="flex w-full flex-1 items-center justify-center">
+			{#if bulletinEleve}
+				<div class="bulletin-sheet">
+					{@render singleBulletin(bulletinEleve, false)}
+					{@render singleBulletin(bulletinEleve, true)}
+				</div>
+			{:else if bulletinTousEleves}
+				{#each elevesClasse as eleve (eleve.id)}
+					<div class="bulletin-sheet">
+						{@render singleBulletin(eleve, false)}
+						{@render singleBulletin(eleve, true)}
+					</div>
+				{/each}
+			{/if}
+		</div>
 	</div>
 {/if}
 
@@ -395,43 +403,25 @@
 		<!-- EN-TÊTE -->
 		<div class="bulletin-header">
 			<!-- Logo gauche -->
-			<div class="bulletin-logo">
-				<svg viewBox="0 0 100 100" class="logo-rond" role="img" aria-label="Logo établissement">
-					<circle cx="50" cy="50" r="48" fill="#3c6e47" stroke="#2a4f33" stroke-width="2" />
-					<path d="M2 72 A48 48 0 0 0 98 72 L98 80 A48 48 0 0 1 2 80 Z" fill="#e25b8a" />
-					<g fill="#fff">
-						<rect x="36" y="42" width="28" height="24" />
-						<rect x="32" y="38" width="36" height="6" />
-						<path d="M32 38 L50 26 L68 38 Z" />
-						<rect x="46" y="50" width="8" height="16" fill="#3c6e47" />
-						<rect x="39" y="50" width="5" height="5" />
-						<rect x="56" y="50" width="5" height="5" />
-					</g>
-				</svg>
-			</div>
+		<div class="bulletin-logo">
+			<img src="/logos/logo-left.png" alt="Logo établissement" class="logo-rond" />
+		</div>
 
 			<!-- Bloc texte central -->
-			<div class="bulletin-titre">
-				<p class="ecole-nom">LYCEE TSARARIVOTRA ANDRIAMANELO</p>
-				<p class="ecole-nom">SAINT CHRISTOPHOROS ALASORA</p>
-				<div class="embleme-centre" aria-hidden="true">★</div>
-				<h1 class="bulletin-grand-titre">{titreBulletinValue}</h1>
-				<p class="annee-scolaire">
-					Année scolaire : <span class="valeur-annee">{anneeScolaireValue || '—'}</span>
-				</p>
-			</div>
+		<div class="bulletin-titre">
+			<img src="/logos/building-icon.png" alt="Icône établissement" class="building-icon" />
+			<p class="ecole-nom">LYCEE TSARARIVOTRA ANDRIAMANELO</p>
+			<p class="ecole-nom">SAINT CHRISTOPHOROS ALASORA</p>
+			<h1 class="bulletin-grand-titre">{titreBulletinValue}</h1>
+			<p class="annee-scolaire">
+				Année scolaire : <span class="valeur-annee">{anneeScolaireValue || '—'}</span>
+			</p>
+		</div>
 
 			<!-- Logo droit -->
-			<div class="bulletin-logo">
-				<svg viewBox="0 0 100 100" class="logo-rond" role="img" aria-label="Sceau officiel">
-					<circle cx="50" cy="50" r="48" fill="#f4c20d" stroke="#caa00a" stroke-width="2" />
-					<circle cx="50" cy="50" r="32" fill="#1f8fb0" />
-					<circle cx="50" cy="50" r="26" fill="none" stroke="#fff" stroke-width="1.5" />
-					<text x="50" y="54" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold"
-						>ÉTAB</text
-					>
-				</svg>
-			</div>
+		<div class="bulletin-logo">
+			<img src="/logos/logo-right.png" alt="Sceau officiel" class="logo-rond" />
+		</div>
 		</div>
 
 		<!-- INFORMATIONS ÉLÈVE -->
@@ -567,21 +557,33 @@
 {/snippet}
 
 <style>
-	/* Cadre de page type A4 */
+	/* Feuille A4 paysage : 2 bulletins côte à côte (gauche/droite) */
+	.bulletin-sheet {
+		width: 100%;
+		max-width: 297mm;
+		display: flex;
+		flex-direction: row;
+		background: #fff;
+	}
+
+	/* Un bulletin = moitié largeur de la feuille A4 paysage */
 	.bulletin-page {
-		width: 210mm;
-		min-height: 297mm;
-		margin: 0 auto;
-		padding: 8mm 10mm 6mm;
+		width: 50%;
+		flex: 1 1 0;
+		min-height: 148mm;
+		padding: 5mm 8mm 4mm;
 		box-sizing: border-box;
 		background: #fff;
 		color: #000;
 		font-family: Arial, Helvetica, sans-serif;
-		font-size: 11px;
-		line-height: 1.3;
+		font-size: 10px;
+		line-height: 1.25;
 		border: 1px solid #000;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
+	}
+	.bulletin-page + .bulletin-page {
+		border-left: none;
 	}
 
 	/* EN-TÊTE */
@@ -590,7 +592,6 @@
 		grid-template-columns: 70px 1fr 70px;
 		align-items: center;
 		gap: 8px;
-		border-bottom: 1px solid #000;
 		padding-bottom: 6px;
 	}
 	.bulletin-logo {
@@ -600,6 +601,13 @@
 	.logo-rond {
 		width: 64px;
 		height: 64px;
+		object-fit: contain;
+	}
+	.building-icon {
+		height: 28px;
+		width: auto;
+		display: block;
+		margin: 0 auto 4px;
 	}
 	.bulletin-titre {
 		text-align: center;
@@ -758,13 +766,12 @@
 		text-align: center;
 		font-style: italic;
 		font-weight: bold;
-		border-top: 1px solid #000;
 		padding-top: 6px;
 	}
 
-	/* Taille de page explicite pour l'impression : 1 bulletin par page A4 */
+	/* Feuille A4 paysage : 2 bulletins empilés (haut/bas) par page */
 	@page {
-		size: A4;
+		size: A4 landscape;
 		margin: 0;
 	}
 
@@ -773,18 +780,27 @@
 			background: white !important;
 			color: black !important;
 		}
-		.print\:break-after-page {
-			break-after: page;
-		}
-		.bulletin-page {
-			width: 100%;
-			min-height: 297mm;
-			margin: 0;
-			transform: scale(0.92);
-			transform-origin: top center;
-			border: 1px solid #000;
-			page-break-inside: avoid;
-			break-inside: avoid;
+	.bulletin-sheet {
+		width: 297mm;
+		height: 210mm;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		page-break-after: always;
+		break-after: page;
+	}
+	.bulletin-page {
+		width: 50%;
+		flex: 1 1 0;
+		min-height: 148mm;
+		margin: 0;
+		box-sizing: border-box;
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
+		.bulletin-page + .bulletin-page {
+			border-left: none;
 		}
 		.bulletin-table,
 		.bulletin-table tr,

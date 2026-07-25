@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		incidents: prismaEleve.incidents?.length || 0,
 		notesPositives,
 		notesNegatives,
-		heuresCours: 0
+		coursTermines: 0
 	};
 
 	const eleve: Eleve = {

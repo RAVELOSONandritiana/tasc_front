@@ -1,7 +1,7 @@
 export type EmployeeStats = {
 	retards: number;
 	absences: number;
-	heuresCours: number;
+	nbCours: number;
 	incidents: number;
 	notesPositives: number;
 	notesNegatives: number;
@@ -43,7 +43,7 @@ export type EleveStats = {
 	incidents: number;
 	notesPositives: number;
 	notesNegatives: number;
-	heuresCours: number;
+	coursTermines: number;
 };
 
 export type Eleve = {

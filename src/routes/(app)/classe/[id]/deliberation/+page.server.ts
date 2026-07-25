@@ -143,17 +143,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// Tri alphabétique pour un défilement logique
 	elevesClasse.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'));
 
+	const adminCompte = await prisma.compte.findFirst({
+		where: { role: 'ADMINISTRATEUR', statut: 'ACTIF' },
+		include: { personne: true }
+	});
+	const administrateurNom = adminCompte?.personne
+		? `${adminCompte.personne.lastname ?? ''} ${adminCompte.personne.name ?? ''}`.trim() || null
+		: null;
+
 	return {
 		classe,
 		listeCours,
 		listeExamens,
 		elevesClasse,
-		administrateurNom: await prisma.compte
-			.findFirst({
-				where: { role: 'ADMINISTRATEUR', statut: 'ACTIF' },
-				include: { personne: true }
-			})
-			.then((c) => (c ? `${c.personne.lastname} ${c.personne.name}` : null))
-			: null
+		administrateurNom
 	};
 };

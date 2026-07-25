@@ -11,7 +11,7 @@ type PrismaProfesseurShape = {
 	matiere: string[];
 	retards: number;
 	absences: number;
-	heuresCours: number;
+	nbCours: number;
 	incidents: number;
 	notesPositives: number;
 	notesNegatives: number;
@@ -47,7 +47,7 @@ function mapProfesseur(prismaProf: PrismaProfesseurShape): Professeur {
 		stats: {
 			retards: prismaProf.retards,
 			absences: prismaProf.absences,
-			heuresCours: prismaProf.heuresCours,
+			nbCours: prismaProf.nbCours,
 			incidents: prismaProf.incidents,
 			notesPositives: prismaProf.notesPositives,
 			notesNegatives: prismaProf.notesNegatives

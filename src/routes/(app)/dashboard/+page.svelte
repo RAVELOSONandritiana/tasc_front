@@ -288,9 +288,7 @@
 					</div>
 				</div>
 			</Card>
-		</div>
 
-		<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
 				<div class="flex items-center gap-3">
 					<div class="flex size-12 items-center justify-center rounded-lg bg-red-500/10">
@@ -327,17 +325,17 @@
 				</div>
 			</Card>
 
-		<Card class="animate-slide-up opacity-0 p-5 transition-shadow hover:shadow-md">
-			<div class="flex items-center gap-3">
-				<div class="flex size-12 items-center justify-center rounded-lg bg-orange-500/10">
-					<AlertCircle class="size-6 text-orange-500" />
+			<Card class="animate-slide-up opacity-0 p-5 transition-shadow hover:shadow-md">
+				<div class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-orange-500/10">
+						<AlertCircle class="size-6 text-orange-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{additionalStats.unjustifiedAbsences ?? 0}</p>
+						<p class="text-xs text-muted-foreground">Absences non justifiées</p>
+					</div>
 				</div>
-				<div>
-					<p class="text-2xl font-bold">{additionalStats.unjustifiedAbsences ?? 0}</p>
-					<p class="text-xs text-muted-foreground">Absences non justifiées</p>
-				</div>
-			</div>
-		</Card>
+			</Card>
 		</div>
 
 		<div class="grid grid-cols-1 gap-6">

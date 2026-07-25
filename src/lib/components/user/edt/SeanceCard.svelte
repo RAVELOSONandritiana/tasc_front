@@ -8,7 +8,7 @@
 	import * as NativeSelect from '$lib/components/ui/native-select';
 	import { goto } from '$app/navigation';
 
-	const { jour, seances, salles, heures, classeId, cours = [], currentProfesseurId = null, professeurs = [] }: {
+	const { jour, seances, salles, heures, classeId, cours = [], currentProfesseurId = null, userRole = null, professeurs = [] }: {
 		jour: string;
 		seances: SeanceEDT[];
 		salles: { id: string; num: number; name: string; place: number }[];
@@ -16,6 +16,7 @@
 		classeId: string;
 		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string; professeurId?: string | null }[];
 		currentProfesseurId?: string | null;
+		userRole?: string | null;
 		professeurs?: { id: string; nom: string }[];
 	} = $props();
 
@@ -34,6 +35,12 @@
 			!!currentProfesseurId && professeurParCours[coursId] === currentProfesseurId
 		);
 	}
+
+	// Un surveillant ou un administrateur peut modifier/supprimer l'EDT,
+	// mais seul le professeur titulaire du cours peut le démarrer (lancer).
+	const peutModifierEDT = $derived(
+		userRole === 'SURVEILLANT' || userRole === 'ADMINISTRATEUR' || userRole === 'ENSEIGNANT'
+	);
 
 	let dialogOpen = $state(false);
 	let nouvelleSeance = $state({
@@ -61,7 +68,7 @@
 
 <div class="rounded-xl bg-card/50 p-4">
 	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'mb-3 w-full gap-2' })}>
+		<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'mb-3 w-full gap-2' })} disabled={!peutModifierEDT}>
 			<Plus class="size-3.5" />
 			Ajouter une séance
 		</Dialog.Trigger>
@@ -149,7 +156,9 @@
 								size="sm"
 								class="h-6 px-2"
 								disabled={!estTitulaire(seance.coursId)}
-								title={estTitulaire(seance.coursId) ? undefined : 'Réservé au professeur titulaire du cours'}
+								title={estTitulaire(seance.coursId)
+									? undefined
+									: 'Réservé au professeur titulaire du cours'}
 								onclick={() => {
 									if (estTitulaire(seance.coursId)) {
 										goto(`/classe/${classeId}/cours/${seance.coursId}/presence`);
@@ -162,8 +171,8 @@
 								variant="outline"
 								size="sm"
 								class="h-6 px-2"
-								disabled={!estTitulaire(seance.coursId)}
-								title={estTitulaire(seance.coursId) ? 'Modifier le cours' : 'Réservé au professeur titulaire du cours'}
+								disabled={!peutModifierEDT}
+								title={peutModifierEDT ? 'Modifier le cours' : 'Réservé aux surveillants, administrateurs ou au professeur titulaire'}
 								onclick={() => openEditSeance(seance)}
 							>
 								<Pencil class="size-3" />
@@ -174,10 +183,10 @@
 									variant="destructive"
 									size="sm"
 									class="h-6 px-2"
-									disabled={!estTitulaire(seance.coursId)}
-									title={estTitulaire(seance.coursId)
+									disabled={!peutModifierEDT}
+									title={peutModifierEDT
 										? 'Retirer de l’emploi du temps (le cours et les notes sont conservés)'
-										: 'Réservé au professeur titulaire du cours'}
+										: 'Réservé aux surveillants, administrateurs ou au professeur titulaire'}
 								>
 									<Trash2 class="size-3" />
 								</Button>

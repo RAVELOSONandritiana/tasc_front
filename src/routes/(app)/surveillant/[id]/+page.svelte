@@ -101,8 +101,8 @@
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
 						<CalendarDays class="mx-auto mb-1 size-5 text-blue-500" />
-						<p class="text-xs text-muted-foreground">Heures de cours</p>
-						<p class="text-2xl font-bold text-blue-500">{stats.heuresCours}h</p>
+				<p class="text-xs text-muted-foreground">Cours</p>
+					<p class="text-2xl font-bold text-blue-500">{stats.nbCours}</p>
 					</div>
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
 						<Clock class="mx-auto mb-1 size-5 text-amber-500" />

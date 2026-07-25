@@ -252,7 +252,7 @@
 		</div>
 	</div>
 
-	<div class="flex-1 overflow-y-auto p-4 {presenceOpen ? 'print:hidden' : ''}">
+	<div class="flex-1 overflow-x-auto overflow-y-auto p-4 {presenceOpen ? 'print:hidden' : ''}">
 		<p class="mb-4 text-sm text-muted-foreground">
 			Tous les élèves inscrits seront automatiquement affectés aux examens de chaque cours.
 		</p>

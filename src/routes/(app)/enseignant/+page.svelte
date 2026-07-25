@@ -168,7 +168,7 @@
 							stats: {
 								retards: newProf.professeur.retards,
 								absences: newProf.professeur.absences,
-								heuresCours: newProf.professeur.heuresCours,
+								nbCours: newProf.professeur.nbCours,
 								incidents: newProf.professeur.incidents,
 								notesPositives: newProf.professeur.notesPositives,
 								notesNegatives: newProf.professeur.notesNegatives

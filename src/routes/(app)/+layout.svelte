@@ -91,7 +91,7 @@
 <Sidebar.Provider>
 	<LoadingBar />
 	<PageLoader />
-	<div class="flex min-h-screen w-full overflow-x-hidden">
+	<div class="flex min-h-screen w-full overflow-x-clip">
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
 				<div class="flex items-center gap-2.5">

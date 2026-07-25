@@ -80,8 +80,8 @@
 		if (!isEmployee || !employeeStats) return [];
 		return [
 			{
-				label: 'Heures de cours',
-				value: `${employeeStats.heuresCours}h`,
+				label: 'Cours',
+				value: `${employeeStats.nbCours}`,
 				icon: CalendarDays,
 				color: 'text-blue-500'
 			},
@@ -129,7 +129,7 @@
 	});
 </script>
 
-<main class="flex-1 overflow-y-auto bg-background p-4 text-foreground md:p-6">
+<main class="flex-1 overflow-x-auto overflow-y-auto bg-background p-4 text-foreground md:p-6">
 	<div class="space-y-6">
 		<!-- Header -->
 		<div

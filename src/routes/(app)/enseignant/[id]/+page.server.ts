@@ -23,7 +23,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		stats: {
 			retards: prismaProf.retards,
 			absences: prismaProf.absences,
-			heuresCours: prismaProf.heuresCours,
+			nbCours: prismaProf.nbCours,
 			incidents: prismaProf.incidents,
 			notesPositives: prismaProf.notesPositives,
 			notesNegatives: prismaProf.notesNegatives

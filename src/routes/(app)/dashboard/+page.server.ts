@@ -86,7 +86,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		include: {
 			classe: { select: { id: true, nom: true, niveau: true, serie: true } },
 			eleve: { include: { personne: true } },
-			absences: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
+		absences: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
 			retards: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
 			notes: { where: { date: { gte: rangeStart, lte: rangeEnd } } }
 		}

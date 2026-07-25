@@ -147,7 +147,7 @@
 							stats: {
 								retards: newSurv.surveillant.retards,
 								absences: newSurv.surveillant.absences,
-								heuresCours: newSurv.surveillant.heuresCours,
+								nbCours: newSurv.surveillant.nbCours,
 								incidents: newSurv.surveillant.incidents,
 								notesPositives: newSurv.surveillant.notesPositives,
 								notesNegatives: newSurv.surveillant.notesNegatives

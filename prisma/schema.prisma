@@ -199,7 +199,7 @@ model Professeur {
   matiere          String[]
   retards          Int      @default(0)
   absences         Int      @default(0)
-  heuresCours      Int      @default(0)
+  nbCours          Int      @default(0)
   incidents        Int      @default(0)
   notesPositives   Int      @default(0)
   notesNegatives   Int      @default(0)
@@ -220,7 +220,7 @@ model Surveillant {
   poste          String
   retards        Int      @default(0)
   absences       Int      @default(0)
-  heuresCours    Int      @default(0)
+  nbCours        Int      @default(0)
   incidents      Int      @default(0)
   notesPositives Int      @default(0)
   notesNegatives Int      @default(0)

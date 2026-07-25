@@ -26,7 +26,7 @@ function mapEleve(prismaEleve: EleveWithInscriptions): Eleve {
 			incidents: 0,
 			notesPositives: 0,
 			notesNegatives: 0,
-			heuresCours: 0
+			coursTermines: 0
 		}
 	};
 }

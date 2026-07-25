@@ -38,22 +38,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 		const surv = compte.personne?.surveillant;
 		if (compte.role === 'ENSEIGNANT' && prof) {
 			return {
-				retards: prof.retards,
-				absences: prof.absences,
-				heuresCours: prof.heuresCours,
-				incidents: prof.incidents,
-				notesPositives: prof.notesPositives,
-				notesNegatives: prof.notesNegatives
+			retards: prof.retards,
+			absences: prof.absences,
+			nbCours: prof.nbCours,
+			incidents: prof.incidents,
+			notesPositives: prof.notesPositives,
+			notesNegatives: prof.notesNegatives
 			};
 		}
 		if (compte.role === 'SURVEILLANT' && surv) {
 			return {
-				retards: surv.retards,
-				absences: surv.absences,
-				heuresCours: surv.heuresCours,
-				incidents: surv.incidents,
-				notesPositives: surv.notesPositives,
-				notesNegatives: surv.notesNegatives
+			retards: surv.retards,
+			absences: surv.absences,
+			nbCours: surv.nbCours,
+			incidents: surv.incidents,
+			notesPositives: surv.notesPositives,
+			notesNegatives: surv.notesNegatives
 			};
 		}
 		return null;
