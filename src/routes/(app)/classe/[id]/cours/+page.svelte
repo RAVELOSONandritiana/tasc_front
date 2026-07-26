@@ -255,8 +255,8 @@
 	);
 </script>
 
-<div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
-	<div class="sticky top-16 border-b border-sidebar-border bg-sidebar/80 p-4 backdrop-blur-sm">
+<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
+	<div class="shrink-0 border-b border-sidebar-border bg-sidebar/80 p-4 backdrop-blur-sm">
 		<CoursePageHeader
 			classe={data.classe}
 			listeExamens={listeExamens.map((e) => ({
@@ -272,7 +272,7 @@
 		/>
 	</div>
 
-	<div class="flex-1 p-4">
+	<div class="flex-1 overflow-y-auto p-4">
 		{#if listeCours.length === 0}
 			<div class="flex flex-col items-center justify-center py-12 text-center">
 				<BookOpen class="mb-4 size-12 text-muted-foreground" />

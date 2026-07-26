@@ -20,7 +20,7 @@
 
 	let newMessage = $state('');
 	let selectedEleveId = $state<string>('');
-	let selectedType = $state<'info' | 'erreur' | 'note' | 'absent'>('note');
+	let selectedType = $state<'info' | 'erreur' | 'note'>('note');
 	let dialogOpen = $state(false);
 	let searchQuery = $state('');
 
@@ -53,7 +53,7 @@
 	}
 </script>
 
-<main class="flex h-[calc(100vh-4rem)] flex-col bg-background text-foreground">
+<main class="flex min-h-[calc(100dvh-4rem)] flex-col bg-background text-foreground">
 	<div
 		class="animate-slide-down sticky top-16 z-40 flex items-center justify-between border-b border-sidebar-border bg-card/80 px-4 py-3 backdrop-blur-sm"
 	>
@@ -126,16 +126,15 @@
 						<ToggleGroup.Root
 							type="single"
 							variant="outline"
-							class="grid w-full grid-cols-2"
+							class="grid w-full grid-cols-3"
 							value={selectedType}
 							onValueChange={(v) => {
-								if (v) selectedType = v as 'info' | 'erreur' | 'note' | 'absent';
+								if (v) selectedType = v as 'info' | 'erreur' | 'note';
 							}}
 						>
 							<ToggleGroup.Item value="info">Information</ToggleGroup.Item>
 							<ToggleGroup.Item value="erreur">Erreur</ToggleGroup.Item>
 							<ToggleGroup.Item value="note">Note positive</ToggleGroup.Item>
-							<ToggleGroup.Item value="absent">Absence</ToggleGroup.Item>
 						</ToggleGroup.Root>
 						<input type="hidden" name="type" value={selectedType} />
 					</div>

@@ -91,7 +91,7 @@
 <Sidebar.Provider>
 	<LoadingBar />
 	<PageLoader />
-	<div class="flex min-h-screen w-full overflow-x-clip">
+	<div class="flex min-h-screen w-full overflow-x-clip overflow-y-auto">
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
 				<div class="flex items-center gap-2.5">
@@ -150,7 +150,7 @@
 			</Sidebar.Footer>
 		</Sidebar.Root>
 
-		<div class="flex flex-1 flex-col bg-background text-foreground">
+		<div class="flex flex-1 flex-col min-h-0 bg-background text-foreground">
 			<header
 				class="relative sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm"
 			>

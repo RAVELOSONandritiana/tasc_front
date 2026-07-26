@@ -780,7 +780,7 @@ export async function createClasse(data: {
 		data: {
 			nom:
 				data.nom ||
-				`${data.niveau === 0 ? '2nde' : data.niveau === 1 ? '1ère' : 'Terminale'}${data.serie ? ' ' + data.serie.toUpperCase() : ''}`,
+				`${data.niveau === 0 ? '2nd' : data.niveau === 1 ? '1ere' : 'Tle'}${data.serie ? ' ' + data.serie.toUpperCase() : ''}`,
 			niveau: data.niveau,
 			serie: data.serie || null,
 			titulaireId: data.titulaireId || null,

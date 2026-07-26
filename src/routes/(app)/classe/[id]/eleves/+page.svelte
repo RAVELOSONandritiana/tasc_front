@@ -102,9 +102,9 @@
 	}
 </script>
 
-<div class="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
+<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
 	<div
-		class="sticky top-16 z-50 flex justify-between border-b border-sidebar-border bg-sidebar p-4 {presenceOpen
+		class="sticky top-16 z-50 flex flex-wrap items-center justify-between gap-3 border-b border-sidebar-border bg-sidebar p-4 {presenceOpen
 			? 'print:hidden'
 			: ''}"
 	>
@@ -252,13 +252,13 @@
 		</div>
 	</div>
 
-	<div class="flex-1 overflow-x-auto overflow-y-auto p-4 {presenceOpen ? 'print:hidden' : ''}">
+	<div class="flex-1 overflow-y-auto p-4 {presenceOpen ? 'print:hidden' : ''}">
 		<p class="mb-4 text-sm text-muted-foreground">
 			Tous les élèves inscrits seront automatiquement affectés aux examens de chaque cours.
 		</p>
 
-		<div class="overflow-x-auto rounded-md border">
-			<Table.Root>
+	<div class="overflow-x-auto overflow-y-auto rounded-md border max-h-[60vh]">
+		<Table.Root class="min-w-[640px]">
 				<Table.Header>
 					<Table.Row>
 						<Table.Head class="text-center">N° classe</Table.Head>

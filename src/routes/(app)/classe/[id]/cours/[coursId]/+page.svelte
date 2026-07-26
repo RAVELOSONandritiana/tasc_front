@@ -117,8 +117,9 @@
 	}
 </script>
 
-<div class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
-	<div class="mb-6 flex items-center justify-between">
+<div class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
+	<div class="flex-1 overflow-y-auto">
+		<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
 		<div>
 			<h1 class="text-2xl font-bold">{coursInfo?.nom || 'Cours'}</h1>
 			<p class="text-sm text-muted-foreground">
@@ -214,4 +215,5 @@
 			</div>
 		</CardUI>
 	{/if}
+</div>
 </div>

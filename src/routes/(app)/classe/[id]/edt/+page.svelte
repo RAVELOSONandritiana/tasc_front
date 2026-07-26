@@ -17,7 +17,7 @@
 	);
 </script>
 
-<div class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
+<div class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
 	<div class="mb-4">
 		<h2 class="text-lg font-semibold">Emploi du temps</h2>
 	</div>

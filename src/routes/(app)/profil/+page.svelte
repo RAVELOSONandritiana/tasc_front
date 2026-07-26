@@ -129,7 +129,7 @@
 	});
 </script>
 
-<main class="flex-1 overflow-x-auto overflow-y-auto bg-background p-4 text-foreground md:p-6">
+<main class="flex-1 overflow-y-auto bg-background p-4 text-foreground md:p-6">
 	<div class="space-y-6">
 		<!-- Header -->
 		<div
@@ -212,7 +212,7 @@
 		</Card>
 
 		<!-- Stats -->
-		<div class="grid grid-cols-3 gap-3">
+		<div class="grid grid-cols-2 gap-3 md:grid-cols-3">
 			{#each stats as stat, i (stat.label)}
 				<Card
 					class="animate-slide-up stagger-{i +

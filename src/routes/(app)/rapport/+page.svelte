@@ -130,7 +130,7 @@
 	}
 </script>
 
-<main class="flex min-h-[calc(100vh-4rem)] flex-col bg-background text-foreground">
+<main class="flex min-h-[calc(100dvh-4rem)] flex-col bg-background text-foreground">
 	<div
 		class="sticky top-16 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-sidebar-border bg-card/80 px-4 py-3 backdrop-blur-sm"
 	>

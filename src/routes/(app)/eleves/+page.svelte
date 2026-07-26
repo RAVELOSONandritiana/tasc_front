@@ -33,7 +33,7 @@
 	}
 </script>
 
-<main class="flex h-screen flex-col bg-background text-foreground">
+<main class="flex min-h-[100dvh] flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
 		<div class="sticky top-0 z-10 border-b border-sidebar-border bg-background p-4 md:p-6">
 			<div class="space-y-4">
@@ -70,7 +70,7 @@
 				<!-- Filters -->
 				<Card class="animate-slide-up stagger-1 p-4 opacity-0">
 					<div class="flex flex-wrap items-center gap-3">
-						<div class="min-w-48 flex-1">
+						<div class="flex-1">
 							<SearchInput placeholder="Rechercher un élève..." bind:value={searchText} />
 						</div>
 						<div class="flex items-center gap-2">

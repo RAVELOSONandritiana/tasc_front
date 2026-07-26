@@ -27,6 +27,7 @@ import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
 import { deletePbImage } from '$lib/pocketbase/pocketbase';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
+import { formatClasseNom } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const classe = await getClasseById(params.id);
@@ -36,7 +37,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const mappedClasse = {
 		id: classe.id,
-		name: classe.nom || `Niveau ${classe.niveau}`,
+		name: formatClasseNom(classe.niveau, classe.nom) || `Niveau ${classe.niveau}`,
 		niveau: classe.niveau,
 		series: classe.serie || '',
 		eleves: classe.elevesCount,

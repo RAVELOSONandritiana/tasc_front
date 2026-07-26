@@ -74,7 +74,7 @@
 	}
 </script>
 
-<div class="min-h-full bg-sidebar text-sidebar-foreground">
+<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
 	<header
 		class="flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 backdrop-blur-sm"
 	>

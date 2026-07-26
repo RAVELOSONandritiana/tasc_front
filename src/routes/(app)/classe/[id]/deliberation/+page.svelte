@@ -76,10 +76,10 @@
 	}
 </script>
 
-<div class="flex min-h-full bg-sidebar text-sidebar-foreground">
+<div class="flex flex-1 flex-col md:flex-row bg-sidebar text-sidebar-foreground">
 	<!-- LISTE DES ÉLÈVES (profil de la classe) -->
 	<aside
-		class="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 md:block"
+		class="hidden md:block md:sticky md:top-16 w-64 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-3"
 	>
 		<h2 class="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 			Élèves ({total})
@@ -120,7 +120,7 @@
 	</aside>
 
 	<!-- FICHE DE DÉLIBÉRATION -->
-	<div class="flex-1 p-4">
+	<div class="flex-1 overflow-y-auto p-4">
 		<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 			<h1 class="text-xl font-bold">
 				Délibération — {data.classe
@@ -344,7 +344,7 @@
 				</div>
 
 				<!-- NAVIGATION -->
-				<div class="flex items-center justify-between pt-1">
+				<div class="flex flex-wrap items-center justify-between gap-3 pt-1">
 					<Button
 						variant="outline"
 						disabled={!selectedId || elevesClasse.findIndex((e) => e.id === selectedId) === 0}

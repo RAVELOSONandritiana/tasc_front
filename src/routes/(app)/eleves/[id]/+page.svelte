@@ -93,8 +93,9 @@
 	const autresIncidents = incidents.filter((i) => i.type !== 'note' && i.type !== 'erreur');
 </script>
 
-<main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
-	<div class="space-y-6">
+<main class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
+	<div class="flex-1 overflow-y-auto">
+		<div class="space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-bold">Profil de l'élève</h1>
 			<Button variant="outline" onclick={() => goto('/eleves')}>Retour</Button>
@@ -654,5 +655,6 @@
 				{/if}
 			</div>
 		{/if}
+		</div>
 	</div>
 </main>

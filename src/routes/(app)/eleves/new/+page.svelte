@@ -148,7 +148,7 @@
 	}
 </script>
 
-<main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
+<main class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
 	<div>
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouvel élève</h1>

@@ -122,7 +122,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Champs requis manquants' });
 		}
 
-		const validTypes = ['INFO', 'ERREUR', 'NOTE', 'ABSENT'] as const;
+		const validTypes = ['INFO', 'ERREUR', 'NOTE'] as const;
 		if (!validTypes.includes(type as (typeof validTypes)[number])) {
 			return fail(400, { error: 'Type invalide' });
 		}
@@ -181,8 +181,7 @@ export const actions: Actions = {
 			const typeLabels: Record<string, string> = {
 				INFO: 'Information',
 				ERREUR: 'Erreur',
-				NOTE: 'Note positive',
-				ABSENT: 'Absence'
+				NOTE: 'Note positive'
 			};
 			await createNotification({
 				title: `Nouvel incident : ${typeLabels[type] || type}`,

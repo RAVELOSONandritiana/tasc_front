@@ -34,7 +34,7 @@
 
 <header class="sticky top-16 border-b border-sidebar-border bg-sidebar/80 backdrop-blur-sm shadow-sm">
 	<nav>
-		<ul class="flex items-center justify-start gap-x-3 px-4 py-2">
+		<ul class="flex flex-wrap items-center justify-start gap-x-3 gap-y-2 px-4 py-2">
 			{#each navigation as n (n.label)}
 				<Button
 					class="px-3"

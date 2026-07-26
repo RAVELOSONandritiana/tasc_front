@@ -8,10 +8,37 @@ export function cn(...inputs: ClassValue[]) {
 export function formatClasseNom(niveau: number | undefined | null, nom: string | undefined | null): string {
 	if (niveau === null || niveau === undefined) return 'Non affecté';
 	const label = niveau === 0 ? '2nd' : niveau === 1 ? '1ere' : 'Tle';
-	const valeur = (nom || '').trim();
-	if (valeur.toLowerCase().startsWith(`${label.toLowerCase()} `)) {
-		return valeur;
+
+	const prefixes = niveau === 0
+		? ['2nd', '2nde']
+		: niveau === 1
+			? ['1ere', '1ère', '1er']
+			: ['tle', 'terminale'];
+
+	let valeur = (nom || '').trim();
+
+	while (true) {
+		const normalized = valeur
+			.toLowerCase()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '');
+
+		let stripped = false;
+		for (const prefix of prefixes) {
+			const prefixLower = prefix.toLowerCase();
+			if (
+				normalized === prefixLower ||
+				normalized.startsWith(`${prefixLower} `) ||
+				normalized.startsWith(`${prefixLower}-`)
+			) {
+				valeur = valeur.slice(prefix.length).trim();
+				stripped = true;
+				break;
+			}
+		}
+		if (!stripped || valeur === '') break;
 	}
+
 	return `${label} ${valeur}`.trim();
 }
 

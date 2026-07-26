@@ -72,8 +72,9 @@
 	}
 </script>
 
-<main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
-	<div>
+<main class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
+	<div class="flex-1 overflow-y-auto">
+		<div>
 		<div class="mb-6 space-y-2">
 			<h1 class="text-2xl font-bold">Nouveau personnel</h1>
 			<p class="text-sm text-muted-foreground">Tous les champs sont obligatoires sauf l'email.</p>
@@ -376,5 +377,6 @@
 				</Button>
 			</div>
 		</form>
+		</div>
 	</div>
 </main>

@@ -28,8 +28,9 @@
 	const stats = prof.stats;
 </script>
 
-<main class="min-h-full bg-sidebar p-4 text-sidebar-foreground">
-	<div class="space-y-6">
+<main class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
+	<div class="flex-1 overflow-y-auto">
+		<div class="space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-bold">Profil de l'enseignant</h1>
 			<Button variant="outline" onclick={() => goto('/enseignant')}>Retour</Button>
@@ -152,5 +153,6 @@
 				</div>
 			</Card>
 		{/if}
+		</div>
 	</div>
 </main>

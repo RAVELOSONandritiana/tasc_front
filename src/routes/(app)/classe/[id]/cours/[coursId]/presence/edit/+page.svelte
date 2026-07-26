@@ -32,7 +32,7 @@
 	}
 </script>
 
-<div class="min-h-screen bg-sidebar text-sidebar-foreground">
+<div class="min-h-[100dvh] bg-sidebar text-sidebar-foreground">
 	<header
 		class="flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 backdrop-blur-sm"
 	>

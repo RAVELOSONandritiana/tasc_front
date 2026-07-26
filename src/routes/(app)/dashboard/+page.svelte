@@ -347,8 +347,8 @@
 				{#if classSizes.length === 0}
 					<p class="text-sm text-muted-foreground">Aucune donnée</p>
 				{:else}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 500 260" class="h-full w-full">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 500 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre d'élèves par classe
 							</text>
@@ -386,8 +386,8 @@
 				{#if incidentsByType.length === 0}
 					<p class="text-sm text-muted-foreground">Aucun incident</p>
 				{:else}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 260" class="h-full w-full">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 400 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Distribution des incidents
 							</text>
@@ -422,21 +422,22 @@
 				{#if incidentsTrend.length === 0}
 					<p class="text-sm text-muted-foreground">Aucune donnée</p>
 				{:else}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 260" class="h-full w-full">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 400 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Évolution sur la période sélectionnée
 							</text>
 							<path d={trendArea} fill="rgb(59 130 246 / 0.1)" stroke="none" />
 							<path d={trendPath} fill="none" stroke="rgb(59 130 246 / 0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							{#each trendPoints as p, i (i)}
-								<circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="white" stroke-width="2" />
-								{#if p.showLabel}
-									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
-										{p.date}
-									</text>
-								{/if}
-							{/each}
+						{#each trendPoints as p, i (i)}
+							<circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="white" stroke-width="2" />
+							<text x={p.x} y={p.y - 8} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{p.count}</text>
+							{#if p.showLabel}
+								<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">
+									{p.date}
+								</text>
+							{/if}
+						{/each}
 						</svg>
 					</div>
 				{/if}
@@ -452,8 +453,8 @@
 				{#if delaysByClass.length === 0}
 					<p class="text-sm text-muted-foreground">Aucun retard enregistré</p>
 				{:else}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 260" class="h-full w-full">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 400 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre de retards
 							</text>
@@ -485,18 +486,18 @@
 					<UserX class="size-5 text-primary" />
 					<h2 class="font-semibold">Absences (période)</h2>
 				</div>
-				<div class="h-64 w-full flex items-center justify-center">
-					<div class="text-center">
-						<p class="text-5xl font-bold text-red-500">{teacherAbsences}</p>
-						<p class="text-sm text-muted-foreground mt-2">
-							{teacherAbsences === 1 ? 'absence enregistrée' : 'absences enregistrées'}
-						</p>
-						<div class="mt-4 flex items-center justify-center gap-2">
-							<div class="h-2 w-2 rounded-full bg-red-500"></div>
-							<span class="text-xs text-muted-foreground">du {data.rangeStart} au {data.rangeEnd}</span>
-						</div>
+			<div class="h-[240px] w-full flex items-center justify-center">
+				<div class="text-center">
+					<p class="text-5xl font-bold text-red-500">{teacherAbsences}</p>
+					<p class="text-sm text-muted-foreground mt-2">
+						{teacherAbsences === 1 ? 'absence enregistrée' : 'absences enregistrées'}
+					</p>
+					<div class="mt-4 flex items-center justify-center gap-2">
+						<div class="h-2 w-2 rounded-full bg-red-500"></div>
+						<span class="text-xs text-muted-foreground">du {data.rangeStart} au {data.rangeEnd}</span>
 					</div>
 				</div>
+			</div>
 			</Card>
 		</div>
 
@@ -512,40 +513,45 @@
 					{@const total = absenceJustification.reduce((sum, d) => sum + d.count, 0)}
 					{@const radius = 70}
 					{@const cx = 100}
-					{@const cy = 110}
+					{@const cy = 100}
 					{@const circumference = 2 * Math.PI * radius}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 200 220" class="h-full w-full">
-							{#each absenceJustification as item, i (item.label)}
-								{@const percent = total > 0 ? item.count / total : 0}
-								{@const dashArray = `${percent * circumference} ${circumference}`}
-								{@const dashOffset = -(absenceJustification.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
-								{@const labelAngle = (absenceJustification.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0) + percent / 2) * 2 * Math.PI - Math.PI / 2}
-								{@const labelX = cx + (radius + 30) * Math.cos(labelAngle)}
-								{@const labelY = cy + (radius + 30) * Math.sin(labelAngle)}
-								<circle
-									cx={cx}
-									cy={cy}
-									r={radius}
-									fill="transparent"
-									stroke={item.color}
-									stroke-width="35"
-									stroke-dasharray={dashArray}
-									stroke-dashoffset={dashOffset}
-									class="hover:opacity-80 transition-opacity"
-								/>
-								<text x={labelX} y={labelY} text-anchor="middle" class="fill-foreground text-[10px] font-medium">
-									{item.label}: {item.count}
+					<div class="flex flex-col items-center">
+						<div class="h-[240px] w-full flex items-center justify-center">
+							<svg viewBox="0 0 200 200" class="h-full max-h-[210px] min-w-[200px] max-w-[260px]">
+								{#each absenceJustification as item, i (item.label)}
+									{@const percent = total > 0 ? item.count / total : 0}
+									{@const dashArray = `${percent * circumference} ${circumference}`}
+									{@const dashOffset = -(absenceJustification.slice(0, i).reduce((sum, prev) => sum + (total > 0 ? prev.count / total : 0), 0)) * circumference}
+									<circle
+										cx={cx}
+										cy={cy}
+										r={radius}
+										fill="transparent"
+										stroke={item.color}
+										stroke-width="35"
+										stroke-dasharray={dashArray}
+										stroke-dashoffset={dashOffset}
+										class="hover:opacity-80 transition-opacity"
+									/>
+								{/each}
+								<circle cx={cx} cy={cy} r={radius - 15} fill="var(--color-background)" />
+								<text x={cx} y={cy - 2} text-anchor="middle" dominant-baseline="middle" class="fill-foreground text-lg font-bold">
+									{total}
 								</text>
+								<text x={cx} y={cy + 16} text-anchor="middle" dominant-baseline="middle" class="fill-muted-foreground text-[10px]">
+									total
+								</text>
+							</svg>
+						</div>
+						<div class="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+							{#each absenceJustification as item (item.label)}
+								<div class="flex items-center gap-2">
+									<span class="h-2.5 w-2.5 rounded-full" style="background-color: {item.color}"></span>
+									<span class="text-xs text-muted-foreground">{item.label}</span>
+									<span class="text-xs font-semibold text-foreground">{item.count}</span>
+								</div>
 							{/each}
-							<circle cx={cx} cy={cy} r={radius - 15} fill="var(--color-background)" />
-							<text x={cx} y={cy - 2} text-anchor="middle" class="fill-foreground text-lg font-bold">
-								{total}
-							</text>
-							<text x={cx} y={cy + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">
-								total
-							</text>
-						</svg>
+						</div>
 					</div>
 				{/if}
 			</Card>
@@ -558,8 +564,8 @@
 				{#if notesDistribution.length === 0}
 					<p class="text-sm text-muted-foreground">Aucune donnée</p>
 				{:else}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 260" class="h-full w-full">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 400 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Répartition sur 20
 							</text>
@@ -581,8 +587,8 @@
 				{#if avgNotesByClass.length === 0}
 					<p class="text-sm text-muted-foreground">Aucune note</p>
 				{:else}
-					<div class="h-64 w-full overflow-x-auto">
-						<svg viewBox="0 0 500 260" class="h-full w-full min-w-[360px]">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 500 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Moyenne (/20)
 							</text>
@@ -606,8 +612,8 @@
 				{#if incidentsByClass.length === 0}
 					<p class="text-sm text-muted-foreground">Aucun incident</p>
 				{:else}
-					<div class="h-64 w-full overflow-x-auto">
-						<svg viewBox="0 0 500 260" class="h-full w-full min-w-[360px]">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 500 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Nombre d'incidents
 							</text>
@@ -629,20 +635,29 @@
 				{#if evolution.length === 0}
 					<p class="text-sm text-muted-foreground">Aucune donnée</p>
 				{:else}
-					<div class="h-64 w-full">
-						<svg viewBox="0 0 400 260" class="h-full w-full">
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 400 260" class="h-full max-h-[210px] min-w-[320px]">
 							<text x="200" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
 								Sur la période sélectionnée
 							</text>
 							<path d={incPath} fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
 							<path d={absPath} fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 							<path d={retPath} fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							{#each absLine as p, i (i)}
-								<circle cx={p.x} cy={p.y} r="3" fill="#ef4444" stroke="white" stroke-width="1.5" />
-								{#if p.showLabel}
-									<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">{p.date}</text>
-								{/if}
-							{/each}
+						{#each absLine as p, i (i)}
+							<circle cx={p.x} cy={p.y} r="3" fill="#ef4444" stroke="white" stroke-width="1.5" />
+							<text x={p.x} y={p.y - 8} text-anchor="middle" class="fill-red-500 text-[10px] font-semibold">{p.count}</text>
+							{#if p.showLabel}
+								<text x={p.x} y="235" text-anchor="middle" class="fill-muted-foreground text-xs">{p.date}</text>
+							{/if}
+						{/each}
+						{#each retLine as p, i (i)}
+							<circle cx={p.x} cy={p.y} r="3" fill="#f59e0b" stroke="white" stroke-width="1.5" />
+							<text x={p.x} y={p.y - 8} text-anchor="middle" class="fill-amber-500 text-[10px] font-semibold">{p.count}</text>
+						{/each}
+						{#each incLine as p, i (i)}
+							<circle cx={p.x} cy={p.y} r="3" fill="#3b82f6" stroke="white" stroke-width="1.5" opacity="0.6" />
+							<text x={p.x} y={p.y - 8} text-anchor="middle" class="fill-blue-500 text-[10px] font-semibold opacity-0.6">{p.count}</text>
+						{/each}
 						</svg>
 					</div>
 					<div class="mt-2 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
