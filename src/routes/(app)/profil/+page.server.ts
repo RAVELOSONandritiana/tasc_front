@@ -74,6 +74,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			dateInscription: compte.dateInscription.toISOString().split('T')[0],
 			adresse: compte.profil?.adresse || compte.personne.domicile || '',
 			bio: compte.profil?.bio || '',
+			matricule: compte.matricule,
 			stats: getStats()
 		},
 		activities
@@ -195,6 +196,37 @@ export const actions: Actions = {
 			return { success: true };
 		} catch {
 			return fail(500, { error: 'Erreur lors du changement de mot de passe' });
+		}
+	},
+
+	changeMatricule: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'Non autorisé' });
+		}
+
+		const data = await request.formData();
+		const matricule = (data.get('matricule') as string | null)?.trim() ?? '';
+
+		if (!matricule) {
+			return fail(400, { error: 'Le matricule est requis' });
+		}
+
+		const existing = await prisma.compte.findUnique({ where: { matricule } });
+		if (existing && existing.id !== locals.user.userId) {
+			return fail(400, { error: 'Ce matricule est déjà utilisé' });
+		}
+
+		try {
+			await prisma.compte.update({
+				where: { id: locals.user.userId },
+				data: { matricule }
+			});
+			logActivity(locals.user, 'modification_compte', 'Changement de matricule').catch(
+				() => {}
+			);
+			return { success: true };
+		} catch {
+			return fail(500, { error: 'Erreur lors du changement de matricule' });
 		}
 	}
 };

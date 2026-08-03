@@ -4,6 +4,15 @@ import { hashPassword } from './auth';
 const ADMIN_PASSWORD = '666666';
 
 export async function ensureAdmin() {
+	const DEFAULT_MATRICULE = '666666';
+
+	const defaultAdmin = await prisma.compte.findUnique({
+		where: { matricule: DEFAULT_MATRICULE }
+	});
+	if (defaultAdmin) return defaultAdmin;
+
+	// Si le matricule par défaut a été modifié mais qu'un compte admin existe déjà,
+	// on ne le recrée pas.
 	const existing = await prisma.compte.findFirst({
 		where: { role: 'ADMINISTRATEUR' }
 	});
@@ -21,7 +30,7 @@ export async function ensureAdmin() {
 
 	const compte = await prisma.compte.create({
 		data: {
-			matricule: '666666',
+			matricule: DEFAULT_MATRICULE,
 			password: hashPassword(ADMIN_PASSWORD),
 			role: 'ADMINISTRATEUR',
 			statut: 'ACTIF',

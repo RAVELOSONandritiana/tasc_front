@@ -28,11 +28,14 @@
 	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 
-	const { data }: PageProps = $props();
+	const { data, form }: PageProps = $props();
 
 	let isEditing = $state(false);
 	let saving = $state(false);
 	let saved = $state(false);
+	let matriculeSaved = $state(false);
+	let matriculeError = $state('');
+	let editMatricule = $state(data.profil.matricule);
 
 	let editNom = $state(data.profil.nom);
 	let editPrenom = $state(data.profil.prenom);
@@ -479,6 +482,61 @@
 				<div class="mt-4">
 					<Button type="submit" variant="default">Changer le mot de passe</Button>
 				</div>
+			</form>
+		</Card>
+
+		<!-- Matricule Change -->
+		<Card class="animate-slide-up stagger-8 p-5 opacity-0">
+			<h3 class="mb-1 flex items-center gap-2 font-semibold">
+				<Shield class="size-4 text-primary" />
+				Identifiant de connexion (matricule)
+			</h3>
+			<p class="mb-4 text-xs text-muted-foreground">
+				Le matricule sert à vous connecter. Après modification, utilisez le nouveau matricule
+				lors de votre prochaine connexion.
+			</p>
+			{#if matriculeSaved}
+				<div
+					class="animate-fade-in mb-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-500"
+				>
+					<CheckCircle2 class="size-4" />
+					Matricule mis à jour
+				</div>
+			{:else if matriculeError}
+				<div
+					class="animate-fade-in mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+				>
+					{matriculeError}
+				</div>
+			{/if}
+			<form
+				method="POST"
+				action="?/changeMatricule"
+				class="flex flex-col gap-4 sm:flex-row sm:items-end"
+				use:enhance={() => {
+					matriculeError = '';
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							matriculeSaved = true;
+							matriculeError = '';
+							setTimeout(() => (matriculeSaved = false), 3000);
+						} else if (result.type === 'failure') {
+							matriculeSaved = false;
+							matriculeError =
+								((result.data as { error?: string })?.error ??
+									'Modification impossible');
+						}
+					};
+				}}
+			>
+				<div class="grid w-full gap-2 sm:max-w-xs">
+					<Label for="matricule">Nouveau matricule</Label>
+					<Input id="matricule" name="matricule" bind:value={editMatricule} placeholder="Ex: ADM-001" />
+				</div>
+				<Button type="submit" variant="default" class="gap-2">
+					<Save class="size-4" />
+					Enregistrer
+				</Button>
 			</form>
 		</Card>
 	</div>
