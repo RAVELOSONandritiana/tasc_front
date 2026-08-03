@@ -21,7 +21,8 @@
 	let resetSuccess = $derived(form?.resetSuccess || '');
 </script>
 
-<div class="flex min-h-screen items-center justify-center px-4">
+<div class="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+	<img src="/logos/logo-right.png" alt="Logo Tasc" class="h-16 w-auto object-contain" />
 	{#if showReset}
 		<form
 			class="w-full max-w-sm md:max-w-lg"

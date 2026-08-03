@@ -6,7 +6,6 @@
 	import type { PageProps } from './$types';
 	import { formatClasseNom } from '$lib/utils';
 	import { deserialize } from '$app/forms';
-	import { page } from '$app/stores';
 
 	const { data }: PageProps = $props();
 
@@ -70,7 +69,8 @@
 	function initialesEleve(eleve: EleveCours): string {
 		return `${(eleve.nom || '')[0] ?? ''}${(eleve.prenom || '')[0] ?? ''}`.toUpperCase();
 	}
-	function numeroClasse(eleve: EleveCours): string {		const ordre =
+	function numeroClasse(eleve: EleveCours): string {
+		const ordre =
 			[...elevesClasse]
 				.filter((e) => e.sexe === eleve.sexe)
 				.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'))
@@ -85,14 +85,12 @@
 			const fd = new FormData();
 			fd.append('inscriptionId', inscriptionId);
 			fd.append('resultat', resultat);
-			const res = await fetch(
-				`/classe/${$page.params.id}/deliberation?setResultat`,
-				{
-					method: 'POST',
-					body: fd,
-					credentials: 'same-origin'
-				}
-			);
+			const res = await fetch(`?/setResultat`, {
+				method: 'POST',
+				headers: { 'x-sveltekit-action': 'true' },
+				body: fd,
+				credentials: 'same-origin'
+			});
 			const result = deserialize(await res.text());
 			if (result.type === 'success') {
 				const eleve = elevesClasse.find((e) => e.id === eleveId);
@@ -114,12 +112,12 @@
 	}
 </script>
 
-<div class="flex flex-1 flex-col md:flex-row bg-sidebar text-sidebar-foreground">
+<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground md:flex-row">
 	<!-- LISTE DES ÉLÈVES (profil de la classe) -->
 	<aside
-		class="hidden md:block md:sticky md:top-16 w-64 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-3"
+		class="hidden w-64 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 md:sticky md:top-16 md:block"
 	>
-		<h2 class="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+		<h2 class="mb-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
 			Élèves ({total})
 		</h2>
 		<div class="space-y-1">
@@ -153,11 +151,15 @@
 						{numeroClasse(e)}
 					</span>
 					{#if e.resultat === 'ADMIS'}
-						<span class="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600">
+						<span
+							class="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600"
+						>
 							Admis
 						</span>
 					{:else if e.resultat === 'AJOURNE'}
-						<span class="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+						<span
+							class="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive"
+						>
 							Ajourné
 						</span>
 					{/if}
@@ -170,9 +172,7 @@
 	<div class="flex-1 overflow-y-auto p-4">
 		<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 			<h1 class="text-xl font-bold">
-				Délibération — {data.classe
-					? formatClasseNom(data.classe.niveau, data.classe.nom)
-					: ''}
+				Délibération — {data.classe ? formatClasseNom(data.classe.niveau, data.classe.nom) : ''}
 			</h1>
 			<!-- Sélecteur sur mobile -->
 			<select
@@ -196,52 +196,51 @@
 				<!-- PROFIL DE L'ÉLÈVE -->
 				<div class="rounded-xl border border-sidebar-border bg-card p-5 shadow-sm">
 					<div class="flex flex-wrap items-start justify-between gap-4">
-					<div class="flex items-start gap-4">
-						<Avatar.Root class="size-16 shrink-0">
-							{#if selected.url}
-								<Avatar.Image src={selected.url} alt="{selected.nom} {selected.prenom}" />
-							{/if}
-							<Avatar.Fallback class="text-lg">{initialesEleve(selected)}</Avatar.Fallback>
-						</Avatar.Root>
-						<div>
-							<h2 class="text-xl font-bold">{selected.nom} {selected.prenom}</h2>
-							<div
-								class="mt-1 grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-muted-foreground sm:grid-cols-3"
-							>
-								<span
-									>N° classe : <span class="font-semibold text-foreground"
-										>{numeroClasse(selected)}</span
-									></span
+						<div class="flex items-start gap-4">
+							<Avatar.Root class="size-16 shrink-0">
+								{#if selected.url}
+									<Avatar.Image src={selected.url} alt="{selected.nom} {selected.prenom}" />
+								{/if}
+								<Avatar.Fallback class="text-lg">{initialesEleve(selected)}</Avatar.Fallback>
+							</Avatar.Root>
+							<div>
+								<h2 class="text-xl font-bold">{selected.nom} {selected.prenom}</h2>
+								<div
+									class="mt-1 grid grid-cols-2 gap-x-8 gap-y-1 text-sm text-muted-foreground sm:grid-cols-3"
 								>
-								<span
-									>IM : <span class="font-semibold text-foreground"
-										>{selected.im || '—'}</span
-									></span
-								>
-								<span
-									>Sexe : <span class="font-semibold text-foreground"
-										>{selected.sexe === 'F' ? 'Fille' : 'Garçon'}</span
-									></span
-								>
-								<span
-									>Naissance : <span class="font-semibold text-foreground"
-										>{selected.dateNaissance
-											? new Date(selected.dateNaissance).toLocaleDateString('fr-FR')
-											: '—'}</span
-									></span
-								>
-								<span
-									>Situation : <span class="font-semibold text-foreground"
-										>{selected.redoublant ? 'Redoublant' : 'Passant'}</span
-									></span
-								>
-								<span
-									>Domicile : <span class="font-semibold text-foreground"
-										>{selected.domicile || '—'}</span
-									></span
-								>
+									<span
+										>N° classe : <span class="font-semibold text-foreground"
+											>{numeroClasse(selected)}</span
+										></span
+									>
+									<span
+										>IM : <span class="font-semibold text-foreground">{selected.im || '—'}</span
+										></span
+									>
+									<span
+										>Sexe : <span class="font-semibold text-foreground"
+											>{selected.sexe === 'F' ? 'Fille' : 'Garçon'}</span
+										></span
+									>
+									<span
+										>Naissance : <span class="font-semibold text-foreground"
+											>{selected.dateNaissance
+												? new Date(selected.dateNaissance).toLocaleDateString('fr-FR')
+												: '—'}</span
+										></span
+									>
+									<span
+										>Situation : <span class="font-semibold text-foreground"
+											>{selected.redoublant ? 'Redoublant' : 'Passant'}</span
+										></span
+									>
+									<span
+										>Domicile : <span class="font-semibold text-foreground"
+											>{selected.domicile || '—'}</span
+										></span
+									>
+								</div>
 							</div>
-						</div>
 						</div>
 						<div
 							class="flex flex-col items-center rounded-lg border border-sidebar-border bg-muted/30 px-6 py-3"
@@ -271,19 +270,18 @@
 							</span>
 						</div>
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="font-semibold text-sm">Résultat :</span>
+							<span class="text-sm font-semibold">Résultat :</span>
 							{#if selected.resultat === 'ADMIS'}
 								<Button
 									size="sm"
 									variant="default"
 									class="bg-emerald-600 hover:bg-emerald-700"
 									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() =>
-										setResultat(selected.id, selected.inscriptionId!, 'AJOURNE')}
+									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'AJOURNE')}
 								>
-									{savingId === selected.id ? (
+									{#if savingId === selected.id}
 										<Save class="mr-1 size-3 animate-spin" />
-									) : null}
+									{/if}
 									Passer en ajourné
 								</Button>
 							{:else if selected.resultat === 'AJOURNE'}
@@ -292,12 +290,11 @@
 									variant="default"
 									class="bg-destructive hover:bg-destructive/90"
 									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() =>
-										setResultat(selected.id, selected.inscriptionId!, 'ADMIS')}
+									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'ADMIS')}
 								>
-									{savingId === selected.id ? (
+									{#if savingId === selected.id}
 										<Save class="mr-1 size-3 animate-spin" />
-									) : null}
+									{/if}
 									Passer en admis
 								</Button>
 							{:else}
@@ -306,12 +303,11 @@
 									variant="outline"
 									class="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
 									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() =>
-										setResultat(selected.id, selected.inscriptionId!, 'ADMIS')}
+									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'ADMIS')}
 								>
-									{savingId === selected.id ? (
+									{#if savingId === selected.id}
 										<Save class="mr-1 size-3 animate-spin" />
-									) : null}
+									{/if}
 									Admis
 								</Button>
 								<Button
@@ -319,19 +315,18 @@
 									variant="outline"
 									class="border-destructive text-destructive hover:bg-destructive/5"
 									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() =>
-										setResultat(selected.id, selected.inscriptionId!, 'AJOURNE')}
+									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'AJOURNE')}
 								>
-									{savingId === selected.id ? (
+									{#if savingId === selected.id}
 										<Save class="mr-1 size-3 animate-spin" />
-									) : null}
+									{/if}
 									Ajourné
 								</Button>
 							{/if}
 							{#if saveSuccessId === selected.id}
-								<span class="text-xs text-emerald-600 font-medium">Sauvegardé</span>
-						{/if}
-					</div>
+								<span class="text-xs font-medium text-emerald-600">Sauvegardé</span>
+							{/if}
+						</div>
 						<div class="flex items-center gap-2 text-sm">
 							<span class="font-semibold">Mention :</span>
 							<span class="font-semibold text-foreground">{appreciation(moyenneG) || '—'}</span>
@@ -341,7 +336,9 @@
 
 				<!-- RELEVÉ DE NOTES -->
 				<div class="overflow-hidden rounded-xl border border-sidebar-border bg-card shadow-sm">
-					<div class="border-b border-sidebar-border px-4 py-2 text-sm font-semibold">Relevé de notes</div>
+					<div class="border-b border-sidebar-border px-4 py-2 text-sm font-semibold">
+						Relevé de notes
+					</div>
 					<div class="overflow-x-auto">
 						<table class="w-full text-sm">
 							<thead>
@@ -469,10 +466,8 @@
 					</span>
 					<Button
 						variant="default"
-						disabled={
-							!selectedId ||
-							elevesClasse.findIndex((e) => e.id === selectedId) === elevesClasse.length - 1
-						}
+						disabled={!selectedId ||
+							elevesClasse.findIndex((e) => e.id === selectedId) === elevesClasse.length - 1}
 						onclick={() => {
 							const i = elevesClasse.findIndex((e) => e.id === selectedId);
 							if (i < elevesClasse.length - 1) selectedId = elevesClasse[i + 1].id;

@@ -95,9 +95,7 @@
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
 				<div class="flex items-center gap-2.5">
-					<div class="flex size-8 items-center justify-center rounded-lg bg-primary">
-						<span class="text-sm font-bold text-primary-foreground">T</span>
-					</div>
+					<img src="/logos/logo-right.png" alt="Logo Tasc" class="size-9 rounded-lg object-contain" />
 					<div>
 						<span class="text-lg font-bold tracking-tight">Tasc</span>
 						<p class="text-xs text-sidebar-foreground/60">Gestion scolaire</p>

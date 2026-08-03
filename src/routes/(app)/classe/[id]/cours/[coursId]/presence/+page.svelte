@@ -15,14 +15,27 @@
 	let enCours = $state(false);
 	let expandedSeance = $state<string | null>(null);
 
+	// Vrai si une séance était déjà en cours au chargement de la page, c'est-à-dire
+	// que le professeur revient sur un cours non terminé : l'état précédent a été restauré.
+	const seanceExistaitAuChargement = Boolean(data.seance);
+
+	// Identifiant de la séance dont l'état local a déjà été initialisé.
+	// On ne réinitialise les présences que lorsqu'on (ré)ouvre une séance,
+	// afin de ne jamais écraser les modifications locales en cours et de
+	// toujours restaurer l'état précédent quand le professeur revient sur
+	// un cours non terminé.
+	let seanceInitialiseeId = $state<string | null>(null);
+
 	$effect(() => {
-		if (data.seance) {
+		const seance = data.seance;
+		if (seance && seance.id !== seanceInitialiseeId) {
 			const map = data.presencesMap || {};
 			const init: Record<string, Statut> = {};
 			data.eleves.forEach((e) => {
 				init[e.id] = map[e.id] || 'PRESENT';
 			});
 			presences = init;
+			seanceInitialiseeId = seance.id;
 		}
 	});
 
@@ -124,6 +137,14 @@
 		</div>
 	{:else}
 		<div class="space-y-4 p-4">
+			{#if seanceExistaitAuChargement}
+				<div
+					class="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground"
+				>
+					<Clock class="size-4 text-primary" />
+					Séance en cours — l'appel a été restauré, vous pouvez continuer à le modifier.
+				</div>
+			{/if}
 			<div class="grid grid-cols-3 gap-3">
 				<button
 					type="button"

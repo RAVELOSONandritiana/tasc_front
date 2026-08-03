@@ -182,7 +182,7 @@ export const actions: Actions = {
 
 		if (locals.user?.role !== 'SURVEILLANT' && locals.user?.role !== 'ADMINISTRATEUR') {
 			return fail(403, {
-				error: "Seuls les surveillants et administrateurs peuvent délibérer"
+				error: 'Seuls les surveillants et administrateurs peuvent délibérer'
 			});
 		}
 
