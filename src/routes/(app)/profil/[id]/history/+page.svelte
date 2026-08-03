@@ -129,7 +129,7 @@
 	const profileId = data.activities[0]?.compteId || '';
 </script>
 
-<main class="flex min-h-[100dvh] flex-col bg-background text-foreground">
+<main class="flex min-h-0 flex-1 flex-col bg-background text-foreground">
 	<div class="flex-1 overflow-y-auto">
 		<div class="p-4 md:p-6">
 			<div class="mb-4 flex items-center justify-between">

@@ -32,7 +32,7 @@
 	}
 </script>
 
-<header class="sticky top-16 border-b border-sidebar-border bg-sidebar/80 backdrop-blur-sm shadow-sm">
+<header class="sticky top-0 z-20 border-b border-sidebar-border bg-sidebar/80 backdrop-blur-sm shadow-sm">
 	<nav>
 		<ul class="flex flex-wrap items-center justify-start gap-x-3 gap-y-2 px-4 py-2">
 			{#each navigation as n (n.label)}

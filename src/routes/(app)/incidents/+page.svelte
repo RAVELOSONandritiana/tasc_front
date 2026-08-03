@@ -53,9 +53,9 @@
 	}
 </script>
 
-<main class="flex min-h-[calc(100dvh-4rem)] flex-col bg-background text-foreground">
+<main class="flex min-h-0 flex-1 flex-col bg-background text-foreground">
 	<div
-		class="animate-slide-down sticky top-16 z-40 flex items-center justify-between border-b border-sidebar-border bg-card/80 px-4 py-3 backdrop-blur-sm"
+		class="animate-slide-down sticky top-0 z-40 flex items-center justify-between border-b border-sidebar-border bg-card/80 px-4 py-3 backdrop-blur-sm"
 	>
 		<div class="flex items-center gap-3">
 			<div class="flex size-9 items-center justify-center rounded-lg bg-primary/10">

@@ -164,3 +164,45 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		administrateurNom
 	};
 };
+
+export const actions: Actions = {
+	setResultat: async ({ request, locals }) => {
+		const data = await request.formData();
+		const inscriptionId = data.get('inscriptionId') as string;
+		const resultat = (data.get('resultat') as string) || '';
+
+		if (!inscriptionId) {
+			return fail(400, { error: 'inscriptionId requis' });
+		}
+
+		const valeursValides = ['EN_ATTENTE', 'ADMIS', 'AJOURNE'];
+		if (!valeursValides.includes(resultat)) {
+			return fail(400, { error: 'Résultat invalide' });
+		}
+
+		if (locals.user?.role !== 'SURVEILLANT' && locals.user?.role !== 'ADMINISTRATEUR') {
+			return fail(403, {
+				error: "Seuls les surveillants et administrateurs peuvent délibérer"
+			});
+		}
+
+		try {
+			const inscription = await prisma.inscription.update({
+				where: { id: inscriptionId },
+				data: { resultat: resultat as 'EN_ATTENTE' | 'ADMIS' | 'AJOURNE' }
+			});
+
+			logActivity(
+				locals.user,
+				'deliberation' as any,
+				`Délibération : résultat de l'élève mis à jour → ${resultat}`
+			).catch(() => {});
+
+			broadcastRealtime({ entity: 'eleve', action: 'update', id: inscriptionId });
+
+			return { success: true, resultat: inscription.resultat };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de la délibération' });
+		}
+	}
+};

@@ -91,7 +91,7 @@
 <Sidebar.Provider>
 	<LoadingBar />
 	<PageLoader />
-	<div class="flex min-h-screen w-full overflow-x-clip overflow-y-auto">
+	<div class="flex h-screen w-full overflow-hidden">
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
 				<div class="flex items-center gap-2.5">
@@ -151,9 +151,9 @@
 		</Sidebar.Root>
 
 		<div class="flex flex-1 flex-col min-h-0 bg-background text-foreground">
-			<header
-				class="relative sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm"
-			>
+		<header
+			class="relative z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm"
+		>
 				<div class="flex items-center gap-3">
 					<Sidebar.Trigger />
 					{#if data.annees?.length}
@@ -169,7 +169,7 @@
 					/>
 				</div>
 			</header>
-			<div class="flex flex-1 flex-col">
+			<div class="flex flex-1 flex-col overflow-y-auto">
 				{@render children()}
 			</div>
 		</div>

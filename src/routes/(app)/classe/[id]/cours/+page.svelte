@@ -255,7 +255,7 @@
 	);
 </script>
 
-<div class="flex flex-1 flex-col bg-sidebar text-sidebar-foreground">
+<div class="flex min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
 	<div class="shrink-0 border-b border-sidebar-border bg-sidebar/80 p-4 backdrop-blur-sm">
 		<CoursePageHeader
 			classe={data.classe}
