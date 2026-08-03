@@ -1,9 +1,29 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+
+// Vérifie qu'un utilisateur a le droit d'accéder à la délibération d'une classe :
+// admins, surveillants, ou le professeur titulaire (responsable) de la classe.
+async function peutDeliberer(
+	locals: App.Locals,
+	titulairePersonneId?: string | null
+): Promise<boolean> {
+	const user = locals.user;
+	if (!user) return false;
+	if (user.role === 'ADMINISTRATEUR' || user.role === 'SURVEILLANT') return true;
+	if (user.role === 'ENSEIGNANT') {
+		if (!titulairePersonneId) return false;
+		const compte = await prisma.compte.findUnique({
+			where: { id: user.userId },
+			select: { personneId: true }
+		});
+		return !!compte && compte.personneId === titulairePersonneId;
+	}
+	return false;
+}
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const classe = await prisma.classe.findUnique({
@@ -30,6 +50,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			}
 		}
 	});
+
+	if (!(await peutDeliberer(locals, classe?.titulaire?.personneId))) {
+		throw redirect(303, '/classe');
+	}
 
 	const coursList = await prisma.cours.findMany({
 		where: { classeId: params.id },
@@ -180,14 +204,29 @@ export const actions: Actions = {
 			return fail(400, { error: 'Résultat invalide' });
 		}
 
-		if (locals.user?.role !== 'SURVEILLANT' && locals.user?.role !== 'ADMINISTRATEUR') {
+		const inscription = await prisma.inscription.findUnique({
+			where: { id: inscriptionId },
+			include: {
+				classe: {
+					include: {
+						titulaire: true
+					}
+				}
+			}
+		});
+
+		if (!inscription?.classe) {
+			return fail(404, { error: 'Inscription introuvable' });
+		}
+
+		if (!(await peutDeliberer(locals, inscription.classe.titulaire?.personneId))) {
 			return fail(403, {
-				error: 'Seuls les surveillants et administrateurs peuvent délibérer'
+				error: 'Vous n\'avez pas le droit de délibérer pour cette classe'
 			});
 		}
 
 		try {
-			const inscription = await prisma.inscription.update({
+			const updated = await prisma.inscription.update({
 				where: { id: inscriptionId },
 				data: { resultat: resultat as 'EN_ATTENTE' | 'ADMIS' | 'AJOURNE' }
 			});
@@ -200,7 +239,7 @@ export const actions: Actions = {
 
 			broadcastRealtime({ entity: 'eleve', action: 'update', id: inscriptionId });
 
-			return { success: true, resultat: inscription.resultat };
+			return { success: true, resultat: updated.resultat };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la délibération' });
 		}
