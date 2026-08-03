@@ -67,10 +67,17 @@ model Classe {
   @@map("classes")
 }
 
+enum ResultatEleve {
+  EN_ATTENTE
+  ADMIS
+  AJOURNE
+}
+
 /// Inscription d'un eleve dans une classe pour une annee donnee.
 model Inscription {
   id              String        @id @default(uuid())
   actif           Boolean       @default(true)
+  resultat        ResultatEleve @default(EN_ATTENTE)
   dateInscription DateTime      @default(now())
   eleveId         String
   classeId        String?

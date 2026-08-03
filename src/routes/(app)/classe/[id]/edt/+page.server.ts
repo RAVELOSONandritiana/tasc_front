@@ -206,6 +206,8 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const coursId = formData.get('coursId') as string;
 		const professeurId = (formData.get('professeurId') as string) || null;
+		const seanceId = formData.get('seanceId') as string | null;
+		const salleId = (formData.get('salleId') as string) || null;
 
 		if (!coursId) {
 			return fail(400, { error: 'Cours requis' });
@@ -213,6 +215,13 @@ export const actions: Actions = {
 
 		try {
 			await updateCours(coursId, { professeurId: professeurId || undefined });
+
+			if (seanceId) {
+				await prisma.seanceEDT.update({
+					where: { id: seanceId },
+					data: { salleId: salleId || undefined }
+				});
+			}
 		} catch (e: unknown) {
 			return fail(500, { error: (e as Error)?.message || 'Erreur lors du changement de professeur' });
 		}

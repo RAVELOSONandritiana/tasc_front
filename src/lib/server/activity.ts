@@ -25,6 +25,7 @@ export type ActivityAction =
 	| 'suppression_eleve'
 	| 'creation_rapport'
 	| 'suppression_rapport'
+	| 'deliberation'
 	| 'changement_mot_de_passe';
 
 export async function logActivity(

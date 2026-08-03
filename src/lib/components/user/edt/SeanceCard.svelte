@@ -58,10 +58,12 @@
 	let editDialogOpen = $state(false);
 	let editSeance = $state<SeanceEDT | null>(null);
 	let editProfesseurId = $state<string | null>(null);
+	let editSalleId = $state<string | null>(null);
 
 	function openEditSeance(seance: SeanceEDT) {
 		editSeance = seance;
 		editProfesseurId = professeurParCours[seance.coursId] ?? null;
+		editSalleId = seance.salleId ?? null;
 		editDialogOpen = true;
 	}
 </script>
@@ -203,13 +205,15 @@
 			<Dialog.Header>
 				<Dialog.Title>Modifier le cours</Dialog.Title>
 				<Dialog.Description>
-					Changer le professeur de « {editSeance?.coursNom} ». Le cours, les notes et les retards
-					existants sont conservés ; seule la liaison professeur est mise à jour.
+					Changer le professeur ou la salle de « {editSeance?.coursNom} ». Le cours, les notes et
+					les retards existants sont conservés ; seules la liaison professeur et la salle sont
+					mises à jour.
 				</Dialog.Description>
 			</Dialog.Header>
 			{#if editSeance}
 				<form method="POST" action="?/updateCoursProfesseur" use:loadingForm>
 					<input type="hidden" name="coursId" value={editSeance.coursId} />
+					<input type="hidden" name="seanceId" value={editSeance.id} />
 					<div class="grid gap-4 py-4">
 						<div class="grid gap-2">
 							<Label for="edit-professeur">Professeur</Label>
@@ -221,6 +225,19 @@
 								<NativeSelect.Option value="">Aucun</NativeSelect.Option>
 								{#each professeurs as p (p.id)}
 									<NativeSelect.Option value={p.id}>{p.nom}</NativeSelect.Option>
+								{/each}
+							</NativeSelect.Root>
+						</div>
+						<div class="grid gap-2">
+							<Label for="edit-salle">Salle</Label>
+							<NativeSelect.Root
+								bind:value={editSalleId}
+								class="w-full"
+								name="salleId"
+							>
+								<NativeSelect.Option value={null}>Sélectionner</NativeSelect.Option>
+								{#each salles as s (s.id)}
+									<NativeSelect.Option value={s.id}>{s.name} ({s.place} places)</NativeSelect.Option>
 								{/each}
 							</NativeSelect.Root>
 						</div>

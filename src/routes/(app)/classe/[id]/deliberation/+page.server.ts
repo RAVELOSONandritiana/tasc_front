@@ -1,6 +1,9 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
+import { fail } from '@sveltejs/kit';
+import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const classe = await prisma.classe.findUnique({
@@ -105,6 +108,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			sexe: i.eleve.sexe ?? null,
 			redoublant: i.eleve.redoublant ?? false,
 			actif: i.actif,
+			resultat: i.resultat || 'EN_ATTENTE',
+			inscriptionId: i.id,
 			url: i.eleve.personne.imageUrl || undefined,
 			notes:
 				i.eleve.notes?.map((n: any) => ({
