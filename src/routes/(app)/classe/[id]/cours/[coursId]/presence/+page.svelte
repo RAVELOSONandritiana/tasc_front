@@ -14,6 +14,7 @@
 	let presences = $state<Record<string, Statut>>({});
 	let enCours = $state(false);
 	let expandedSeance = $state<string | null>(null);
+	let stopError = $state<string | null>(null);
 
 	// Vrai si une séance était déjà en cours au chargement de la page, c'est-à-dire
 	// que le professeur revient sur un cours non terminé : l'état précédent a été restauré.
@@ -72,10 +73,25 @@
 
 	async function stop() {
 		const fd = new FormData();
-		await fetch(`/classe/${data.classeId}/cours/${data.coursId}/presence?/stopSeance`, {
-			method: 'POST',
-			body: fd
-		});
+		try {
+			const res = await fetch(`/classe/${data.classeId}/cours/${data.coursId}/presence?/stopSeance`, {
+				method: 'POST',
+				body: fd
+			});
+			// Ne quitte la page que si la séance a bien été clôturée, sinon
+			// la séance resterait EN_COURS et l'état des présences persisterait.
+			if (!res.ok) {
+				const texte = await res.text().catch(() => '');
+				console.error('stopSeance a échoué', res.status, texte);
+				stopError = 'La séance n\'a pas pu être terminée. Réessayez.';
+				return;
+			}
+		} catch (e) {
+			console.error('stopSeance', e);
+			stopError = 'La séance n\'a pas pu être terminée. Réessayez.';
+			return;
+		}
+		stopError = null;
 		goto(`/classe/${data.classeId}/cours`);
 	}
 
@@ -253,6 +269,11 @@
 				{/each}
 			</div>
 
+			{#if stopError}
+				<div class="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+					{stopError}
+				</div>
+			{/if}
 			<div class="sticky bottom-0 flex justify-end border-t border-sidebar-border bg-sidebar/95 py-3 backdrop-blur">
 				<Button variant="destructive" onclick={stop}>
 					<Square class="mr-2 size-4" />

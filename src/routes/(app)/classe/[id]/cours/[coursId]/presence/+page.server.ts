@@ -252,9 +252,6 @@ export const actions: Actions = {
 			where: { id: coursId },
 			select: { professeurId: true, participants: true }
 		});
-		if (cours?.professeurId && cours.professeurId !== profConnecteId) {
-			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le terminer' });
-		}
 
 		const seance = await prisma.seanceCours.findFirst({
 			where: { coursId, statut: 'EN_COURS' },
@@ -265,8 +262,19 @@ export const actions: Actions = {
 			return fail(400, { error: 'Aucune séance en cours' });
 		}
 
+		// On autorise le professeur titulaire du cours OU le professeur qui a
+		// réellement démarré la séance (utile en cas de désynchronisation entre
+		// cours.professeurId et la séance).
+		if (
+			seance.professeurId !== profConnecteId &&
+			cours?.professeurId !== profConnecteId
+		) {
+			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le terminer' });
+		}
+
 		const participants = cours?.participants || [];
 
+		try {
 		await prisma.$transaction(async (tx) => {
 			// Incrémente le nombre de cours terminés pour chaque élève participant.
 			for (const eleveId of participants) {
@@ -302,6 +310,10 @@ export const actions: Actions = {
 				data: { statut: 'TERMINE', dateFin: new Date() }
 			});
 		});
+		} catch (e: unknown) {
+			console.error('Erreur lors de la clôture de la séance:', e);
+			return fail(500, { error: 'Erreur lors de la clôture de la séance' });
+		}
 
 		await logActivity(locals.user ?? null, 'fin_seance', `Fin du cours ${coursId}`, undefined, undefined).catch(
 			() => {}
