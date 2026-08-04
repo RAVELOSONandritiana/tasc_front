@@ -231,13 +231,23 @@ export const actions: Actions = {
 				data: { resultat: resultat as 'EN_ATTENTE' | 'ADMIS' | 'AJOURNE' }
 			});
 
+			// Le résultat de la délibération détermine le statut de l'élève :
+			// « ajourné » => redoublant, « admis » => passant. On laisse le champ
+			// inchangé pour « en attente ».
+			if (resultat === 'AJOURNE' || resultat === 'ADMIS') {
+				await prisma.eleve.update({
+					where: { id: inscription.eleveId },
+					data: { redoublant: resultat === 'AJOURNE' }
+				});
+			}
+
 			logActivity(
 				locals.user,
 				'deliberation' as any,
 				`Délibération : résultat de l'élève mis à jour → ${resultat}`
 			).catch(() => {});
 
-			broadcastRealtime({ entity: 'eleve', action: 'update', id: inscriptionId });
+			broadcastRealtime({ entity: 'eleve', action: 'update', id: inscription.eleveId });
 
 			return { success: true, resultat: updated.resultat };
 		} catch (e: any) {

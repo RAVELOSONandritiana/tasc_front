@@ -264,68 +264,69 @@ export const actions: Actions = {
 
 		// On autorise le professeur titulaire du cours OU le professeur qui a
 		// réellement démarré la séance (utile en cas de désynchronisation entre
-		// cours.professeurId et la séance).
-		if (
-			seance.professeurId !== profConnecteId &&
-			cours?.professeurId !== profConnecteId
-		) {
+		// cours.professeurId et la séance), ainsi que les rôles de gestion.
+		const roleAutorise =
+			locals.user?.role === 'ADMINISTRATEUR' ||
+			locals.user?.role === 'SURVEILLANT' ||
+			seance.professeurId === profConnecteId ||
+			cours?.professeurId === profConnecteId;
+		if (!roleAutorise) {
 			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le terminer' });
 		}
 
-		const participants = cours?.participants || [];
+		// 1) Clôturer la séance EN PREMIER et de façon inconditionnelle. On la
+		// sort de la transaction annexe pour garantir que le statut passe bien à
+		// TERMINE, même si les traitements suivants échouent.
+		await prisma.seanceCours.update({
+			where: { id: seance.id },
+			data: { statut: 'TERMINE', dateFin: new Date() }
+		});
+		// Par sécurité, on termine aussi toute autre séance EN_COURS résiduelle
+		// pour ce cours (cas de séances en double).
+		await prisma.seanceCours.updateMany({
+			where: { coursId, statut: 'EN_COURS', NOT: { id: seance.id } },
+			data: { statut: 'TERMINE', dateFin: new Date() }
+		});
 
-		// Certains participants peuvent référencer un élève supprimé (resté dans
-		// le tableau). On ne traite que les élèves toujours existants pour éviter
-		// une erreur P2025 qui ferait échouer toute la clôture.
+		// 2) Traitements annexes (increment, absences/retards) en best-effort :
+		// ils ne doivent jamais empêcher la clôture de la séance.
+		const participants = cours?.participants || [];
 		const participantsValides =
 			participants.length > 0
-				? (
-						await prisma.eleve.findMany({
-							where: { id: { in: participants } },
-							select: { id: true }
-						})
-					).map((e) => e.id)
+				? (await prisma.eleve.findMany({ where: { id: { in: participants } }, select: { id: true } })).map(
+						(e) => e.id
+					)
 				: [];
-
 		try {
-		await prisma.$transaction(async (tx) => {
-			// Incrémente le nombre de cours terminés pour chaque élève participant.
-			for (const eleveId of participantsValides) {
-				await tx.eleve.update({
-					where: { id: eleveId },
-					data: { coursTermines: { increment: 1 } }
-				});
-			}
-
-			for (const p of seance.presences) {
-				if (p.statut === 'ABSENT') {
-					await tx.absence.create({
-						data: {
-							eleveId: p.eleveId,
-							inscriptionId: p.inscriptionId || null,
-							date: seance.dateDebut
-						}
-					});
-				} else if (p.statut === 'RETARD') {
-					await tx.retard.create({
-						data: {
-							eleveId: p.eleveId,
-							inscriptionId: p.inscriptionId || null,
-							duree: '10min',
-							date: seance.dateDebut
-						}
-					});
+			await prisma.$transaction(async (tx) => {
+				for (const eleveId of participantsValides) {
+					await tx.eleve
+						.update({ where: { id: eleveId }, data: { coursTermines: { increment: 1 } } })
+						.catch(() => {});
 				}
-			}
-
-			await tx.seanceCours.update({
-				where: { id: seance.id },
-				data: { statut: 'TERMINE', dateFin: new Date() }
+				for (const p of seance.presences) {
+					if (p.statut === 'ABSENT') {
+						await tx.absence
+							.create({
+								data: { eleveId: p.eleveId, inscriptionId: p.inscriptionId || null, date: seance.dateDebut }
+							})
+							.catch(() => {});
+					} else if (p.statut === 'RETARD') {
+						await tx.retard
+							.create({
+								data: {
+									eleveId: p.eleveId,
+									inscriptionId: p.inscriptionId || null,
+									duree: '10min',
+									date: seance.dateDebut
+								}
+							})
+							.catch(() => {});
+					}
+				}
 			});
-		});
 		} catch (e: unknown) {
-			console.error('Erreur lors de la clôture de la séance:', e);
-			return fail(500, { error: 'Erreur lors de la clôture de la séance' });
+			console.error('Traitements annexes de fin de séance (non bloquants):', e);
 		}
 
 		await logActivity(locals.user ?? null, 'fin_seance', `Fin du cours ${coursId}`, undefined, undefined).catch(
