@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { prisma, getCoursByProfesseurId } from '$lib/server/prisma';
+import { prisma, getCoursByProfesseurId, getEleveStats, getActiveAnneeScolaire } from '$lib/server/prisma';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	let compte = await prisma.compte.findUnique({
 		where: { id: params.id },
 		include: {
@@ -28,7 +28,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		ADMINISTRATEUR: 'Administrateur',
 		ENSEIGNANT: 'Enseignant',
 		SURVEILLANT: 'Surveillant',
-		PERSONNEL: 'Personnel'
+		PERSONNEL: 'Personnel',
+		OPERATEUR: 'Operateur'
 	};
 
 	const personne = await prisma.personne.findUnique({
@@ -85,7 +86,29 @@ export const load: PageServerLoad = async ({ params }) => {
 		? await getCoursByProfesseurId(personne.professeur.id)
 		: [];
 
+	// Absences et retards saisies par l'operateur (visibles sur le profil eleve).
+	const activeAnneeP = await getActiveAnneeScolaire();
+	const whereAnneeP = activeAnneeP
+		? { OR: [{ inscription: { anneeId: activeAnneeP.id } }, { inscriptionId: null }] }
+		: {};
+	const absencesEleveP = personne?.eleve
+		? await prisma.absence.findMany({
+				where: { eleveId: personne.eleve.id, ...whereAnneeP },
+				orderBy: { date: 'desc' },
+				take: 100
+			})
+		: [];
+	const retardsEleveP = personne?.eleve
+		? await prisma.retard.findMany({
+				where: { eleveId: personne.eleve.id, ...whereAnneeP },
+				orderBy: { date: 'desc' },
+				take: 100
+			})
+		: [];
+	const seuilAbsenceP = activeAnneeP?.seuilAbsenceConvoc ?? 3;
+
 	return {
+		viewerRole: locals.user?.role ?? null,
 		user: {
 			id: compte.id,
 			matricule: compte.matricule,
@@ -104,13 +127,33 @@ export const load: PageServerLoad = async ({ params }) => {
 			stats,
 			cours
 		},
-		presence
+		presence,
+		absences: absencesEleveP.map((a) => ({
+			id: a.id,
+			date: a.date.toISOString().split('T')[0],
+			motif: a.motif || null,
+			justifie: a.justifie
+		})),
+		retards: retardsEleveP.map((r) => ({
+			id: r.id,
+			date: r.date.toISOString().split('T')[0],
+			motif: r.motif || null,
+			justifie: r.justifie
+		})),
+		seuilAbsence: seuilAbsenceP,
+		totalAbsencesAnnee: absencesEleveP.length
 	};
 
 	async function buildStats() {
 		const result: Record<string, number> = {};
 		if (personne?.eleve) {
-			result.coursTermines = personne.eleve.coursTermines;
+			// Compteurs recalcules depuis la base (les champs denormalises de la
+			// table `eleves` ne sont pas fiables).
+			const eleveStats = await getEleveStats(personne.eleve.id);
+			result.coursTermines = eleveStats.coursTermines;
+			result.absencesEleve = eleveStats.absences;
+			result.retardsEleve = eleveStats.retards;
+			result.incidentsEleve = eleveStats.incidents;
 		}
 		if (personne?.professeur) {
 			const profId = personne.professeur.id;

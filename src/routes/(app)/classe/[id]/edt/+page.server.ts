@@ -111,7 +111,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	};
 };
 
-const MODIFIABLE_ROLES = ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT'];
+const MODIFIABLE_ROLES = ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT', 'OPERATEUR'];
 
 function peutModifierEDT(role: string | undefined): boolean {
 	return !!role && MODIFIABLE_ROLES.includes(role);
@@ -208,6 +208,8 @@ export const actions: Actions = {
 		const professeurId = (formData.get('professeurId') as string) || null;
 		const seanceId = formData.get('seanceId') as string | null;
 		const salleId = (formData.get('salleId') as string) || null;
+		const heureDebut = (formData.get('heureDebut') as string) || null;
+		const heureFin = (formData.get('heureFin') as string) || null;
 
 		if (!coursId) {
 			return fail(400, { error: 'Cours requis' });
@@ -219,7 +221,11 @@ export const actions: Actions = {
 			if (seanceId) {
 				await prisma.seanceEDT.update({
 					where: { id: seanceId },
-					data: { salleId: salleId || undefined }
+					data: {
+						salleId: salleId || undefined,
+						...(heureDebut ? { heureDebut } : {}),
+						...(heureFin ? { heureFin } : {})
+					}
 				});
 			}
 		} catch (e: unknown) {

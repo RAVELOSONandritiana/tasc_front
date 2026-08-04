@@ -14,6 +14,7 @@
 		LayoutDashboard,
 		UserSquare2,
 		UserCog,
+		IdCard,
 		Users,
 		GraduationCap,
 		ClipboardList,
@@ -42,18 +43,19 @@
 		},
 		{ path: '/surveillant', label: 'Surveillants', icon: UserSquare2, roles: ['ADMINISTRATEUR'] },
 		{ path: '/enseignant', label: 'Enseignants', icon: UserCog, roles: ['ADMINISTRATEUR'] },
-		{ path: '/personne', label: 'Personnels', icon: Users, roles: ['ADMINISTRATEUR'] },
+		{ path: '/operateur', label: 'Operateurs', icon: IdCard, roles: ['ADMINISTRATEUR'] },
+		{ path: '/personne', label: 'Personnels', icon: Users, roles: ['ADMINISTRATEUR', 'OPERATEUR'] },
 		{
 			path: '/eleves',
 			label: 'Élèves',
 			icon: GraduationCap,
-			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'OPERATEUR']
 		},
 		{
 			path: '/classe',
 			label: 'Classes',
 			icon: ClipboardList,
-			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'OPERATEUR']
 		},
 		{
 			path: '/incidents',
@@ -78,7 +80,7 @@
 			path: '/profil',
 			label: 'Mon profil',
 			icon: UserRoundSearch,
-			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'OPERATEUR']
 		}
 	];
 

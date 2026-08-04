@@ -81,6 +81,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		im: i.eleve.im ?? null,
 		sexe: i.eleve.sexe ?? null,
 		redoublant: i.eleve.redoublant ?? false,
+		situation: i.eleve.situation ?? 'P',
 		actif: i.actif,
 		notes:
 			i.eleve.notes?.map((n: any) => ({

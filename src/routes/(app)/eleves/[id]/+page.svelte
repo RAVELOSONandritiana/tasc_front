@@ -17,7 +17,8 @@
 		Info,
 		AlertCircle,
 		ChevronDown,
-		ChevronUp
+		ChevronUp,
+		Printer
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
@@ -30,6 +31,8 @@
 	const { data }: PageProps = $props();
 	const eleve = data.eleve;
 	const incidents: EleveIncident[] = data.incidents || [];
+	const absences = $derived(data.absences || []);
+	const retards = $derived(data.retards || []);
 
 	let editOpen = $state(false);
 	let nomValue = $state(eleve.nom);
@@ -87,10 +90,19 @@
 	let positivesOpen = $state(false);
 	let negativesOpen = $state(false);
 	let autresOpen = $state(false);
+	let absencesOpen = $state(false);
+	let retardsOpen = $state(false);
 
 	const notesPositives = incidents.filter((i) => i.type === 'note');
 	const notesNegatives = incidents.filter((i) => i.type === 'erreur');
 	const autresIncidents = incidents.filter((i) => i.type !== 'note' && i.type !== 'erreur');
+
+	const formatDate = (iso: string) =>
+		new Date(iso).toLocaleDateString('fr-FR', {
+			day: '2-digit',
+			month: 'long',
+			year: 'numeric'
+		});
 </script>
 
 <main class="flex flex-1 flex-col bg-sidebar p-4 text-sidebar-foreground">
@@ -98,7 +110,12 @@
 		<div class="space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-bold">Profil de l'élève</h1>
-			<Button variant="outline" onclick={() => goto('/eleves')}>Retour</Button>
+			<div class="flex gap-2">
+				<Button variant="outline" href={`/eleves/${eleve.id}/fiche`}>
+					<Printer class="mr-2 size-4" /> Fiche (PDF)
+				</Button>
+				<Button variant="outline" onclick={() => goto('/eleves')}>Retour</Button>
+			</div>
 		</div>
 
 		<Card class="p-6">
@@ -449,13 +466,19 @@
 
 		{#if stats}
 			<Card class="space-y-4 p-5">
-				<h3 class="font-semibold">Statistiques</h3>
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<h3 class="font-semibold">Statistiques</h3>
+					<span class="text-xs text-muted-foreground">Cumul depuis l'inscription</span>
+				</div>
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
 						<Clock class="mx-auto mb-1 size-5 text-amber-500" />
 						<p class="text-xs text-muted-foreground">Retards</p>
 						<p class="text-2xl font-bold {stats.retards > 2 ? 'text-red-500' : 'text-amber-500'}">
 							{stats.retards}
+						</p>
+						<p class="text-[11px] text-muted-foreground">
+							{stats.retardsJustifies ?? 0} justifié{(stats.retardsJustifies ?? 0) > 1 ? 's' : ''}
 						</p>
 					</div>
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
@@ -464,15 +487,25 @@
 						<p class="text-2xl font-bold {stats.absences > 1 ? 'text-red-500' : 'text-amber-500'}">
 							{stats.absences}
 						</p>
+						<p class="text-[11px] text-muted-foreground">
+							{stats.absencesJustifiees ?? 0} justifiée{(stats.absencesJustifiees ?? 0) > 1
+								? 's'
+								: ''}
+						</p>
 					</div>
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
 						<Shield class="mx-auto mb-1 size-5 text-red-500" />
 						<p class="text-xs text-muted-foreground">Incidents</p>
 						<p
-							class="text-2xl font-bold {stats.incidents > 0 ? 'text-red-500' : 'text-emerald-500'}"
+							class="text-2xl font-bold {stats.notesNegatives > 0
+								? 'text-red-500'
+								: stats.incidents > 0
+									? 'text-amber-500'
+									: 'text-emerald-500'}"
 						>
 							{stats.incidents}
 						</p>
+						<p class="text-[11px] text-muted-foreground">toutes catégories</p>
 					</div>
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
 						<CheckCircle2 class="mx-auto mb-1 size-5 text-emerald-500" />
@@ -494,11 +527,134 @@
 					</div>
 					<div class="rounded-lg bg-muted/30 p-3 text-center">
 						<Calendar class="mx-auto mb-1 size-5 text-blue-500" />
-						<p class="text-xs text-muted-foreground">Cours</p>
+						<p class="text-xs text-muted-foreground">Cours suivis</p>
 						<p class="text-2xl font-bold text-blue-500">{stats.coursTermines}</p>
+						<p class="text-[11px] text-muted-foreground">
+							sur {stats.coursTotal ?? stats.coursTermines} séance{(stats.coursTotal ??
+								stats.coursTermines) > 1
+								? 's'
+								: ''}
+						</p>
 					</div>
 				</div>
 			</Card>
+		{/if}
+
+		{#if absences.length > 0 || retards.length > 0}
+			<div class="space-y-3">
+				{#if absences.length > 0}
+					<button
+						onclick={() => (absencesOpen = !absencesOpen)}
+						class="flex w-full items-center justify-between rounded-xl border border-red-200/80 bg-red-50/30 p-4 text-left transition-all hover:bg-red-50/50 dark:border-red-700/70 dark:bg-red-950/10 dark:hover:bg-red-950/20"
+					>
+						<div class="flex items-center gap-3">
+							<div
+								class="flex size-10 items-center justify-center rounded-full bg-red-100/90 dark:bg-red-900/40"
+							>
+								<AlertCircle class="size-5 text-red-600 dark:text-red-400" />
+							</div>
+							<div>
+								<p class="font-semibold text-red-800 dark:text-red-300">Absences</p>
+								<p class="text-xs text-red-600/80 dark:text-red-400/70">
+									{absences.filter((a) => a.justifie).length} justifiée(s) sur {absences.length}
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<span
+								class="flex size-6 items-center justify-center rounded-full bg-red-100/90 text-xs font-bold text-red-700 dark:bg-red-900/50 dark:text-red-300"
+							>
+								{absences.length}
+							</span>
+							{#if absencesOpen}
+								<ChevronUp class="size-4 text-red-600 dark:text-red-400" />
+							{:else}
+								<ChevronDown class="size-4 text-red-600 dark:text-red-400" />
+							{/if}
+						</div>
+					</button>
+					{#if absencesOpen}
+						<div class="ml-4 space-y-2 border-l-2 border-red-300/70 pl-4 dark:border-red-700/70">
+							{#each absences as absence (absence.id)}
+								<div
+									class="flex items-center justify-between gap-3 rounded-lg border border-red-200/70 bg-white/90 p-3 shadow-sm dark:border-red-800/70 dark:bg-slate-900/80"
+								>
+									<div>
+										<p class="text-sm text-slate-800 dark:text-slate-100">
+											{formatDate(absence.date)}
+										</p>
+										{#if absence.motif}
+											<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{absence.motif}</p>
+										{/if}
+									</div>
+									<Badge variant={absence.justifie ? 'secondary' : 'destructive'} class="text-xs">
+										{absence.justifie ? 'Justifiée' : 'Non justifiée'}
+									</Badge>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
+
+				{#if retards.length > 0}
+					<button
+						onclick={() => (retardsOpen = !retardsOpen)}
+						class="flex w-full items-center justify-between rounded-xl border border-amber-200/80 bg-amber-50/30 p-4 text-left transition-all hover:bg-amber-50/50 dark:border-amber-700/70 dark:bg-amber-950/10 dark:hover:bg-amber-950/20"
+					>
+						<div class="flex items-center gap-3">
+							<div
+								class="flex size-10 items-center justify-center rounded-full bg-amber-100/90 dark:bg-amber-900/40"
+							>
+								<Clock class="size-5 text-amber-600 dark:text-amber-400" />
+							</div>
+							<div>
+								<p class="font-semibold text-amber-800 dark:text-amber-300">Retards</p>
+								<p class="text-xs text-amber-600/80 dark:text-amber-400/70">
+									{retards.filter((r) => r.justifie).length} justifié(s) sur {retards.length}
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<span
+								class="flex size-6 items-center justify-center rounded-full bg-amber-100/90 text-xs font-bold text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+							>
+								{retards.length}
+							</span>
+							{#if retardsOpen}
+								<ChevronUp class="size-4 text-amber-600 dark:text-amber-400" />
+							{:else}
+								<ChevronDown class="size-4 text-amber-600 dark:text-amber-400" />
+							{/if}
+						</div>
+					</button>
+					{#if retardsOpen}
+						<div class="ml-4 space-y-2 border-l-2 border-amber-300/70 pl-4 dark:border-amber-700/70">
+							{#each retards as retard (retard.id)}
+								<div
+									class="flex items-center justify-between gap-3 rounded-lg border border-amber-200/70 bg-white/90 p-3 shadow-sm dark:border-amber-800/70 dark:bg-slate-900/80"
+								>
+									<div>
+										<p class="text-sm text-slate-800 dark:text-slate-100">
+											{formatDate(retard.date)}
+											{#if retard.duree}
+												<span class="text-xs text-slate-500 dark:text-slate-400"
+													>• {retard.duree}</span
+												>
+											{/if}
+										</p>
+										{#if retard.motif}
+											<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{retard.motif}</p>
+										{/if}
+									</div>
+									<Badge variant={retard.justifie ? 'secondary' : 'destructive'} class="text-xs">
+										{retard.justifie ? 'Justifié' : 'Non justifié'}
+									</Badge>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
+			</div>
 		{/if}
 
 		{#if incidents.length > 0}

@@ -1,8 +1,9 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { capitalize } from '$lib/actions/capitalize';
 import { formatClasseNom } from '$lib/utils';
+import type { EleveStats } from '$lib/types/Personne.type';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -20,12 +21,12 @@ function sortByLower<T>(items: T[], getKey: (item: T) => string | null | undefin
 	);
 }
 
-const STAFF_ROLES = ['ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'ADMINISTRATEUR'] as const;
+const STAFF_ROLES = ['ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'ADMINISTRATEUR', 'OPERATEUR'] as const;
 
 // Une personne est un élève uniquement si elle n'est liée à aucun profil
 // personnel / professeur / surveillant, et si son compte (s'il existe) n'a
 // pas un rôle de membre du personnel.
-function elevePersonneFilter() {
+function elevePersonneFilter(): Prisma.PersonneWhereInput {
 	return {
 		personnel: null,
 		professeur: null,
@@ -65,7 +66,7 @@ export async function getEleves(anneeId?: string) {
 	return sortByLower(eleves, (e) => e.personne?.name);
 }
 
-export async function getEleveById(id: string) {
+export async function getEleveById(id: string, anneeId?: string | null) {
 	return prisma.eleve.findUnique({
 		where: { id },
 		include: {
@@ -78,9 +79,117 @@ export async function getEleveById(id: string) {
 					dateInscription: 'desc'
 				}
 			},
-			incidents: true
+			incidents: {
+				where: anneeId ? { anneeId } : undefined,
+				orderBy: { date: 'desc' }
+			},
+			absences: {
+				where: anneeId ? { OR: [{ inscription: { anneeId } }, { inscriptionId: null }] } : undefined,
+				orderBy: { date: 'desc' }
+			},
+			retards: {
+				where: anneeId ? { OR: [{ inscription: { anneeId } }, { inscriptionId: null }] } : undefined,
+				orderBy: { date: 'desc' }
+			}
 		}
 	});
+}
+
+function emptyEleveStats(): EleveStats {
+	return {
+		retards: 0,
+		retardsJustifies: 0,
+		absences: 0,
+		absencesJustifiees: 0,
+		incidents: 0,
+		notesPositives: 0,
+		notesNegatives: 0,
+		coursTermines: 0,
+		coursTotal: 0
+	};
+}
+
+/**
+ * Statistiques reelles d'un ensemble d'eleves, calculees a partir des
+ * enregistrements en base (absences, retards, incidents, presences) et non des
+ * compteurs denormalises stockes sur `Eleve`, qui derivent facilement.
+ *
+ * Les absences / retards sont rattaches a l'annee via leur inscription ; les
+ * enregistrements sans inscription sont conserves pour ne rien perdre.
+ */
+export async function getElevesStats(
+	eleveIds: string[],
+	anneeId?: string | null
+): Promise<Record<string, EleveStats>> {
+	const stats: Record<string, EleveStats> = {};
+	for (const id of eleveIds) stats[id] = emptyEleveStats();
+
+	const ids = [...new Set(eleveIds)].filter(Boolean);
+	if (ids.length === 0) return stats;
+
+	const [absences, retards, incidents, presences] = await Promise.all([
+		prisma.absence.groupBy({
+			by: ['eleveId', 'justifie'],
+			where: anneeId
+				? { eleveId: { in: ids }, OR: [{ inscription: { anneeId } }, { inscriptionId: null }] }
+				: { eleveId: { in: ids } },
+			_count: { _all: true }
+		}),
+		prisma.retard.groupBy({
+			by: ['eleveId', 'justifie'],
+			where: anneeId
+				? { eleveId: { in: ids }, OR: [{ inscription: { anneeId } }, { inscriptionId: null }] }
+				: { eleveId: { in: ids } },
+			_count: { _all: true }
+		}),
+		prisma.incident.groupBy({
+			by: ['eleveId', 'type'],
+			where: anneeId ? { eleveId: { in: ids }, anneeId } : { eleveId: { in: ids } },
+			_count: { _all: true }
+		}),
+		prisma.presenceEleve.groupBy({
+			by: ['eleveId', 'statut'],
+			where: {
+				eleveId: { in: ids },
+				seance: anneeId ? { statut: 'TERMINE', anneeId } : { statut: 'TERMINE' }
+			},
+			_count: { _all: true }
+		})
+	]);
+
+	for (const row of absences) {
+		const s = stats[row.eleveId];
+		if (!s) continue;
+		s.absences += row._count._all;
+		if (row.justifie) s.absencesJustifiees = (s.absencesJustifiees ?? 0) + row._count._all;
+	}
+	for (const row of retards) {
+		const s = stats[row.eleveId];
+		if (!s) continue;
+		s.retards += row._count._all;
+		if (row.justifie) s.retardsJustifies = (s.retardsJustifies ?? 0) + row._count._all;
+	}
+	for (const row of incidents) {
+		const s = stats[row.eleveId];
+		if (!s) continue;
+		s.incidents += row._count._all;
+		if (row.type === 'NOTE') s.notesPositives += row._count._all;
+		else if (row.type === 'ERREUR') s.notesNegatives += row._count._all;
+	}
+	// Un cours "suivi" = une seance terminee ou l'eleve n'etait pas absent.
+	for (const row of presences) {
+		const s = stats[row.eleveId];
+		if (!s) continue;
+		s.coursTotal = (s.coursTotal ?? 0) + row._count._all;
+		if (row.statut !== 'ABSENT') s.coursTermines += row._count._all;
+	}
+
+	return stats;
+}
+
+export async function getEleveStats(eleveId: string, anneeId?: string | null): Promise<EleveStats> {
+	const stats = await getElevesStats([eleveId], anneeId);
+	return stats[eleveId] ?? emptyEleveStats();
 }
 
 export async function getProfesseurs() {
@@ -249,7 +358,8 @@ export async function getAllPersonnes() {
 	const personnes = await prisma.personne.findMany({
 		where: {
 			eleve: null,
-			professeur: null
+			professeur: null,
+			compte: null
 		},
 		include: {
 			compte: {
@@ -262,6 +372,88 @@ export async function getAllPersonnes() {
 		}
 	});
 	return sortByLower(personnes, (p) => p.name);
+}
+
+export async function getOperateurs() {
+	const comptes = await prisma.compte.findMany({
+		where: { role: 'OPERATEUR' },
+		include: { personne: true }
+	});
+	return comptes
+		.filter((c) => c.personne)
+		.map((c) => ({
+			id: c.id,
+			name: c.personne!.name,
+			lastname: c.personne!.lastname,
+			domicile: c.personne!.domicile || '',
+			fokontany: c.personne!.fokontany || '',
+			commune: c.personne!.commune || '',
+			phone: c.personne!.phone,
+			email: c.personne!.email,
+			imageUrl: c.personne!.imageUrl || null,
+			compte: { id: c.id, role: c.role, matricule: c.matricule },
+			personneId: c.personneId
+		}));
+}
+
+export async function getOperateurById(id: string) {
+	return prisma.compte.findUnique({
+		where: { id },
+		include: { personne: true }
+	});
+}
+
+export async function createOperateurFromPersonne(personneId: string, matricule: string) {
+	const motDePasseDefaut = await import('./auth').then((m) => m.hashPassword('123456'));
+	return prisma.$transaction(async (tx) => {
+		const personne = await tx.personne.findUniqueOrThrow({
+			where: { id: personneId },
+			include: { compte: true }
+		});
+
+		if (personne.compte?.role === 'OPERATEUR') {
+			throw new Error('Cette personne est déjà opérateur');
+		}
+
+		let compte = personne.compte;
+		if (!compte) {
+			compte = await tx.compte.create({
+				data: {
+					matricule,
+					password: motDePasseDefaut,
+					role: 'OPERATEUR',
+					statut: 'EN_ATTENTE',
+					personneId
+				}
+			});
+		} else {
+			compte = await tx.compte.update({
+				where: { id: compte.id },
+				data: {
+					matricule,
+					password: motDePasseDefaut,
+					role: 'OPERATEUR',
+					statut: 'EN_ATTENTE'
+				}
+			});
+		}
+
+		return { personne, compte };
+	});
+}
+
+export async function deleteOperateur(compteId: string) {
+	return prisma.$transaction(async (tx) => {
+		const compte = await tx.compte.findUniqueOrThrow({
+			where: { id: compteId },
+			include: { personne: true }
+		});
+		if (compte.role !== 'OPERATEUR') {
+			throw new Error('Ce compte n’est pas un opérateur');
+		}
+		await tx.compte.delete({ where: { id: compteId } });
+		return { personne: compte.personne };
+	});
 }
 
 export async function getClasses(anneeId?: string) {
@@ -596,6 +788,7 @@ export async function createEleve(
 		im?: string | null;
 		sexe?: string | null;
 		redoublant?: boolean;
+		situation?: string;
 	},
 	anneeId?: string
 ) {
@@ -633,6 +826,7 @@ export async function createEleve(
 				im: im,
 				sexe: data.sexe || null,
 				redoublant: data.redoublant ?? false,
+				situation: (data.situation as any) || 'P',
 				cin: data.cin || null,
 				lieuNaissance: data.lieuNaissance ? data.lieuNaissance.toUpperCase() : null,
 				communeNaissance: data.communeNaissance ? data.communeNaissance.toUpperCase() : null,
@@ -672,6 +866,7 @@ export async function updateEleveInfos(
 		im?: string | null;
 		sexe?: string | null;
 		cin?: string | null;
+		situation?: string;
 		lieuNaissance?: string | null;
 		communeNaissance?: string | null;
 		regionNaissance?: string | null;
@@ -693,6 +888,7 @@ export async function updateEleveInfos(
 		where: { id },
 		data: {
 			redoublant: data.redoublant,
+			situation: data.situation === undefined ? undefined : ((data.situation as any) || 'P'),
 			dateNaissance: data.dateNaissance === undefined ? undefined : new Date(data.dateNaissance),
 			im: data.im === undefined ? undefined : data.im || null,
 			sexe: data.sexe === undefined ? undefined : data.sexe || null,
@@ -740,20 +936,25 @@ export async function getActiveAnneeScolaire() {
 	});
 }
 
-export async function createAnneeScolaire(nom: string) {
-	return prisma.$transaction(async (tx) => {
-		const hasActive = await tx.anneeScolaire.findFirst({ where: { active: true } });
-		// La nouvelle annee est inactive par defaut ; elle ne devient active
-		// qu'apres selection explicite. Si aucune annee n'est active, on l'active
-		// pour eviter de bloquer l'application.
-		const active = !hasActive;
-		if (active) {
-			await tx.anneeScolaire.updateMany({ data: { active: false } });
-		}
-		return tx.anneeScolaire.create({
-			data: { nom, active }
-		});
-	});
+export async function createAnneeScolaire(nom: string, seuilAbsenceConvoc?: number) {
+  return prisma.$transaction(async (tx) => {
+    const hasActive = await tx.anneeScolaire.findFirst({ where: { active: true } });
+    // La nouvelle annee est inactive par defaut ; elle ne devient active
+    // qu'apres selection explicite. Si aucune annee n'est active, on l'active
+    // pour eviter de bloquer l'application.
+    const active = !hasActive;
+    if (active) {
+      await tx.anneeScolaire.updateMany({ data: { active: false } });
+    }
+    return tx.anneeScolaire.create({
+      data: {
+        nom,
+        active,
+        seuilAbsenceConvoc:
+          seuilAbsenceConvoc && seuilAbsenceConvoc > 0 ? seuilAbsenceConvoc : 3
+      }
+    });
+  });
 }
 
 export async function setActiveAnneeScolaire(id: string) {

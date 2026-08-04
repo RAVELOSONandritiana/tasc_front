@@ -30,7 +30,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		ADMINISTRATEUR: 'Administrateur',
 		ENSEIGNANT: 'Enseignant',
 		SURVEILLANT: 'Surveillant',
-		PERSONNEL: 'Personnel'
+		PERSONNEL: 'Personnel',
+		OPERATEUR: 'Operateur'
 	};
 
 	const getStats = () => {

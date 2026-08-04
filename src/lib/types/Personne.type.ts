@@ -43,7 +43,14 @@ export type EleveStats = {
 	incidents: number;
 	notesPositives: number;
 	notesNegatives: number;
+	/** Seances terminees auxquelles l'eleve a assiste (present ou en retard). */
 	coursTermines: number;
+	/** Absences couvertes par un rapport. */
+	absencesJustifiees?: number;
+	/** Retards couverts par un rapport. */
+	retardsJustifies?: number;
+	/** Nombre total de seances terminees ou l'eleve etait attendu. */
+	coursTotal?: number;
 };
 
 export type Eleve = {
@@ -61,6 +68,8 @@ export type Eleve = {
 	fokontany?: string | null;
 	commune?: string | null;
 	redoublant?: boolean;
+	situation?: string;
+	lieuNaissance?: string | null;
 	imageUrl?: string | null;
 	personneId?: string;
 	nomPere?: string | null;

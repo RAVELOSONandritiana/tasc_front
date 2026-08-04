@@ -39,8 +39,31 @@
 	// Un surveillant ou un administrateur peut modifier/supprimer l'EDT,
 	// mais seul le professeur titulaire du cours peut le démarrer (lancer).
 	const peutModifierEDT = $derived(
-		userRole === 'SURVEILLANT' || userRole === 'ADMINISTRATEUR' || userRole === 'ENSEIGNANT'
+		userRole === 'SURVEILLANT' || userRole === 'ADMINISTRATEUR' || userRole === 'ENSEIGNANT' || userRole === 'OPERATEUR'
 	);
+
+	// Grille horaire dynamique (pas de 15 min) pour gérer les créneaux non
+	// ronds (:15, :30, :45...). On complète avec les heures déjà utilisées
+	// par les séances afin de ne jamais perdre une valeur existante.
+	function genererCreneaux(debut = '06:00', fin = '22:00', pas = 15): string[] {
+		const [dh, dm] = debut.split(':').map(Number);
+		const [fh, fm] = fin.split(':').map(Number);
+		const debutMin = dh * 60 + dm;
+		const finMin = fh * 60 + fm;
+		const set = new Set<string>();
+		for (let t = debutMin; t <= finMin; t += pas) {
+			const h = Math.floor(t / 60);
+			const m = t % 60;
+			set.add(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+		}
+		for (const s of seances ?? []) {
+			if (s.heureDebut) set.add(s.heureDebut);
+			if (s.heureFin) set.add(s.heureFin);
+		}
+		return [...set].sort();
+	}
+
+	const creneaux = $derived(genererCreneaux());
 
 	let dialogOpen = $state(false);
 	let nouvelleSeance = $state({
@@ -59,13 +82,22 @@
 	let editSeance = $state<SeanceEDT | null>(null);
 	let editProfesseurId = $state<string | null>(null);
 	let editSalleId = $state<string | null>(null);
+	let editHeureDebut = $state('');
+	let editHeureFin = $state('');
 
 	function openEditSeance(seance: SeanceEDT) {
 		editSeance = seance;
 		editProfesseurId = professeurParCours[seance.coursId] ?? null;
 		editSalleId = seance.salleId ?? null;
+		editHeureDebut = seance.heureDebut || '';
+		editHeureFin = seance.heureFin || '';
 		editDialogOpen = true;
 	}
+
+	// Les séances d'une journée sont triées par heure de début (matin -> soir).
+	const seancesTriees = $derived(
+		[...(seances ?? [])].sort((a, b) => (a.heureDebut || '').localeCompare(b.heureDebut || ''))
+	);
 </script>
 
 <div class="rounded-xl bg-card/50 p-4">
@@ -90,7 +122,7 @@
 								class="w-full"
 								name="heureDebut"
 							>
-								{#each heures as h (h)}
+								{#each creneaux as h (h)}
 									<NativeSelect.Option value={h}>{h}</NativeSelect.Option>
 								{/each}
 							</NativeSelect.Root>
@@ -102,7 +134,7 @@
 								class="w-full"
 								name="heureFin"
 							>
-								{#each heures as h (h)}
+								{#each creneaux as h (h)}
 									<NativeSelect.Option value={h}>{h}</NativeSelect.Option>
 								{/each}
 							</NativeSelect.Root>
@@ -139,7 +171,7 @@
 		{#if seances.length === 0}
 			<p class="text-xs text-muted-foreground italic">Aucune séance</p>
 		{:else}
-			{#each seances as seance (seance.id)}
+			{#each seancesTriees as seance (seance.id)}
 				<div class="rounded-md border border-sidebar-border bg-sidebar-accent/30 p-2 text-xs">
 					<div class="flex items-start justify-between">
 						<div>
@@ -215,6 +247,32 @@
 					<input type="hidden" name="coursId" value={editSeance.coursId} />
 					<input type="hidden" name="seanceId" value={editSeance.id} />
 					<div class="grid gap-4 py-4">
+						<div class="grid grid-cols-2 gap-3">
+							<div class="grid gap-2">
+								<Label for="edit-heure-debut">Début *</Label>
+								<NativeSelect.Root
+									bind:value={editHeureDebut}
+									class="w-full"
+									name="heureDebut"
+								>
+									{#each creneaux as h (h)}
+										<NativeSelect.Option value={h}>{h}</NativeSelect.Option>
+									{/each}
+								</NativeSelect.Root>
+							</div>
+							<div class="grid gap-2">
+								<Label for="edit-heure-fin">Fin *</Label>
+								<NativeSelect.Root
+									bind:value={editHeureFin}
+									class="w-full"
+									name="heureFin"
+								>
+									{#each creneaux as h (h)}
+										<NativeSelect.Option value={h}>{h}</NativeSelect.Option>
+									{/each}
+								</NativeSelect.Root>
+							</div>
+						</div>
 						<div class="grid gap-2">
 							<Label for="edit-professeur">Professeur</Label>
 							<NativeSelect.Root

@@ -146,11 +146,13 @@ export const actions: Actions = {
 	creerAnnee: async ({ request }) => {
 		const data = await request.formData();
 		const nom = data.get('nom') as string;
+		const seuilRaw = data.get('seuil') as string;
+		const seuil = parseInt(seuilRaw, 10);
 
 		if (!nom?.trim()) return fail(400, { error: 'Nom requis' });
 
 		try {
-			await createAnneeScolaire(nom.trim());
+			await createAnneeScolaire(nom.trim(), Number.isNaN(seuil) ? undefined : seuil);
 			broadcastRealtime({ entity: 'annee', action: 'create', id: '', scope: 'ADMIN' });
 		} catch (error) {
 			return fail(500, { error: 'Erreur lors de la création' });

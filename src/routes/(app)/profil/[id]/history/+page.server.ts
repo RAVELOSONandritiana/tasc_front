@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { prisma } from '$lib/server/prisma';
+import { redirect } from '@sveltejs/kit';
 import type { RoleCompte } from '@prisma/client';
 
 type Activity = {
@@ -23,9 +24,12 @@ type Activity = {
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const userId = params.id;
 
-	const baseWhere: Record<string, unknown> = locals.user?.role === 'ADMINISTRATEUR'
-		? { compteId: userId }
-		: { compteId: locals.user?.userId };
+	// Seul l'administrateur peut consulter l'historique des activités.
+	if (locals.user?.role !== 'ADMINISTRATEUR') {
+		throw redirect(303, '/profil');
+	}
+
+	const baseWhere: Record<string, unknown> = { compteId: userId };
 
 	const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
 	const pageSize = 10;

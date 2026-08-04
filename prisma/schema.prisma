@@ -8,23 +8,51 @@ datasource db {
 
 /// Annee scolaire active. Une seule annee peut etre active a la fois.
 model AnneeScolaire {
-  id             String          @id @default(uuid())
-  nom            String
-  dateCreation   DateTime        @default(now())
-  active         Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  classes        Classe[]
-  cours          Cours[]
-  emploisDuTemps EmploiDuTemps[]
-  examens        Examen[]
-  inscriptions   Inscription[]
-  incidents      Incident[]
-  matieres       Matiere[]
-  seancesCours   SeanceCours[]
-  rapports       Rapport[]
+  id                  String          @id @default(uuid())
+  nom                 String
+  dateCreation        DateTime        @default(now())
+  active              Boolean         @default(false)
+  /// Seuil d'absences (par multiple) declenchant une convocation des parents.
+  seuilAbsenceConvoc  Int             @default(3)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  classes             Classe[]
+  cours               Cours[]
+  emploisDuTemps      EmploiDuTemps[]
+  examens             Examen[]
+  inscriptions        Inscription[]
+  incidents           Incident[]
+  matieres            Matiere[]
+  seancesCours        SeanceCours[]
+  pointages           Pointage[]
+  rapports            Rapport[]
 
   @@map("annees_scolaires")
+}
+
+/// Pointage d'un cours par l'operateur/surveillant : heures effectuees par le
+/// professeur et (le cas echeant) cause d'un cours incomplet.
+model Pointage {
+  id               String       @id @default(uuid())
+  coursId          String
+  classeId         String
+  professeurId     String?
+  anneeId          String
+  operateurId      String?
+  date             DateTime     @default(now())
+  heuresPrevues    Float?
+  heuresEffectuees Float
+  causeIncomplet   String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  cours            Cours        @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  classe           Classe       @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  anneeScolaire    AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+  professeur       Professeur?  @relation(fields: [professeurId], references: [id])
+  absences         Absence[]
+  retards          Retard[]
+
+  @@map("pointages")
 }
 
 /// Catalogue des matieres enseignees.
@@ -63,6 +91,7 @@ model Classe {
   emploisDuTemps EmploiDuTemps[]
   examens        Examen[]
   inscriptions   Inscription[]
+  pointages      Pointage[]
 
   @@map("classes")
 }
@@ -71,6 +100,17 @@ enum ResultatEleve {
   EN_ATTENTE
   ADMIS
   AJOURNE
+}
+
+/// Situation de l'eleve (utilisee dans le bulletin).
+enum SituationEleve {
+  P  // Passant
+  R  // Redoublant
+  TP // Transfert Passant
+  TR // Transfert Redoublant
+  T  // Transfert
+  DP // Derogation Passant
+  D  // Derogation
 }
 
 /// Inscription d'un eleve dans une classe pour une annee donnee.
@@ -115,6 +155,7 @@ model Cours {
   notes         Note[]
   seances       SeanceEDT[]
   seancesCours  SeanceCours[]
+  pointages     Pointage[]
 
   @@map("cours")
 }
@@ -215,6 +256,7 @@ model Professeur {
   classesTitulaire Classe[] @relation("TitulaireClasse")
   cours            Cours[]
   seancesCours     SeanceCours[]
+  pointages        Pointage[]
   personne         Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
 
   @@map("professeurs")
@@ -258,6 +300,7 @@ model Eleve {
   im              String?
   sexe            String?
   redoublant      Boolean      @default(false)
+  situation       SituationEleve @default(P)
   cin             String?
   lieuNaissance   String?
   communeNaissance String?
@@ -433,6 +476,8 @@ model Absence {
   motif         String?
   eleveId       String
   inscriptionId String?
+  pointageId    String?
+  pointage      Pointage?    @relation(fields: [pointageId], references: [id], onDelete: SetNull)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
@@ -451,6 +496,8 @@ model Retard {
   justifie      Boolean      @default(false)
   eleveId       String
   inscriptionId String?
+  pointageId    String?
+  pointage      Pointage?    @relation(fields: [pointageId], references: [id], onDelete: SetNull)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
@@ -590,6 +637,7 @@ enum RoleCompte {
   ENSEIGNANT
   SURVEILLANT
   PERSONNEL
+  OPERATEUR
 }
 
 enum StatutCompte {

@@ -21,6 +21,7 @@ export type RealtimeEntity =
 	| 'matiere'
 	| 'salle'
 	| 'surveillant'
+	| 'operateur'
 	| 'incident'
 	| 'examen'
 	| 'sousExamen'

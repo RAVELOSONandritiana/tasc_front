@@ -64,7 +64,7 @@
 		<!-- List -->
 		<div class="p-4 md:p-6">
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each filteredPersonnel as p, i (p.phone)}
+				{#each filteredPersonnel as p, i (p.id)}
 					<div
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"

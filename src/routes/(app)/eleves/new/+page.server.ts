@@ -34,7 +34,8 @@ export const actions: Actions = {
 		const telephoneTuteur = (data.get('telephoneTuteur') as string | null)?.trim() || '';
 		const im = (data.get('im') as string | null)?.trim() || '';
 		const sexe = (data.get('sexe') as string | null)?.trim() || '';
-		const redoublant = data.get('statut') === 'true';
+		const situation = (data.get('situation') as string | null)?.trim() || 'P';
+		const redoublant = situation === 'R' || situation === 'TR';
 
 		const errors: Record<string, string> = {};
 
@@ -111,6 +112,7 @@ export const actions: Actions = {
 					im: imEffectif || null,
 					sexe: sexe || null,
 					redoublant,
+					situation,
 					cin: cin || null,
 					lieuNaissance: lieuNaissance || null,
 					communeNaissance: communeNaissance || null,
@@ -187,7 +189,8 @@ export const actions: Actions = {
 					telephoneTuteur: telephoneTuteur || null,
 					im: imEffectif || null,
 					sexe: sexe || null,
-					redoublant
+					redoublant,
+					situation
 				},
 				annee?.id
 			);

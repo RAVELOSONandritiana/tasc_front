@@ -1,7 +1,14 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getEleveById, updateEleveInfos } from '$lib/server/prisma';
-import { fail } from '@sveltejs/kit';
-import type { Eleve, EleveStats } from '$lib/types/Personne.type';
+import {
+	prisma,
+	getEleveById,
+	getEleveStats,
+	getActiveAnneeScolaire,
+	updateEleveInfos
+} from '$lib/server/prisma';
+import { broadcastRealtime } from '$lib/server/realtime';
+import { error, fail } from '@sveltejs/kit';
+import type { Eleve } from '$lib/types/Personne.type';
 import type { IncidentType } from '$lib/types/Incident.type';
 import { formatClasseNom } from '$lib/utils';
 
@@ -10,13 +17,22 @@ function peutModifier(role?: string): boolean {
 }
 
 export const load: PageServerLoad = async ({ params, locals }) => {
+	const annee = await getActiveAnneeScolaire();
+	const anneeId = annee?.id ?? null;
+
+	// Le profil est le dossier complet de l'eleve : on n'y filtre pas par annee
+	// scolaire, sinon les absences / retards / incidents des annees precedentes
+	// (ou rattaches a une inscription supprimee) disparaitraient silencieusement.
 	const prismaEleve = await getEleveById(params.id);
 	if (!prismaEleve) {
-		throw new Error('Élève non trouvé');
+		throw error(404, 'Élève non trouvé');
 	}
-	const inscription = prismaEleve.inscriptions?.[0];
-	const notesPositives = prismaEleve.incidents?.filter((i) => i.type === 'NOTE').length || 0;
-	const notesNegatives = prismaEleve.incidents?.filter((i) => i.type === 'ERREUR').length || 0;
+
+	// On privilegie l'inscription de l'annee active ; a defaut la plus recente.
+	const inscription =
+		prismaEleve.inscriptions?.find((i) => i.anneeId === anneeId && i.actif) ??
+		prismaEleve.inscriptions?.find((i) => i.anneeId === anneeId) ??
+		prismaEleve.inscriptions?.[0];
 
 	const incidents = (prismaEleve.incidents || []).map((inc) => ({
 		id: inc.id,
@@ -27,14 +43,24 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		auteurId: inc.compteId || undefined
 	}));
 
-	const stats: EleveStats = {
-		retards: 0,
-		absences: 0,
-		incidents: prismaEleve.incidents?.length || 0,
-		notesPositives,
-		notesNegatives,
-		coursTermines: 0
-	};
+	const absences = (prismaEleve.absences || []).map((a) => ({
+		id: a.id,
+		date: a.date.toISOString(),
+		justifie: a.justifie,
+		motif: a.motif
+	}));
+
+	const retards = (prismaEleve.retards || []).map((r) => ({
+		id: r.id,
+		date: r.date.toISOString(),
+		duree: r.duree,
+		justifie: r.justifie,
+		motif: r.motif
+	}));
+
+	// Les compteurs sont recalcules depuis la base : les champs denormalises de
+	// la table `eleves` ne sont pas fiables.
+	const stats = await getEleveStats(params.id);
 
 	const eleve: Eleve = {
 		id: prismaEleve.id,
@@ -65,10 +91,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		telephoneTuteur: prismaEleve.telephoneTuteur,
 		im: prismaEleve.im,
 		sexe: prismaEleve.sexe,
+		situation: (prismaEleve as { situation?: string }).situation,
+		lieuNaissance: (prismaEleve as { lieuNaissance?: string | null }).lieuNaissance ?? null,
 		stats
 	};
 	const canEdit = peutModifier(locals.user?.role);
-	return { eleve, incidents, canEdit };
+	return { eleve, incidents, absences, retards, canEdit };
 };
 
 export const actions: Actions = {
@@ -132,6 +160,49 @@ export const actions: Actions = {
 			});
 		} catch (e: unknown) {
 			return fail(500, { error: 'Erreur lors de la mise à jour' });
+		}
+		return { success: true };
+	},
+
+	// Ajout d'une absence depuis la fiche individuelle (carte de suivi).
+	addAbsence: async ({ request, params, locals }) => {
+		if (!peutModifier(locals.user?.role)) {
+			return fail(403, { error: 'Non autorisé' });
+		}
+		const form = await request.formData();
+		const read = (k: string) => (form.get(k) as string | null)?.trim() ?? '';
+		const dateHeure = read('dateHeure');
+		const duree = read('duree');
+		const motif = read('motif');
+		const dateRetour = read('dateRetour');
+
+		if (!dateHeure) {
+			return fail(400, { error: 'La date / heure est obligatoire' });
+		}
+
+		const annee = await getActiveAnneeScolaire();
+
+		try {
+			const inscription = annee
+				? await prisma.inscription.findFirst({
+						where: { eleveId: params.id, anneeId: annee.id, actif: true }
+					})
+				: null;
+
+			await prisma.absence.create({
+				data: {
+					eleveId: params.id,
+					inscriptionId: inscription?.id || null,
+					date: new Date(dateHeure),
+					duree: duree || null,
+					motif: motif || null
+					// dateRetour n'est pas stockée en base ; champ libre du
+					// carnet papier. On le conserve côté formulaire uniquement.
+				}
+			});
+			broadcastRealtime({ entity: 'eleve', action: 'update', id: params.id });
+		} catch (e: unknown) {
+			return fail(500, { error: 'Erreur lors de l\'enregistrement de l\'absence' });
 		}
 		return { success: true };
 	}

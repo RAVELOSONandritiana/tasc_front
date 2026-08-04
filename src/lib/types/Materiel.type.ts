@@ -45,6 +45,7 @@ export type EleveCours = {
 	im?: string | null;
 	sexe?: string | null;
 	redoublant?: boolean;
+	situation?: string;
 	actif: boolean;
 	resultat?: 'EN_ATTENTE' | 'ADMIS' | 'AJOURNE';
 	inscriptionId?: string;

@@ -1,17 +1,17 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getEleves, getActiveAnneeScolaire, deleteEleve } from '$lib/server/prisma';
+import { getEleves, getElevesStats, getActiveAnneeScolaire, deleteEleve } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
 import type { Prisma } from '@prisma/client';
-import type { Eleve } from '$lib/types/Personne.type';
+import type { Eleve, EleveStats } from '$lib/types/Personne.type';
 import { formatClasseNom } from '$lib/utils';
 
 type EleveWithInscriptions = Prisma.EleveGetPayload<{
 	include: { personne: true; inscriptions: { include: { classe: true } } };
 }>;
 
-function mapEleve(prismaEleve: EleveWithInscriptions): Eleve {
+function mapEleve(prismaEleve: EleveWithInscriptions, stats?: EleveStats): Eleve {
 	const inscription = prismaEleve.inscriptions?.[0];
 	return {
 		id: prismaEleve.id,
@@ -20,21 +20,17 @@ function mapEleve(prismaEleve: EleveWithInscriptions): Eleve {
 		dateNaissance: prismaEleve.dateNaissance?.toISOString().split('T')[0] || '',
 		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
 		imageUrl: prismaEleve.personne.imageUrl || null,
-		stats: {
-			retards: 0,
-			absences: 0,
-			incidents: 0,
-			notesPositives: 0,
-			notesNegatives: 0,
-			coursTermines: 0
-		}
+		stats
 	};
 }
 
 export const load: PageServerLoad = async () => {
 	const annee = await getActiveAnneeScolaire();
 	const eleves = annee ? await getEleves(annee.id) : [];
-	const list_eleve: Eleve[] = eleves.map(mapEleve);
+	// Compteurs reels (absences, retards, incidents, cours suivis) calcules en
+	// une seule passe pour toute la liste.
+	const stats = await getElevesStats(eleves.map((e) => e.id));
+	const list_eleve: Eleve[] = eleves.map((e) => mapEleve(e, stats[e.id]));
 	return { list_eleve };
 };
 

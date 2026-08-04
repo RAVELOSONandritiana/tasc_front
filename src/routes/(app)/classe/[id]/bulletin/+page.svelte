@@ -478,7 +478,7 @@
 					{formatClasseNom(data.classe?.niveau, data.classe?.nom)}</span
 				>
 				<span><span class="libelle">N° :</span> {numero || '—'}</span>
-				<span><span class="libelle">Situation :</span> {eleve.redoublant ? 'D' : 'P'}</span>
+				<span><span class="libelle">Situation :</span> {eleve.situation || 'P'}</span>
 				<span><span class="libelle">IM :</span> {eleve.im || '—'}</span>
 			</div>
 		</div>

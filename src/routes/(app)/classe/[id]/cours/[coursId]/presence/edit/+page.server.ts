@@ -79,6 +79,14 @@ export const actions: Actions = {
 		const eleveIds = formData.getAll('eleveId[]') as string[];
 		const statuses = formData.getAll('status[]') as string[];
 
+		// Bornes de la journee : on evite de creer un doublon si l'eleve a deja
+		// ete marque absent / en retard aujourd'hui (double soumission,
+		// correction faite apres la cloture de la seance, ...).
+		const debutJour = new Date();
+		debutJour.setHours(0, 0, 0, 0);
+		const finJour = new Date(debutJour);
+		finJour.setDate(finJour.getDate() + 1);
+
 		for (let i = 0; i < eleveIds.length; i++) {
 			const eleveId = eleveIds[i];
 			const status = statuses[i] as 'present' | 'absent' | 'retard';
@@ -94,6 +102,10 @@ export const actions: Actions = {
 			if (!inscription) continue;
 
 			if (status === 'absent') {
+				const existante = await prisma.absence.findFirst({
+					where: { eleveId, date: { gte: debutJour, lt: finJour } }
+				});
+				if (existante) continue;
 				await prisma.absence.create({
 					data: {
 						eleveId,
@@ -102,9 +114,14 @@ export const actions: Actions = {
 					}
 				});
 			} else if (status === 'retard') {
+				const existant = await prisma.retard.findFirst({
+					where: { eleveId, date: { gte: debutJour, lt: finJour } }
+				});
+				if (existant) continue;
 				await prisma.retard.create({
 					data: {
 						eleveId,
+						inscriptionId: inscription.id,
 						duree: '10min',
 						date: new Date()
 					}

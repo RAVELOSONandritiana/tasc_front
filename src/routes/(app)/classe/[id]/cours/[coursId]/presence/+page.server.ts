@@ -3,6 +3,7 @@ import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { createNotification } from '$lib/server/notifications';
 
 type ElevePresence = {
 	id: string;
@@ -14,6 +15,15 @@ type ElevePresence = {
 	imageUrl?: string | null;
 };
 
+function heuresPrevuesCalc(seanceEDT: { heureDebut?: string | null; heureFin?: string | null } | null): number | null {
+	if (!seanceEDT?.heureDebut || !seanceEDT?.heureFin) return null;
+	const [h1, m1] = seanceEDT.heureDebut.split(':').map(Number);
+	const [h2, m2] = seanceEDT.heureFin.split(':').map(Number);
+	if ([h1, m1, h2, m2].some((n) => Number.isNaN(n))) return null;
+	const diff = h2 * 60 + m2 - (h1 * 60 + m1);
+	return diff > 0 ? Math.round((diff / 60) * 100) / 100 : null;
+}
+
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const classeId = params.id;
 	const coursId = params.coursId;
@@ -23,9 +33,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		include: {
 			inscriptions: {
 				where: { actif: true },
-				include: {
-					eleve: { include: { personne: true } }
-				}
+				include: { eleve: { include: { personne: true } } }
 			}
 		}
 	});
@@ -54,31 +62,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		imageUrl: inscription.eleve.personne.imageUrl || null
 	}));
 
-	const seanceActive = await prisma.seanceCours.findFirst({
-		where: { coursId: coursId, statut: 'EN_COURS' },
-		include: { presences: true }
-	});
+	const annee = await getActiveAnneeScolaire();
 
-	const presencesMap: Record<string, 'PRESENT' | 'ABSENT' | 'RETARD'> = {};
-	if (seanceActive) {
-		seanceActive.presences.forEach((p) => {
-			presencesMap[p.eleveId] = p.statut;
-		});
-	}
-
-	const historique = await prisma.seanceCours.findMany({
-		where: { coursId: coursId, statut: 'TERMINE' },
+	const historique = await prisma.pointage.findMany({
+		where: { coursId: coursId },
+		orderBy: { date: 'desc' },
+		take: 15,
 		include: {
-			presences: { include: { eleve: { include: { personne: true } } } },
-			professeur: { include: { personne: true } }
-		},
-		orderBy: { dateDebut: 'desc' },
-		take: 10
+			professeur: { include: { personne: true } },
+			absences: { include: { eleve: { include: { personne: true } } } },
+			retards: { include: { eleve: { include: { personne: true } } } }
+		}
 	});
-
-	const profConnecteId = locals.user ? await getProfesseurId(locals) : null;
-	const canStart =
-		!!profConnecteId && (!cours.professeurId || cours.professeurId === profConnecteId);
 
 	return {
 		eleves,
@@ -89,267 +84,163 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		professeur: cours.professeur
 			? `${cours.professeur.personne.name} ${cours.professeur.personne.lastname}`
 			: '—',
+		professeurId: cours.professeurId ?? null,
 		salleNom: seanceEDT?.salle?.nom || 'Non définie',
 		heureDebut: seanceEDT?.heureDebut || '08:00',
 		heureFin: seanceEDT?.heureFin || '10:00',
-		seance: seanceActive
-			? {
-					id: seanceActive.id,
-					dateDebut: seanceActive.dateDebut.toISOString(),
-					statut: seanceActive.statut
-				}
-			: null,
-		professeurId: cours.professeurId ?? null,
-		canStart,
-		presencesMap,
-		historique: historique.map((s) => {
-			const absentsList = s.presences
-				.filter((p) => p.statut === 'ABSENT')
-				.map((p) => `${p.eleve.personne.name} ${p.eleve.personne.lastname}`);
-			const retardsList = s.presences
-				.filter((p) => p.statut === 'RETARD')
-				.map((p) => `${p.eleve.personne.name} ${p.eleve.personne.lastname}`);
-			return {
-				id: s.id,
-				dateDebut: s.dateDebut.toISOString(),
-				professeur: s.professeur
-					? `${s.professeur.personne.name} ${s.professeur.personne.lastname}`
-					: '—',
-				presents: s.presences.filter((p) => p.statut === 'PRESENT').length,
-				retards: s.presences.filter((p) => p.statut === 'RETARD').length,
-				absents: s.presences.filter((p) => p.statut === 'ABSENT').length,
-				total: s.presences.length,
-				absentsList,
-				retardsList
-			};
-		})
+		heuresPrevues: heuresPrevuesCalc(seanceEDT),
+		seuilAbsence: annee?.seuilAbsenceConvoc ?? 3,
+		canEdit:
+			!!annee &&
+			(locals.user?.role === 'SURVEILLANT' || locals.user?.role === 'ADMINISTRATEUR'),
+		historique: historique.map((p) => ({
+			id: p.id,
+			date: p.date.toISOString(),
+			professeur: p.professeur
+				? `${p.professeur.personne.name} ${p.professeur.personne.lastname}`
+				: '—',
+			heuresEffectuees: p.heuresEffectuees,
+			heuresPrevues: p.heuresPrevues ?? null,
+			causeIncomplet: p.causeIncomplet || null,
+			absents: p.absences.map((a) => `${a.eleve.personne.name} ${a.eleve.personne.lastname}`),
+			retards: p.retards.map((r) => `${r.eleve.personne.name} ${r.eleve.personne.lastname}`)
+		}))
 	};
 };
 
-async function getProfesseurId(locals: App.Locals): Promise<string | null> {
-	if (!locals.user) return null;
-	const compte = await prisma.compte.findUnique({
-		where: { id: locals.user.userId },
-		include: { personne: { include: { professeur: true } } }
-	});
-	return compte?.personne?.professeur?.id ?? null;
-}
-
 export const actions: Actions = {
-	startSeance: async ({ params, locals }) => {
-		const coursId = params.coursId;
-		if (!locals.user) return fail(403, { error: 'Non autorisé' });
+	enregistrer: async ({ request, params, locals }) => {
+		const role = locals.user?.role;
+		if (role !== 'SURVEILLANT' && role !== 'ADMINISTRATEUR') {
+			return fail(403, { error: 'Réservé au surveillant ou à l’opérateur' });
+		}
 
-		const profConnecteId = await getProfesseurId(locals);
-		if (!profConnecteId) {
-			return fail(403, { error: 'Seul le professeur titulaire peut démarrer ce cours' });
+		const formData = await request.formData();
+		const coursId = params.coursId;
+		const classeId = params.id;
+		const dateRaw = (formData.get('date') as string) || '';
+		const heuresEffectueesRaw = formData.get('heuresEffectuees') as string;
+		const causeIncomplet = (formData.get('causeIncomplet') as string)?.trim() || null;
+		const absentIds = formData.getAll('absentIds').map(String).filter(Boolean);
+		const retardIds = formData.getAll('retardIds').map(String).filter(Boolean);
+
+		const heuresEffectuees = parseFloat(heuresEffectueesRaw);
+		if (Number.isNaN(heuresEffectuees) || heuresEffectuees < 0) {
+			return fail(400, { error: 'Nombre d’heures effectuées invalide' });
+		}
+		if (!dateRaw) {
+			return fail(400, { error: 'Date requise' });
 		}
 
 		const annee = await getActiveAnneeScolaire();
-		if (!annee) return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
+		if (!annee) {
+			return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
+		}
 
 		const cours = await prisma.cours.findUnique({
 			where: { id: coursId },
-			select: { professeurId: true }
+			include: { matiere: true, classe: true }
 		});
-		if (cours?.professeurId && cours.professeurId !== profConnecteId) {
-			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le démarrer' });
-		}
-		const professeurId = cours?.professeurId || profConnecteId;
+		if (!cours) return fail(400, { error: 'Cours introuvable' });
 
-		const existante = await prisma.seanceCours.findFirst({
-			where: { coursId, statut: 'EN_COURS' }
-		});
-		if (existante) {
-			return { seanceId: existante.id, alreadyActive: true };
-		}
+		const seuil = annee.seuilAbsenceConvoc || 3;
 
+		// Inscriptions de la classe pour cette année (pour lier absences/retards).
 		const inscriptions = await prisma.inscription.findMany({
-			where: { classeId: params.id, actif: true },
+			where: { classeId, anneeId: annee.id, actif: true },
 			select: { id: true, eleveId: true }
 		});
+		const inscriptionParEleve = new Map(inscriptions.map((i) => [i.eleveId, i.id]));
+		const motifCours = `Cours : ${cours.matiere.nom} (${cours.classe ? `${cours.classe.nom}` : ''})`;
 
-		const seance = await prisma.seanceCours.create({
+		const datePointage = new Date(dateRaw);
+
+		const seanceEDT = await prisma.seanceEDT.findFirst({
+			where: { coursId: coursId },
+			select: { heureDebut: true, heureFin: true }
+		});
+		const heuresPrevues = heuresPrevuesCalc(seanceEDT);
+
+		const pointage = await prisma.pointage.create({
 			data: {
 				coursId,
-				professeurId,
+				classeId,
+				professeurId: cours.professeurId || null,
 				anneeId: annee.id,
-				statut: 'EN_COURS',
-				presences: {
-					create: inscriptions.map((ins) => ({
-						eleveId: ins.eleveId,
-						inscriptionId: ins.id,
-						statut: 'PRESENT'
-					}))
-				}
-			},
-			include: { presences: true }
-		});
-
-		await logActivity(locals.user ?? null, 'debut_seance', `Début du cours ${coursId}`, undefined, undefined).catch(
-			() => {}
-		);
-
-		// Marque la salle liée à ce cours (via l'emploi du temps) comme occupée.
-		try {
-			const seanceEDT = await prisma.seanceEDT.findFirst({
-				where: { coursId, salleId: { not: null } },
-				select: { salleId: true }
-			});
-			if (seanceEDT?.salleId) {
-				await prisma.salle.update({
-					where: { id: seanceEDT.salleId },
-					data: { occupe: true }
-				});
-				broadcastRealtime({ entity: 'salle', action: 'update', id: seanceEDT.salleId });
-			}
-		} catch (e) {
-			console.error('Erreur mise à jour occupation salle (start):', e);
-		}
-
-		return { seanceId: seance.id, success: true };
-	},
-
-	markPresence: async ({ request, params }) => {
-		const formData = await request.formData();
-		const seanceId = formData.get('seanceId') as string;
-		const eleveId = formData.get('eleveId') as string;
-		const statut = formData.get('statut') as 'PRESENT' | 'ABSENT' | 'RETARD';
-		const coursId = params.coursId;
-
-		if (!seanceId || !eleveId || !statut) {
-			return fail(400, { error: 'Paramètres manquants' });
-		}
-
-		const inscription = await prisma.inscription.findFirst({
-			where: { eleveId, classeId: params.id, actif: true }
-		});
-
-		await prisma.presenceEleve.upsert({
-			where: { seanceId_eleveId: { seanceId, eleveId } },
-			update: { statut, heureMarquage: new Date() },
-			create: {
-				seanceId,
-				eleveId,
-				inscriptionId: inscription?.id || null,
-				statut
+				operateurId: locals.user?.userId ?? null,
+				date: datePointage,
+				heuresPrevues,
+				heuresEffectuees,
+				causeIncomplet
 			}
 		});
 
-		return { success: true };
-	},
+		// Les élèves à traiter : absents en priorité, retards sur le reste.
+		const ensembleAbsents = new Set(absentIds);
+		const ensembleRetards = new Set(retardIds.filter((id) => !ensembleAbsents.has(id)));
 
-	stopSeance: async ({ params, locals }) => {
-		const coursId = params.coursId;
-		if (!locals.user) return fail(403, { error: 'Non autorisé' });
+		const elevesConcernes = new Set<string>([...ensembleAbsents, ...ensembleRetards]);
 
-		const profConnecteId = await getProfesseurId(locals);
-		if (!profConnecteId) {
-			return fail(403, { error: 'Seul le professeur titulaire peut terminer ce cours' });
-		}
-
-		const cours = await prisma.cours.findUnique({
-			where: { id: coursId },
-			select: { professeurId: true, participants: true }
-		});
-
-		const seance = await prisma.seanceCours.findFirst({
-			where: { coursId, statut: 'EN_COURS' },
-			include: { presences: true }
-		});
-
-		if (!seance) {
-			return fail(400, { error: 'Aucune séance en cours' });
-		}
-
-		// On autorise le professeur titulaire du cours OU le professeur qui a
-		// réellement démarré la séance (utile en cas de désynchronisation entre
-		// cours.professeurId et la séance), ainsi que les rôles de gestion.
-		const roleAutorise =
-			locals.user?.role === 'ADMINISTRATEUR' ||
-			locals.user?.role === 'SURVEILLANT' ||
-			seance.professeurId === profConnecteId ||
-			cours?.professeurId === profConnecteId;
-		if (!roleAutorise) {
-			return fail(403, { error: 'Seul le professeur titulaire de ce cours peut le terminer' });
-		}
-
-		// 1) Clôturer la séance EN PREMIER et de façon inconditionnelle. On la
-		// sort de la transaction annexe pour garantir que le statut passe bien à
-		// TERMINE, même si les traitements suivants échouent.
-		await prisma.seanceCours.update({
-			where: { id: seance.id },
-			data: { statut: 'TERMINE', dateFin: new Date() }
-		});
-		// Par sécurité, on termine aussi toute autre séance EN_COURS résiduelle
-		// pour ce cours (cas de séances en double).
-		await prisma.seanceCours.updateMany({
-			where: { coursId, statut: 'EN_COURS', NOT: { id: seance.id } },
-			data: { statut: 'TERMINE', dateFin: new Date() }
-		});
-
-		// 2) Traitements annexes (increment, absences/retards) en best-effort :
-		// ils ne doivent jamais empêcher la clôture de la séance.
-		const participants = cours?.participants || [];
-		const participantsValides =
-			participants.length > 0
-				? (await prisma.eleve.findMany({ where: { id: { in: participants } }, select: { id: true } })).map(
-						(e) => e.id
-					)
-				: [];
 		try {
 			await prisma.$transaction(async (tx) => {
-				for (const eleveId of participantsValides) {
-					await tx.eleve
-						.update({ where: { id: eleveId }, data: { coursTermines: { increment: 1 } } })
-						.catch(() => {});
+				for (const eleveId of ensembleAbsents) {
+					await tx.absence.create({
+						data: {
+							eleveId,
+							inscriptionId: inscriptionParEleve.get(eleveId) || null,
+							date: datePointage,
+							motif: motifCours,
+							pointageId: pointage.id
+						}
+					});
 				}
-				for (const p of seance.presences) {
-					if (p.statut === 'ABSENT') {
-						await tx.absence
-							.create({
-								data: { eleveId: p.eleveId, inscriptionId: p.inscriptionId || null, date: seance.dateDebut }
-							})
-							.catch(() => {});
-					} else if (p.statut === 'RETARD') {
-						await tx.retard
-							.create({
-								data: {
-									eleveId: p.eleveId,
-									inscriptionId: p.inscriptionId || null,
-									duree: '10min',
-									date: seance.dateDebut
-								}
-							})
-							.catch(() => {});
-					}
+				for (const eleveId of ensembleRetards) {
+					await tx.retard.create({
+						data: {
+							eleveId,
+							inscriptionId: inscriptionParEleve.get(eleveId) || null,
+							date: datePointage,
+							duree: '—',
+							motif: motifCours,
+							pointageId: pointage.id
+						}
+					});
 				}
 			});
-		} catch (e: unknown) {
-			console.error('Traitements annexes de fin de séance (non bloquants):', e);
-		}
-
-		await logActivity(locals.user ?? null, 'fin_seance', `Fin du cours ${coursId}`, undefined, undefined).catch(
-			() => {}
-		);
-
-		// Libère la salle liée à ce cours (via l'emploi du temps).
-		try {
-			const seanceEDT = await prisma.seanceEDT.findFirst({
-				where: { coursId, salleId: { not: null } },
-				select: { salleId: true }
-			});
-			if (seanceEDT?.salleId) {
-				await prisma.salle.update({
-					where: { id: seanceEDT.salleId },
-					data: { occupe: false }
-				});
-				broadcastRealtime({ entity: 'salle', action: 'update', id: seanceEDT.salleId });
-			}
 		} catch (e) {
-			console.error('Erreur mise à jour occupation salle (stop):', e);
+			console.error('Erreur création absences/retards:', e);
+			return fail(500, { error: 'Erreur lors de l’enregistrement' });
 		}
 
-		return { success: true };
+		// Alertes de convocation des parents aux multiples du seuil.
+		const alertes: string[] = [];
+		for (const eleveId of elevesConcernes) {
+			const total = await prisma.absence.count({
+				where: { eleveId, inscription: { anneeId: annee.id } }
+			});
+			if (total > 0 && total % seuil === 0) {
+				const eleve = await prisma.eleve.findUnique({
+					where: { id: eleveId },
+					include: { personne: true }
+				});
+				const nomComplet = eleve ? `${eleve.personne.name} ${eleve.personne.lastname}` : 'Un élève';
+				await createNotification({
+					title: 'Convocation des parents',
+					description: `${nomComplet} a atteint ${total} absences (seuil : ${seuil}). Convocation des parents requise.`,
+					scope: 'ALL',
+					actionType: 'CONVOCATION_PARENTS'
+				}).catch(() => {});
+				alertes.push(`${nomComplet} → ${total} absences`);
+				broadcastRealtime({ entity: 'eleve', action: 'update', id: eleveId });
+			}
+		}
+
+		await logActivity(
+			locals.user ?? null,
+			'pointage_cours',
+			`Pointage du cours ${cours.matiere.nom} (${heuresEffectuees}h)`
+		).catch(() => {});
+
+		return { success: true, alertes };
 	}
 };

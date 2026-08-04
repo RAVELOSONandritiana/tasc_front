@@ -135,19 +135,19 @@
 									<span class="text-xs text-destructive">{errors.nom}</span>
 								{/if}
 							</div>
-							<div class="grid gap-2">
-								<Label for="prenom">Prénom *</Label>
-								<Input
-									id="prenom"
-									name="prenom"
-									bind:value={form.prenom}
-									placeholder="Entrer le prénom"
-									class={errors.prenom ? 'border-destructive capitalize' : 'capitalize'}
-								/>
-								{#if errors.prenom}
-									<span class="text-xs text-destructive">{errors.prenom}</span>
-								{/if}
-							</div>
+						<div class="grid gap-2">
+							<Label for="prenom">Prénom *</Label>
+							<Input
+								id="prenom"
+								name="prenom"
+								bind:value={form.prenom}
+								placeholder="Entrer le prénom"
+								class={errors.prenom ? 'border-destructive capitalize' : 'capitalize'}
+							/>
+							{#if errors.prenom}
+								<span class="text-xs text-destructive">{errors.prenom}</span>
+							{/if}
+						</div>
 							<div class="grid gap-2">
 								<Label for="dateNaissance">Date de naissance *</Label>
 								<Input

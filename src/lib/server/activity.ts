@@ -19,6 +19,8 @@ export type ActivityAction =
 	| 'suppression_surveillant'
 	| 'creation_enseignant'
 	| 'suppression_enseignant'
+	| 'creation_operateur'
+	| 'suppression_operateur'
 	| 'debut_seance'
 	| 'fin_seance'
 	| 'creation_eleve'
@@ -26,7 +28,8 @@ export type ActivityAction =
 	| 'creation_rapport'
 	| 'suppression_rapport'
 	| 'deliberation'
-	| 'changement_mot_de_passe';
+	| 'changement_mot_de_passe'
+	| 'pointage_cours';
 
 export async function logActivity(
 	session: Session | null,

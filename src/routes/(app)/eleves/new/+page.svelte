@@ -47,7 +47,7 @@
 		telephoneTuteur: '',
 		im: '',
 		sexe: '',
-		statut: 'false'
+		situation: 'P'
 	});
 
 	function resetForm() {
@@ -78,7 +78,7 @@
 			telephoneTuteur: '',
 			im: '',
 			sexe: '',
-			statut: 'false'
+			situation: 'P'
 		};
 		errors = {};
 		success = false;
@@ -134,7 +134,7 @@
 				telephoneTuteur: e.telephoneTuteur || '',
 				im: e.im || '',
 				sexe: e.sexe || '',
-				statut: e.statut || 'false'
+				situation: e.situation || 'P'
 			};
 			checked = Boolean(e.nomTuteur || e.prenomTuteur);
 			searchError = '';
@@ -308,15 +308,20 @@
 								/>
 							</div>
 							<div class="grid gap-2">
-								<Label for="statut">Statut scolaire</Label>
+								<Label for="situation">Situation de l'élève *</Label>
 								<NativeSelect.Root
-									id="statut"
+									id="situation"
 									class="w-full"
-									name="statut"
-									bind:value={form.statut}
+									name="situation"
+									bind:value={form.situation}
 								>
-									<NativeSelect.Option value="false">Passant</NativeSelect.Option>
-									<NativeSelect.Option value="true">Redoublant</NativeSelect.Option>
+									<NativeSelect.Option value="P">Passant (P)</NativeSelect.Option>
+									<NativeSelect.Option value="R">Redoublant (R)</NativeSelect.Option>
+									<NativeSelect.Option value="TP">Transfert Passant (TP)</NativeSelect.Option>
+									<NativeSelect.Option value="TR">Transfert Redoublant (TR)</NativeSelect.Option>
+									<NativeSelect.Option value="T">Transfert (T)</NativeSelect.Option>
+									<NativeSelect.Option value="DP">Dérogation Passant (DP)</NativeSelect.Option>
+									<NativeSelect.Option value="D">Dérogation (D)</NativeSelect.Option>
 								</NativeSelect.Root>
 							</div>
 						</div>

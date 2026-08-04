@@ -35,7 +35,8 @@
 		Administrateur: 'bg-red-500/10 text-red-500 border-red-500/20',
 		Enseignant: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
 		Surveillant: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-		Personnel: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+		Personnel: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+		Operateur: 'bg-purple-500/10 text-purple-500 border-purple-500/20'
 	};
 
 	const stats = $derived([
@@ -46,6 +47,36 @@
 						value: user.stats.coursTermines.toString(),
 						icon: GraduationCap,
 						color: 'text-emerald-500'
+					}
+				]
+			: []),
+		...(user.stats?.absencesEleve !== undefined
+			? [
+					{
+						label: 'Absences',
+						value: user.stats.absencesEleve.toString(),
+						icon: UserX,
+						color: 'text-red-500'
+					}
+				]
+			: []),
+		...(user.stats?.retardsEleve !== undefined
+			? [
+					{
+						label: 'Retards',
+						value: user.stats.retardsEleve.toString(),
+						icon: Timer,
+						color: 'text-amber-500'
+					}
+				]
+			: []),
+		...(user.stats?.incidentsEleve !== undefined
+			? [
+					{
+						label: 'Incidents',
+						value: user.stats.incidentsEleve.toString(),
+						icon: Shield,
+						color: 'text-red-500'
 					}
 				]
 			: []),
@@ -161,10 +192,12 @@
 				<ArrowLeft class="size-4" />
 				Retour
 			</Button>
-			<Button variant="outline" class="gap-2" onclick={() => goto(`/profil/${user.id}/history`)}>
-				<History class="size-4" />
-				Historique
-			</Button>
+			{#if data.viewerRole === 'ADMINISTRATEUR'}
+				<Button variant="outline" class="gap-2" onclick={() => goto(`/profil/${user.id}/history`)}>
+					<History class="size-4" />
+					Historique
+				</Button>
+			{/if}
 		</div>
 
 		<Card class="overflow-hidden">
@@ -422,6 +455,70 @@
 						</div>
 					{/if}
 				{/if}
+			</Card>
+		{/if}
+
+		{#if data.absences?.length > 0 || data.retards?.length > 0}
+			<Card class="space-y-4 p-4">
+				<div class="flex items-center justify-between gap-2">
+					<h3 class="flex items-center gap-2 font-semibold">
+						<CalendarClock class="size-4 text-primary" />
+						Absences & retards
+					</h3>
+					{#if data.seuilAbsence}
+						<Badge variant="outline" class="text-xs">
+							Convocation parents à {data.seuilAbsence} absences
+							{#if data.totalAbsencesAnnee}
+								· {data.totalAbsencesAnnee} cette année
+							{/if}
+						</Badge>
+					{/if}
+				</div>
+
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<div>
+						<p class="mb-2 text-xs font-semibold text-red-500">
+							Absences ({data.absences?.length ?? 0})
+						</p>
+						{#if (data.absences?.length ?? 0) === 0}
+							<p class="text-xs text-muted-foreground">Aucune absence enregistrée.</p>
+						{:else}
+							<ul class="space-y-1">
+								{#each data.absences as a (a.id)}
+									<li class="flex items-center justify-between gap-2 rounded-md border border-sidebar-border px-2 py-1 text-xs">
+										<span class="min-w-0 flex-1 truncate">
+											{a.date}{a.motif ? ` · ${a.motif}` : ''}
+										</span>
+										<span class={a.justifie ? 'text-emerald-500' : 'text-amber-500'}>
+											{a.justifie ? 'Justifiée' : 'Non just.'}
+										</span>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+					<div>
+						<p class="mb-2 text-xs font-semibold text-amber-500">
+							Retards ({data.retards?.length ?? 0})
+						</p>
+						{#if (data.retards?.length ?? 0) === 0}
+							<p class="text-xs text-muted-foreground">Aucun retard enregistré.</p>
+						{:else}
+							<ul class="space-y-1">
+								{#each data.retards as r (r.id)}
+									<li class="flex items-center justify-between gap-2 rounded-md border border-sidebar-border px-2 py-1 text-xs">
+										<span class="min-w-0 flex-1 truncate">
+											{r.date}{r.motif ? ` · ${r.motif}` : ''}
+										</span>
+										<span class={r.justifie ? 'text-emerald-500' : 'text-amber-500'}>
+											{r.justifie ? 'Justifié' : 'Non just.'}
+										</span>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				</div>
 			</Card>
 		{/if}
 	</div>

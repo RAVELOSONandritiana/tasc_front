@@ -115,6 +115,10 @@
 				<Printer class="mr-2 size-4" />
 				Liste de présence
 			</Button>
+			<Button variant="outline" href={`/classe/${data.classeId}/liste-fiches`}>
+				<Printer class="mr-2 size-4" />
+				Fiches de classe (PDF)
+			</Button>
 			<Dialog.Root
 				bind:open={openAddDialog}
 				onOpenChange={(open) => {
@@ -262,9 +266,10 @@
 				<Table.Header>
 					<Table.Row>
 						<Table.Head class="text-center">N° classe</Table.Head>
-						<Table.Head>Nom</Table.Head>
-						<Table.Head>Prénom</Table.Head>
-						<Table.Head>Date naissance</Table.Head>
+					<Table.Head>Nom</Table.Head>
+					<Table.Head>Prénom</Table.Head>
+					<Table.Head>IM (Matricule)</Table.Head>
+					<Table.Head>Date naissance</Table.Head>
 						<Table.Head class="text-center">Âge</Table.Head>
 						<Table.Head>Domicile</Table.Head>
 						<Table.Head class="text-center">Incidents</Table.Head>
@@ -279,6 +284,7 @@
 							<Table.Cell class="text-center font-semibold">{numeroClasse(eleve)}</Table.Cell>
 							<Table.Cell class="font-medium">{eleve.nom}</Table.Cell>
 							<Table.Cell>{eleve.prenom}</Table.Cell>
+							<Table.Cell class="text-center">{eleve.im ?? '—'}</Table.Cell>
 							<Table.Cell>
 								{#if eleve.dateNaissance}
 									{new Date(eleve.dateNaissance).toLocaleDateString()}
@@ -306,6 +312,14 @@
 								{eleve.retards?.length || 0}
 							</Table.Cell>
 							<Table.Cell class="text-center">
+								<Button
+									variant="outline"
+									size="sm"
+									class="mb-1 mr-1"
+									href={`/eleves/${eleve.id}/fiche`}
+								>
+									Fiche
+								</Button>
 								<Button
 									type="button"
 									variant="destructive"

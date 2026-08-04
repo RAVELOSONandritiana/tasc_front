@@ -49,7 +49,8 @@
 			ADMINISTRATEUR: 'Administrateur',
 			ENSEIGNANT: 'Enseignant',
 			SURVEILLANT: 'Surveillant',
-			PERSONNEL: 'Personnel'
+			PERSONNEL: 'Personnel',
+			OPERATEUR: 'Operateur'
 		}[role] || role
 	);
 

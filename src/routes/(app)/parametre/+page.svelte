@@ -17,6 +17,7 @@
 
 	let searchCompte = $state('');
 	let nouvelleAnnee = $state('');
+	let nouveauSeuil = $state('3');
 
 	const demandesEnAttente = $derived(data.demandesReset.filter((d) => !d.done));
 
@@ -329,17 +330,32 @@
 						</p>
 					</div>
 							<div class="mt-4 grid gap-3 w-full">
-								<Label>Nom de l'année scolaire</Label>
-								<Input class="w-full" placeholder="Ex: 2026-2027" name="nom" bind:value={nouvelleAnnee} form="form-creer-annee" />
-							</div>
-						</AlertDialog.Header>
-						<AlertDialog.Footer>
-							<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-							<form id="form-creer-annee" method="POST" action="?/creerAnnee" class="inline" use:loadingForm>
-								<input type="hidden" name="nom" value={nouvelleAnnee} />
-								<AlertDialog.Action type="submit">Créer</AlertDialog.Action>
-							</form>
-						</AlertDialog.Footer>
+							<Label>Nom de l'année scolaire</Label>
+							<Input class="w-full" placeholder="Ex: 2026-2027" name="nom" bind:value={nouvelleAnnee} form="form-creer-annee" />
+							<Label class="mt-1">Seuil d'absences pour convocation des parents</Label>
+							<Input
+								class="w-full"
+								type="number"
+								min="1"
+								placeholder="Ex: 3"
+								name="seuil"
+								bind:value={nouveauSeuil}
+								form="form-creer-annee"
+							/>
+							<p class="text-xs text-muted-foreground">
+								Une alerte de convocation des parents est envoyée à chaque multiple de ce nombre
+								d'absences (ex : 3, 6, 9…).
+							</p>
+						</div>
+					</AlertDialog.Header>
+					<AlertDialog.Footer>
+						<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
+						<form id="form-creer-annee" method="POST" action="?/creerAnnee" class="inline" use:loadingForm>
+							<input type="hidden" name="nom" value={nouvelleAnnee} />
+							<input type="hidden" name="seuil" value={nouveauSeuil} />
+							<AlertDialog.Action type="submit">Créer</AlertDialog.Action>
+						</form>
+					</AlertDialog.Footer>
 					</AlertDialog.Content>
 				</AlertDialog.Root>
 			</Card>

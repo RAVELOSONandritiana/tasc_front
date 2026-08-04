@@ -406,6 +406,7 @@
 		</form>
 
 		<!-- Activity History -->
+		{#if data.user?.role === 'ADMINISTRATEUR'}
 		<Card
 			class="animate-slide-up stagger-7 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
 		>
@@ -457,6 +458,7 @@
 				</div>
 			{/if}
 		</Card>
+		{/if}
 
 		<!-- Password Change -->
 		<Card class="animate-slide-up stagger-8 p-5 opacity-0">

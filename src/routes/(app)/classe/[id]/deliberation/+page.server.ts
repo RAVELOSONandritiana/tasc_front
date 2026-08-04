@@ -237,7 +237,10 @@ export const actions: Actions = {
 			if (resultat === 'AJOURNE' || resultat === 'ADMIS') {
 				await prisma.eleve.update({
 					where: { id: inscription.eleveId },
-					data: { redoublant: resultat === 'AJOURNE' }
+					data: {
+						redoublant: resultat === 'AJOURNE',
+						situation: resultat === 'AJOURNE' ? 'R' : 'P'
+					}
 				});
 			}
 

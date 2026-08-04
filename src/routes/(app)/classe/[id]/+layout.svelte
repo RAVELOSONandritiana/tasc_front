@@ -14,6 +14,7 @@
 		{ path: `/classe/${id}/eleves`, label: 'Eleve', number: 1 },
 		{ path: `/classe/${id}/edt`, label: 'Emploi du temps', number: 2 },
 		{ path: `/classe/${id}/bulletin`, label: 'Bulletins', number: 3 },
+		{ path: `/classe/${id}/analyse`, label: 'Analyse', number: 5 },
 		{ path: `/classe/${id}/deliberation`, label: 'Délibération', number: 4, adminOnly: true }
 	];
 
@@ -21,12 +22,9 @@
 		data.peutDeliberer ? navigation : navigation.filter((n) => !n.adminOnly)
 	);
 
-	const activePathIndex = $derived(
-		(() => {
-			const idx = visibleNavigation.findIndex((n) => $page.url.pathname.startsWith(n.path));
-			return idx !== -1 ? idx : 0;
-		})()
-	);
+	function isActive(path: string): boolean {
+		return $page.url.pathname.startsWith(path);
+	}
 
 	function setCurrentTab(pageNumber: number) {
 		const newpath = navigation.find((e) => e.number == pageNumber)?.path;
@@ -41,7 +39,7 @@
 				<Button
 					class="px-3"
 					onclick={() => setCurrentTab(n.number)}
-					variant={activePathIndex == n.number ? 'default' : 'secondary'}>{n.label}</Button
+					variant={isActive(n.path) ? 'default' : 'secondary'}>{n.label}</Button
 				>
 			{/each}
 		</ul>

@@ -50,6 +50,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				telephoneTuteur: eleve.telephoneTuteur || '',
 				im: eleve.im || '',
 				sexe: eleve.sexe || '',
+				situation: eleve.situation ?? 'P',
 				statut: eleve.redoublant ? 'true' : 'false'
 			}
 		});
