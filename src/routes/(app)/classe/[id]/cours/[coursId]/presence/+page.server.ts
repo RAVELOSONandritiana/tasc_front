@@ -274,10 +274,23 @@ export const actions: Actions = {
 
 		const participants = cours?.participants || [];
 
+		// Certains participants peuvent référencer un élève supprimé (resté dans
+		// le tableau). On ne traite que les élèves toujours existants pour éviter
+		// une erreur P2025 qui ferait échouer toute la clôture.
+		const participantsValides =
+			participants.length > 0
+				? (
+						await prisma.eleve.findMany({
+							where: { id: { in: participants } },
+							select: { id: true }
+						})
+					).map((e) => e.id)
+				: [];
+
 		try {
 		await prisma.$transaction(async (tx) => {
 			// Incrémente le nombre de cours terminés pour chaque élève participant.
-			for (const eleveId of participants) {
+			for (const eleveId of participantsValides) {
 				await tx.eleve.update({
 					where: { id: eleveId },
 					data: { coursTermines: { increment: 1 } }
