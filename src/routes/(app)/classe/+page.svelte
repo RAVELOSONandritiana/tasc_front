@@ -281,22 +281,40 @@
 			</div>
 		</div>
 		<div class="p-4 md:p-6">
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{#each listClasse as l, i (l.id)}
-					<div
-						class="animate-slide-up opacity-0"
-						style="animation-delay: {Math.min(i * 50, 400)}ms"
+			{#if listClasse.length === 0}
+				<div
+					class="animate-fade-in flex flex-col items-center justify-center py-16 text-muted-foreground"
+				>
+					<ClipboardList class="size-12 text-muted-foreground/30" />
+					<p class="mt-4 text-sm font-medium">Aucune classe enregistrée</p>
+					<p class="mt-1 text-xs">Créez une classe pour commencer.</p>
+					<Button
+						class="mt-4"
+						variant="outline"
+						onclick={() => (openDialog = true)}
+						disabled={!anneeSelectionnee}
+						title={anneeSelectionnee ? undefined : "Aucune année scolaire n'est sélectionnée"}
+						>Nouvelle classe</Button
 					>
-						<Classe
-						classe={l}
-						id={l.id}
-						deleteAction="?/delete"
-						{enseignants}
-						ondelete={(id: string) => (listClasse = listClasse.filter((c) => c.id !== id))}
-					/>
-					</div>
-			{/each}
-			</div>
+				</div>
+			{:else}
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					{#each listClasse as l, i (l.id)}
+						<div
+							class="animate-slide-up opacity-0"
+							style="animation-delay: {Math.min(i * 50, 400)}ms"
+						>
+							<Classe
+								classe={l}
+								id={l.id}
+								deleteAction="?/delete"
+								{enseignants}
+								ondelete={(id: string) => (listClasse = listClasse.filter((c) => c.id !== id))}
+							/>
+						</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	</div>
 </main>
