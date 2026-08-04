@@ -287,7 +287,13 @@
 						class="animate-slide-up opacity-0"
 						style="animation-delay: {Math.min(i * 50, 400)}ms"
 					>
-						<Classe classe={l} id={l.id} deleteAction="?/delete" {enseignants} />
+						<Classe
+						classe={l}
+						id={l.id}
+						deleteAction="?/delete"
+						{enseignants}
+						ondelete={(id: string) => (listClasse = listClasse.filter((c) => c.id !== id))}
+					/>
 					</div>
 			{/each}
 			</div>

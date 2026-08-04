@@ -14,7 +14,13 @@
 	import { Pencil } from '@lucide/svelte/icons';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	const { classe: cl, id: classeId, deleteAction = '', enseignants = [] } = $props();
+	const { classe: cl, id: classeId, deleteAction = '', enseignants = [], ondelete = () => {} }: {
+		classe: typeof cl;
+		id: string;
+		deleteAction?: string;
+		enseignants?: Personne[];
+		ondelete?: (id: string) => void;
+	} = $props();
 
 	let c = $state(cl);
 
@@ -150,8 +156,7 @@
 				return async ({ result }: { result: ActionResult }) => {
 					submittingDelete = false;
 					if (result.type === 'success') {
-						dispatch('delete', { id: classeId });
-						window.location.reload();
+						ondelete(classeId);
 					} else if (result.type === 'failure') {
 						console.error('[Delete] Failure:', result.data);
 						alert(result.data?.error || 'Suppression impossible');
