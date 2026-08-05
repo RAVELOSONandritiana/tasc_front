@@ -4,6 +4,7 @@ import { prisma } from '$lib/server/prisma';
 import { hashPassword } from '$lib/server/auth';
 import { broadcastNotification, type NotificationScope } from '$lib/server/notifications';
 import { logActivity } from '$lib/server/activity';
+import { hasAdminPower } from '$lib/permissions';
 
 function genererMotDePasse(longueur = 6): string {
 	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -20,7 +21,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
 		return new Response('Unauthorized', { status: 401 });
 	}
-	if (locals.user.role !== 'ADMINISTRATEUR') {
+	if (!hasAdminPower(locals.user)) {
 		return json({ success: false, error: "Réservé à l'administrateur" }, { status: 403 });
 	}
 

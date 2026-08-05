@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { getEleves, getProfesseurs, getSurveillants, getClasses, getIncidents, getNotifications, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
+import { getEleves, getProfesseurs, getSurveillants, getClasses, getIncidents, getNotifications, getActiveAnneeScolaire, getOperateurs, prisma } from '$lib/server/prisma';
 import { formatClasseNom } from '$lib/utils';
-import { fail } from '@sveltejs/kit';
 
 function toISODate(d: Date): string {
 	const y = d.getFullYear();
@@ -39,20 +38,22 @@ export const load: PageServerLoad = async ({ url }) => {
 	const anneeStartISO = toISODate(annee?.dateCreation ?? rangeStart);
 	const todayISO = toISODate(today);
 
-	const [eleves, profs, surveillants, classes, incidents, notifications, salles] = await Promise.all([
+	const [eleves, profs, surveillants, classes, incidents, notifications, salles, operateurs] = await Promise.all([
 		anneeId ? getEleves(anneeId) : Promise.resolve([]),
 		getProfesseurs(),
 		getSurveillants(),
 		anneeId ? getClasses(anneeId) : Promise.resolve([]),
 		anneeId ? getIncidents(anneeId, rangeStart, rangeEnd) : Promise.resolve([]),
 		getNotifications(),
-		prisma.salle.count()
+		prisma.salle.count(),
+		getOperateurs()
 	]);
 
 	const stats = {
 		eleves: eleves.length,
 		professeurs: profs.length,
 		surveillants: surveillants.length,
+		operateurs: operateurs.length,
 		classes: classes.length,
 		salles,
 		incidents: incidents.length,
@@ -86,14 +87,33 @@ export const load: PageServerLoad = async ({ url }) => {
 		include: {
 			classe: { select: { id: true, nom: true, niveau: true, serie: true } },
 			eleve: { include: { personne: true } },
-		absences: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
-			retards: { where: { date: { gte: rangeStart, lte: rangeEnd } } },
 			notes: { where: { date: { gte: rangeStart, lte: rangeEnd } } }
 		}
 	});
 
-	const allAbsenceIds = inscriptions.flatMap((i) => i.absences.map((a) => a.id));
-	const allRetardIds = inscriptions.flatMap((i) => i.retards.map((r) => r.id));
+	// On compte les absences/retards par eleve (et non plus seulement via la
+	// relation inscription.absences) : ainsi, un pointage dont l'absence n'a
+	// pas pu etre rattachee a une inscription (inscriptionId null) reste
+	// visible sur le dashboard.
+	const eleveIds = inscriptions.map((i) => i.eleve.id);
+	const allAbsences = await prisma.absence.findMany({
+		where: { eleveId: { in: eleveIds }, date: { gte: rangeStart, lte: rangeEnd } },
+		include: {
+			eleve: {
+				include: {
+					personne: true,
+					inscriptions: { where: { actif: true }, include: { classe: true } }
+				}
+			}
+		}
+	});
+	const allRetards = await prisma.retard.findMany({
+		where: { eleveId: { in: eleveIds }, date: { gte: rangeStart, lte: rangeEnd } },
+		include: { eleve: { include: { personne: true } } }
+	});
+
+	const allAbsenceIds = allAbsences.map((a) => a.id);
+	const allRetardIds = allRetards.map((r) => r.id);
 	const lignesJustifiees = await prisma.rapportLigne.findMany({
 		where: {
 			OR: [{ absenceId: { in: allAbsenceIds } }, { retardId: { in: allRetardIds } }]
@@ -104,24 +124,15 @@ export const load: PageServerLoad = async ({ url }) => {
 	const justifiedAbsenceIds = new Set(
 		lignesJustifiees.filter((l) => l.absenceId).map((l) => l.absenceId as string)
 	);
-	const justifiedRetardIds = new Set(
-		lignesJustifiees.filter((l) => l.retardId).map((l) => l.retardId as string)
-	);
-
-	const unjustifiedAbsencesList = inscriptions.flatMap((ins) =>
-		ins.absences
-			.filter((a) => !justifiedAbsenceIds.has(a.id))
-			.map((a) => ({
-				id: a.id,
-				eleveNom: ins.eleve?.personne?.lastname || '',
-				elevePrenom: ins.eleve?.personne?.name || '',
-				classe: formatClasseNom(ins.classe?.niveau, ins.classe?.nom),
-				date: a.date.toISOString()
-			}))
-	);
-
-	const allAbsences = inscriptions.flatMap((i) => i.absences);
-	const allRetards = inscriptions.flatMap((i) => i.retards);
+	const unjustifiedAbsencesList = allAbsences
+		.filter((a) => !justifiedAbsenceIds.has(a.id))
+		.map((a) => ({
+			id: a.id,
+			eleveNom: a.eleve?.personne?.lastname || '',
+			elevePrenom: a.eleve?.personne?.name || '',
+			classe: formatClasseNom(a.eleve?.inscriptions?.find((i) => i.actif)?.classe?.niveau, a.eleve?.inscriptions?.find((i) => i.actif)?.classe?.nom) || '',
+			date: a.date.toISOString()
+		})	);
 
 	const days: { key: string; label: string; showLabel: boolean }[] = [];
 	const cursor = new Date(rangeStart);
@@ -162,7 +173,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		incidents: incidentsByDay[d.key] || 0
 	}));
 
-	const absentsCount = inscriptions.filter((i) => i.absences && i.absences.length > 0).length;
+	const absentsCount = new Set(allAbsences.map((a) => a.eleveId)).size;
 	const presentsCount = inscriptions.length - absentsCount;
 	const attendanceData = [
 		{ label: 'Présent', count: Math.max(presentsCount, 0) },
@@ -176,15 +187,19 @@ export const load: PageServerLoad = async ({ url }) => {
 		{ label: 'Non justifiée', count: unjustifiedCount, color: '#ef4444' }
 	];
 
-	const delaysByClass = inscriptions.reduce(
-		(acc, ins) => {
-			const count = ins.retards?.length || 0;
-			if (count > 0) {
-				const className = formatClasseNom(ins.classe?.niveau, ins.classe?.nom) || 'Inconnue';
-				const existing = acc.find((a) => a.className === className);
-				if (existing) existing.count += count;
-				else acc.push({ className, count });
-			}
+	const classParEleve = new Map(
+		inscriptions.map((i) => [
+			i.eleve.id,
+			formatClasseNom(i.classe?.niveau, i.classe?.nom) || 'Inconnue'
+		])
+	);
+
+	const delaysByClass = allRetards.reduce(
+		(acc, r) => {
+			const className = classParEleve.get(r.eleveId) || 'Inconnue';
+			const existing = acc.find((a) => a.className === className);
+			if (existing) existing.count += 1;
+			else acc.push({ className, count: 1 });
 			return acc;
 		},
 		[] as { className: string; count: number }[]
@@ -263,6 +278,22 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	const teacherAbsences = allAbsences.length;
 
+	// Activité des opérateurs : pointages de cours effectués sur la période.
+	const pointagesOperateur = await prisma.pointage.findMany({
+		where: { operateurId: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
+		select: { operateurId: true }
+	});
+	const operateurNom = new Map(operateurs.map((op) => [op.id, `${op.name} ${op.lastname}`]));
+	const pointagesByOperateurMap = new Map<string, number>();
+	for (const p of pointagesOperateur) {
+		if (!p.operateurId) continue;
+		pointagesByOperateurMap.set(p.operateurId, (pointagesByOperateurMap.get(p.operateurId) || 0) + 1);
+	}
+	const pointagesByOperateur = [...pointagesByOperateurMap.entries()]
+		.map(([id, count]) => ({ nom: operateurNom.get(id) || 'Opérateur', count }))
+		.sort((a, b) => b.count - a.count);
+	const totalPointagesOperateur = pointagesOperateur.length;
+
 	const additionalStats = {
 		totalAbsences: allAbsences.length,
 		totalRetards: allRetards.length,
@@ -280,7 +311,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		usersByRole: [
 			{ role: 'Élèves', count: eleves.length, color: '#3b82f6' },
 			{ role: 'Enseignants', count: profs.length, color: '#10b981' },
-			{ role: 'Surveillants', count: surveillants.length, color: '#f59e0b' }
+			{ role: 'Surveillants', count: surveillants.length, color: '#f59e0b' },
+			{ role: 'Opérateurs', count: operateurs.length, color: '#8b5cf6' }
 		],
 		attendanceData,
 		delaysByClass,
@@ -291,7 +323,9 @@ export const load: PageServerLoad = async ({ url }) => {
 		absenceJustification,
 		notesDistribution,
 		avgNotesByClass,
-		incidentsByClass
+		incidentsByClass,
+		pointagesByOperateur,
+		totalPointagesOperateur
 	};
 
 	return {
@@ -300,6 +334,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		chartData,
 		additionalStats,
 		unjustifiedAbsencesList,
+		totalPointagesOperateur,
 		anneeStart: anneeStartISO,
 		todayISO,
 		rangeStart: toISODate(rangeStart),

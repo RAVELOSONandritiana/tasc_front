@@ -1,23 +1,45 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Plus, Play, Trash2, Pencil, UserCog } from '@lucide/svelte/icons';
+	import { Plus, Play, Trash2, Pencil, UserCog, UserX } from '@lucide/svelte/icons';
+	import { invalidateAll } from '$app/navigation';
+	import { Textarea } from '$lib/components/ui/textarea';
+	import { Label } from '$lib/components/ui/label';
 	import type { SeanceEDT } from '$lib/types/Materiel.type';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Label } from '$lib/components/ui/label';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import * as NativeSelect from '$lib/components/ui/native-select';
-	import { goto } from '$app/navigation';
+	import StartCoursDialog from './StartCoursDialog.svelte';
 
-	const { jour, seances, salles, heures, classeId, cours = [], currentProfesseurId = null, userRole = null, professeurs = [] }: {
+	type EleveEDT = { id: string; nom: string; prenom: string; numero: string };
+
+	const {
+		jour,
+		seances,
+		salles,
+		heures,
+		classeId,
+		cours = [],
+		jours = [],
+		currentProfesseurId = null,
+		userRole = null,
+		professeurs = [],
+		eleves = [],
+		seuilAbsence = 3,
+		anneeActive = true
+	}: {
 		jour: string;
 		seances: SeanceEDT[];
 		salles: { id: string; num: number; name: string; place: number }[];
 		heures: string[];
 		classeId: string;
 		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string; professeurId?: string | null }[];
+		jours?: string[];
 		currentProfesseurId?: string | null;
 		userRole?: string | null;
 		professeurs?: { id: string; nom: string }[];
+		eleves?: EleveEDT[];
+		seuilAbsence?: number;
+		anneeActive?: boolean;
 	} = $props();
 
 	const professeurParCours = $derived(
@@ -45,7 +67,7 @@
 	// Grille horaire dynamique (pas de 15 min) pour gérer les créneaux non
 	// ronds (:15, :30, :45...). On complète avec les heures déjà utilisées
 	// par les séances afin de ne jamais perdre une valeur existante.
-	function genererCreneaux(debut = '06:00', fin = '22:00', pas = 15): string[] {
+	function genererCreneaux(debut = '07:00', fin = '18:00', pas = 15): string[] {
 		const [dh, dm] = debut.split(':').map(Number);
 		const [fh, fm] = fin.split(':').map(Number);
 		const debutMin = dh * 60 + dm;
@@ -84,6 +106,7 @@
 	let editSalleId = $state<string | null>(null);
 	let editHeureDebut = $state('');
 	let editHeureFin = $state('');
+	let editJour = $state('');
 
 	function openEditSeance(seance: SeanceEDT) {
 		editSeance = seance;
@@ -91,6 +114,7 @@
 		editSalleId = seance.salleId ?? null;
 		editHeureDebut = seance.heureDebut || '';
 		editHeureFin = seance.heureFin || '';
+		editJour = seance.jour || '';
 		editDialogOpen = true;
 	}
 
@@ -98,6 +122,72 @@
 	const seancesTriees = $derived(
 		[...(seances ?? [])].sort((a, b) => (a.heureDebut || '').localeCompare(b.heureDebut || ''))
 	);
+
+	// Fenêtre "Démarrer le cours" (pointage) ouverte depuis l'emploi du temps.
+	let startDialogOpen = $state(false);
+	let seanceEnCours = $state<SeanceEDT | null>(null);
+
+	function ouvrirStartCours(seance: SeanceEDT) {
+		seanceEnCours = seance;
+		startDialogOpen = true;
+	}
+
+	// Un enseignant ne peut démarrer que les cours dont il est titulaire ; les
+	// autres rôles (surveillant, opérateur, admin) peuvent tous les démarrer.
+	function peutDemarrerCours(coursId: string): boolean {
+		if (!peutModifierEDT) return false;
+		if (userRole === 'ENSEIGNANT') return estTitulaire(coursId);
+		return true;
+	}
+
+	// Quatrieme bouton : declarer l'absence du professeur (cours manque) pour la
+	// seance affichee. Réservé aux roles pouvant declare une absence d'enseignant
+	// (surveillant, opérateur, administrateur).
+	const rolePeutDeclarerAbsenceProf = $derived(
+		userRole === 'SURVEILLANT' || userRole === 'ADMINISTRATEUR' || userRole === 'OPERATEUR'
+	);
+
+	let absenceDialogOpen = $state(false);
+	let motifAbsenceProf = $state('');
+	let submittingAbsence = $state(false);
+	let erreurAbsence = $state<string | null>(null);
+	let succesAbsence = $state(false);
+
+	async function declarerAbsenceProf(seance: SeanceEDT) {
+		if (!rolePeutDeclarerAbsenceProf) return;
+		submittingAbsence = true;
+		erreurAbsence = null;
+		succesAbsence = false;
+		const aujourdhui = new Date();
+		const dateRaw = `${aujourdhui.getFullYear()}-${String(aujourdhui.getMonth() + 1).padStart(2, '0')}-${String(aujourdhui.getDate()).padStart(2, '0')}`;
+		const fd = new FormData();
+		fd.append('seanceId', seance.id);
+		fd.append('date', dateRaw);
+		if (motifAbsenceProf.trim()) fd.append('motif', motifAbsenceProf.trim());
+		try {
+			const res = await fetch(`/classe/${classeId}/analyse?/absenceProf`, {
+				method: 'POST',
+				body: fd
+			});
+			const result = await res.json().catch(() => null);
+			if (res.ok && result?.type === 'success') {
+				succesAbsence = true;
+				await invalidateAll();
+				absenceDialogOpen = false;
+				motifAbsenceProf = '';
+			} else {
+				erreurAbsence =
+					result?.data?.error ||
+					(result && 'error' in result ? result.error : null) ||
+					'Échec de la déclaration';
+			}
+		} catch {
+			erreurAbsence = 'Erreur réseau';
+		} finally {
+			submittingAbsence = false;
+		}
+	}
+
 </script>
 
 <div class="rounded-xl bg-card/50 p-4">
@@ -185,22 +275,18 @@
 							{/if}
 						</div>
 						<div class="flex items-center gap-1">
-							<Button
-								variant="default"
-								size="sm"
-								class="h-6 px-2"
-								disabled={!estTitulaire(seance.coursId)}
-								title={estTitulaire(seance.coursId)
-									? undefined
-									: 'Réservé au professeur titulaire du cours'}
-								onclick={() => {
-									if (estTitulaire(seance.coursId)) {
-										goto(`/classe/${classeId}/cours/${seance.coursId}/presence`);
-									}
-								}}
-							>
-								<Play class="size-3" />
-							</Button>
+						<Button
+							variant="default"
+							size="sm"
+							class="h-6 px-2"
+							disabled={!peutDemarrerCours(seance.coursId)}
+							title={peutDemarrerCours(seance.coursId)
+								? 'Démarrer le cours'
+								: 'Réservé au professeur titulaire du cours'}
+							onclick={() => ouvrirStartCours(seance)}
+						>
+							<Play class="size-3" />
+						</Button>
 							<Button
 								variant="outline"
 								size="sm"
@@ -211,9 +297,25 @@
 							>
 								<Pencil class="size-3" />
 							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								class="h-6 px-2"
+								disabled={!rolePeutDeclarerAbsenceProf}
+								title={!rolePeutDeclarerAbsenceProf
+									? 'Réservé aux surveillants, opérateurs et administrateurs'
+									: 'Déclarer le professeur absent (cours manqué)'}
+								onclick={() => {
+									seanceEnCours = seance;
+									absenceDialogOpen = true;
+								}}
+							>
+								<UserX class="size-3" />
+							</Button>
 							<form method="POST" action="?/deleteSeance" use:loadingForm>
 								<input type="hidden" name="id" value={seance.id} />
 								<Button
+									type="submit"
 									variant="destructive"
 									size="sm"
 									class="h-6 px-2"
@@ -237,9 +339,9 @@
 			<Dialog.Header>
 				<Dialog.Title>Modifier le cours</Dialog.Title>
 				<Dialog.Description>
-					Changer le professeur ou la salle de « {editSeance?.coursNom} ». Le cours, les notes et
-					les retards existants sont conservés ; seules la liaison professeur et la salle sont
-					mises à jour.
+					Modifier le jour, le professeur ou la salle de « {editSeance?.coursNom} ». Pour déplacer
+					la séance vers un autre jour, changez le champ « Jour ». Le cours, les notes et les
+					retards existants sont conservés.
 				</Dialog.Description>
 			</Dialog.Header>
 			{#if editSeance}
@@ -247,6 +349,14 @@
 					<input type="hidden" name="coursId" value={editSeance.coursId} />
 					<input type="hidden" name="seanceId" value={editSeance.id} />
 					<div class="grid gap-4 py-4">
+						<div class="grid gap-2">
+							<Label for="edit-jour">Jour *</Label>
+							<NativeSelect.Root bind:value={editJour} class="w-full" name="jour">
+								{#each jours as j (j)}
+									<NativeSelect.Option value={j}>{j}</NativeSelect.Option>
+								{/each}
+							</NativeSelect.Root>
+						</div>
 						<div class="grid grid-cols-2 gap-3">
 							<div class="grid gap-2">
 								<Label for="edit-heure-debut">Début *</Label>
@@ -308,6 +418,80 @@
 					</Dialog.Footer>
 				</form>
 			{/if}
+		</Dialog.Content>
+	</Dialog.Root>
+
+	{#if seanceEnCours}
+		<StartCoursDialog
+			bind:open={startDialogOpen}
+			{classeId}
+			coursId={seanceEnCours.coursId}
+			coursNom={seanceEnCours.coursNom || seanceEnCours.coursId}
+			salleNom={seanceEnCours.salleNom}
+			heureDebut={seanceEnCours.heureDebut}
+			heureFin={seanceEnCours.heureFin}
+			{eleves}
+			{seuilAbsence}
+			{anneeActive}
+			canEdit={peutDemarrerCours(seanceEnCours.coursId)}
+		/>
+	{/if}
+
+	<Dialog.Root bind:open={absenceDialogOpen}>
+		<Dialog.Content class="sm:max-w-md">
+			<Dialog.Header>
+				<Dialog.Title class="flex items-center gap-2">
+					<UserX class="size-4 text-destructive" /> Professeur absent
+				</Dialog.Title>
+				<Dialog.Description>
+					Déclarer le cours manqué pour {seanceEnCours?.coursNom || 'ce cours'}{seanceEnCours
+						?.jour
+						? ` · ${seanceEnCours.jour}`
+						: ''}{seanceEnCours?.heureDebut
+						? ` · ${seanceEnCours.heureDebut} - ${seanceEnCours.heureFin}`
+						: ''}.
+					<br />
+					L’heure prévue de la séance est comptée comme heure manquée (profil du professeur et
+					classe).
+				</Dialog.Description>
+			</Dialog.Header>
+			<div class="grid gap-2">
+				<Label for="motif-absence-prof">Motif (optionnel)</Label>
+				<Textarea
+					id="motif-absence-prof"
+					rows={2}
+					placeholder="Ex: maladie, convocation…"
+					bind:value={motifAbsenceProf}
+				/>
+			</div>
+			{#if erreurAbsence}
+				<div
+					class="mt-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+				>
+					{erreurAbsence}
+				</div>
+			{/if}
+			{#if succesAbsence}
+				<div
+					class="mt-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-600"
+				>
+					Absence du professeur enregistrée.
+				</div>
+			{/if}
+			<Dialog.Footer class="mt-4">
+				<Button variant="outline" size="sm" type="button" onclick={() => (absenceDialogOpen = false)}
+					>Annuler</Button
+				>
+				<Button
+					variant="destructive"
+					size="sm"
+					type="button"
+					disabled={submittingAbsence || !seanceEnCours}
+					onclick={() => seanceEnCours && declarerAbsenceProf(seanceEnCours)}
+				>
+					{submittingAbsence ? 'Enregistrement…' : 'Confirmer l’absence'}
+				</Button>
+			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
 </div>

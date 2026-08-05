@@ -32,6 +32,7 @@ function mapRapport(
 			id: l.id,
 			type: l.type,
 			date: l.date.toISOString(),
+			heure: null,
 			motif: l.motif,
 			eleveNom: r.eleve.personne.lastname,
 			elevePrenom: r.eleve.personne.name,
@@ -42,7 +43,7 @@ function mapRapport(
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const role = locals.user?.role;
-	const canEdit = role === 'SURVEILLANT' || role === 'ADMINISTRATEUR';
+	const canEdit = role === 'SURVEILLANT' || role === 'ADMINISTRATEUR' || role === 'OPERATEUR';
 	if (!canEdit && role !== 'ENSEIGNANT') {
 		throw redirect(303, '/dashboard');
 	}
@@ -75,27 +76,51 @@ export const load: PageServerLoad = async ({ locals }) => {
 		imageUrl: e.personne.imageUrl || null
 	}));
 
-	// Absences et retards de l'annee pour alimenter la selection.
-	const [absences, retards] = anneeId
+	// Absences et retards de l'annee pour alimenter la selection. On exclut
+	// les elements deja justifies (un rapport les a deja traites) : ils ne
+	// doivent plus etre proposables.
+	const [absences, retards, seancesEDT] = anneeId
 		? await Promise.all([
 				prisma.absence.findMany({
-					where: { eleve: { inscriptions: { some: { anneeId, actif: true } } } },
-					include: { eleve: { include: { personne: true } }, inscription: { include: { classe: true } } },
+					where: {
+						justifie: false,
+						eleve: { inscriptions: { some: { anneeId, actif: true } } }
+					},
+					include: {
+						eleve: { include: { personne: true } },
+						inscription: { include: { classe: true } },
+						pointage: { select: { coursId: true } }
+					},
 					orderBy: { date: 'desc' }
 				}),
 				prisma.retard.findMany({
-					where: { eleve: { inscriptions: { some: { anneeId, actif: true } } } },
-					include: { eleve: { include: { personne: true } }, inscription: { include: { classe: true } } },
+					where: {
+						justifie: false,
+						eleve: { inscriptions: { some: { anneeId, actif: true } } }
+					},
+					include: {
+						eleve: { include: { personne: true } },
+						inscription: { include: { classe: true } },
+						pointage: { select: { coursId: true } }
+					},
 					orderBy: { date: 'desc' }
+				}),
+				prisma.seanceEDT.findMany({
+					include: { salle: true }
 				})
 			])
-		: [[], []];
+		: [[], [], []];
+
+	// Heure reelle du cours d'apres l'emploi du temps (le pointage ne stocke
+	// que la date). Cle par coursId.
+	const heureDebutParCours = new Map(seancesEDT.map((s) => [s.coursId, s.heureDebut]));
 
 	const absenceItems = absences.map((a) => ({
 		id: a.id,
 		eleveId: a.eleveId,
 		type: 'ABSENCE' as const,
 		date: a.date.toISOString(),
+		heure: a.pointage ? heureDebutParCours.get(a.pointage.coursId) || null : null,
 		motif: a.motif,
 		justifie: a.justifie,
 		eleveNom: a.eleve.personne.lastname,
@@ -107,6 +132,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		eleveId: r.eleveId,
 		type: 'RETARD' as const,
 		date: r.date.toISOString(),
+		heure: r.pointage ? heureDebutParCours.get(r.pointage.coursId) || null : null,
 		motif: r.motif,
 		justifie: r.justifie,
 		eleveNom: r.eleve.personne.lastname,
@@ -206,7 +232,14 @@ export const actions: Actions = {
 				});
 			}
 
-			logActivity(locals.user, 'creation_rapport', `Rapport ${type} pour ${eleveId}`).catch(() => {});
+			const eleve = await prisma.eleve.findUnique({
+				where: { id: eleveId },
+				include: { personne: true }
+			});
+			const eleveNom = eleve ? `${eleve.personne.name} ${eleve.personne.lastname}`.trim() : 'élève';
+			logActivity(locals.user, 'creation_rapport', `Rapport ${type} pour ${eleveNom}`).catch(
+				() => {}
+			);
 		} catch (e) {
 			console.error('Create rapport error:', e);
 			return fail(500, { error: 'Erreur lors de la création du rapport' });
@@ -232,10 +265,12 @@ export const actions: Actions = {
 				rapport.compteId &&
 				rapport.compteId !== locals.user?.userId
 			) {
-				return fail(403, { error: 'Seul l\'auteur ou un surveillant/admin peut supprimer ce rapport' });
+				return fail(403, {
+					error: "Seul l'auteur ou un surveillant/admin peut supprimer ce rapport"
+				});
 			}
 			await prisma.rapport.delete({ where: { id: rapportId } });
-			logActivity(locals.user, 'suppression_rapport', 'Suppression d\'un rapport').catch(() => {});
+			logActivity(locals.user, 'suppression_rapport', "Suppression d'un rapport").catch(() => {});
 		} catch (e) {
 			console.error('Delete rapport error:', e);
 			return fail(500, { error: 'Erreur lors de la suppression' });

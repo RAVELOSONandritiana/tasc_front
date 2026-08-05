@@ -27,6 +27,25 @@ export const load: PageServerLoad = async ({ params }) => {
 		prismaEleve.inscriptions?.find((i) => i.anneeId === anneeId) ??
 		prismaEleve.inscriptions?.[0];
 
+	// Numero de classe (ex: 1F / 1G) : ordre de l'eleve au sein de son sexe
+	// dans sa classe, suivi du suffixe F (fille) ou G (garcon).
+	let numeroClasse: string | null = null;
+	if (inscription?.classeId) {
+		const camarades = await getElevesByClasseId(inscription.classeId);
+		const memesSexe = camarades
+			.filter((c) => c.eleve?.sexe === prismaEleve.sexe)
+			.sort((a, b) =>
+				`${a.eleve?.personne?.name} ${a.eleve?.personne?.lastname}`.localeCompare(
+					`${b.eleve?.personne?.name} ${b.eleve?.personne?.lastname}`,
+					'fr'
+				)
+			);
+		const rang = memesSexe.findIndex((c) => c.eleve?.id === prismaEleve.id);
+		if (rang >= 0) {
+			numeroClasse = `${rang + 1}${prismaEleve.sexe === 'F' ? 'F' : 'G'}`;
+		}
+	}
+
 	const eleve = {
 		id: prismaEleve.id,
 		nom: prismaEleve.personne.name,
@@ -36,6 +55,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		im: prismaEleve.im,
 		situation: (prismaEleve as { situation?: string }).situation,
 		classe: formatClasseNom(inscription?.classe?.niveau, inscription?.classe?.nom),
+		numeroClasse,
+		sexe: prismaEleve.sexe,
 		redoublant: prismaEleve.redoublant,
 		telephone: prismaEleve.personne.phone || null,
 		telephonePere: prismaEleve.telephonePere,
@@ -46,7 +67,6 @@ export const load: PageServerLoad = async ({ params }) => {
 	const absences = (prismaEleve.absences || []).map((a) => ({
 		id: a.id,
 		date: a.date.toISOString(),
-		duree: a.duree ?? null,
 		motif: a.motif ?? null
 	}));
 

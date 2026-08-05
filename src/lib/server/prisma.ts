@@ -289,7 +289,8 @@ export async function getPersonnes() {
 export async function getAllPersonnesForSurveillant() {
 	const personnes = await prisma.personne.findMany({
 		where: {
-			surveillant: null
+			surveillant: null,
+			compte: null
 		},
 		include: {
 			compte: {

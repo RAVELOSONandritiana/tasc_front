@@ -24,6 +24,14 @@ export type Classe = {
 	url?: string;
 };
 
+export type CoursStats = {
+	nbSeances: number;
+	heuresEffectuees: number;
+	absences: number;
+	retards: number;
+	derniereSeance: string | null;
+};
+
 export type Cours = {
 	id: string;
 	nom: string;
@@ -34,6 +42,7 @@ export type Cours = {
 	matiereId?: string;
 	matiere?: { id: string; nom: string; couleur?: string };
 	url?: string;
+	stats?: CoursStats;
 };
 
 export type EleveCours = {

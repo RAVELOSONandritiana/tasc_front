@@ -61,13 +61,13 @@
 			path: '/incidents',
 			label: 'Incidents',
 			icon: AlertTriangle,
-			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL']
+			roles: ['ADMINISTRATEUR', 'ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'OPERATEUR']
 		},
 		{
 			path: '/rapport',
 			label: 'Rapports',
 			icon: FileText,
-			roles: ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT']
+			roles: ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT', 'OPERATEUR']
 		},
 		{ path: '/parametre', label: 'Paramètres', icon: Settings, roles: ['ADMINISTRATEUR'] },
 		{
@@ -84,8 +84,14 @@
 		}
 	];
 
+	import { hasAdminPower } from '$lib/permissions';
+
+	const isAdmin = hasAdminPower(data.user);
 	const userRole = data.user?.role;
-	const path = allPaths.filter((p) => (userRole ? p.roles.includes(userRole) : false));
+	const path = allPaths.filter((p) => {
+		if (p.roles.includes('ADMINISTRATEUR') && isAdmin) return true;
+		return userRole ? p.roles.includes(userRole) : false;
+	});
 
 	const isActive = (linkPath: string) => $page.url.pathname.startsWith(linkPath);
 </script>
@@ -152,7 +158,7 @@
 
 		<div class="flex flex-1 flex-col min-h-0 bg-background text-foreground">
 		<header
-			class="relative z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm"
+			class="relative z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm print:hidden"
 		>
 				<div class="flex items-center gap-3">
 					<Sidebar.Trigger />
@@ -175,3 +181,12 @@
 		</div>
 	</div>
 </Sidebar.Provider>
+
+<style>
+	@media print {
+		:global([data-slot='sidebar']),
+		:global([data-slot='sidebar-container']) {
+			display: none !important;
+		}
+	}
+</style>

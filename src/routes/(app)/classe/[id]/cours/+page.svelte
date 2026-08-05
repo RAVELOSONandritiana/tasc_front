@@ -75,7 +75,11 @@
 		if (!selectedExamenForDelete) return;
 		const fd = new FormData();
 		fd.append('id', selectedExamenForDelete.id);
-		const res = await fetch('?/deleteExamen', { method: 'POST', body: fd, credentials: 'same-origin' });
+		const res = await fetch('?/deleteExamen', {
+			method: 'POST',
+			body: fd,
+			credentials: 'same-origin'
+		});
 		const result = deserialize(await res.text());
 		if (result.type === 'success') {
 			listeExamens = listeExamens.filter((e) => e.id !== selectedExamenForDelete!.id);
@@ -267,6 +271,7 @@
 			}))}
 			bind:openCreateCours={openCoursDialog}
 			bind:openCreateExamen={openExamenDialog}
+			peutGererExamens={data.userRole !== 'ENSEIGNANT'}
 			onManageSousExamens={ouvrirSousExamens}
 			onDeleteExamen={demanderSuppressionExamen}
 		/>
@@ -288,14 +293,25 @@
 					{@const estTitulaire =
 						!!data.currentProfesseurId && cours.professeurId === data.currentProfesseurId}
 					{@const peutModifierParticipants =
-						data.userRole === 'SURVEILLANT' || data.userRole === 'ADMINISTRATEUR'}
+						data.userRole === 'SURVEILLANT' ||
+						data.userRole === 'OPERATEUR' ||
+						data.userRole === 'ADMINISTRATEUR' ||
+						data.isAdmin}
 					{@const peutSupprimer = peutModifierParticipants}
+					{@const peutCommencer =
+						estTitulaire ||
+						data.userRole === 'SURVEILLANT' ||
+						data.userRole === 'OPERATEUR' ||
+						data.userRole === 'ADMINISTRATEUR' ||
+						data.isAdmin}
 					<CourseCard
 						{cours}
 						{matiere}
+						classeId={data.classe.id}
 						{estTitulaire}
 						{peutModifierParticipants}
 						{peutSupprimer}
+						{peutCommencer}
 						defaultMatiereColor={DEFAULT_MATIERE_COLOR}
 						formatParticipants={formaterParticipants}
 						onEditCoefficient={ouvrirModifierCoefficient}

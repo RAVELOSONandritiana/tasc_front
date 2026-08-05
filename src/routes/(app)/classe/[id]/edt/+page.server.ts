@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
-import { prisma, getProfesseurs, updateCours } from '$lib/server/prisma';
+import { prisma, getProfesseurs, updateCours, getActiveAnneeScolaire } from '$lib/server/prisma';
+import { registerPointage, PointageError } from '$lib/server/pointage';
 import { redirect, fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -89,6 +90,43 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const profs = await getProfesseurs();
 
+	// Eleves de la classe pour l'annee active (utiles pour la fenetre
+	// "Demarrer le cours" : pointage des absents/retards par numero).
+	const annee = await getActiveAnneeScolaire();
+	const seuilAbsence = annee?.seuilAbsenceConvoc ?? 3;
+
+	function numeroClasse(
+		eleve: { id: string; nom: string; prenom: string; sexe: string },
+		tous: { id: string; nom: string; prenom: string; sexe: string }[]
+	): string {
+		const ordre =
+			tous
+				.filter((e) => e.sexe === eleve.sexe)
+				.sort((a, b) =>
+					`${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr')
+				)
+				.findIndex((e) => e.id === eleve.id) + 1;
+		const suffix = eleve.sexe === 'F' ? 'F' : 'G';
+		return `${ordre}${suffix}`;
+	}
+
+	const elevesBruts = annee
+		? await prisma.inscription.findMany({
+				where: { classeId, anneeId: annee.id, actif: true },
+				include: { eleve: { include: { personne: true } } }
+			})
+		: [];
+
+	const eleves: { id: string; nom: string; prenom: string; sexe: string; numero: string }[] =
+		elevesBruts.map((ins) => ({
+			id: ins.eleve.id,
+			nom: ins.eleve.personne.lastname,
+			prenom: ins.eleve.personne.name,
+			sexe: ins.eleve.sexe || 'G',
+			numero: ''
+		}));
+	for (const e of eleves) e.numero = numeroClasse(e, eleves);
+
 	return {
 		classe,
 		seances,
@@ -107,7 +145,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			nom: `${p.personne?.name || ''} ${p.personne?.lastname || ''}`.trim() || 'Professeur'
 		})),
 		currentProfesseurId,
-		userRole: locals.user?.role ?? null
+		userRole: locals.user?.role ?? null,
+		eleves,
+		seuilAbsence,
+		anneeActive: !!annee
 	};
 };
 
@@ -206,10 +247,11 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const coursId = formData.get('coursId') as string;
 		const professeurId = (formData.get('professeurId') as string) || null;
-		const seanceId = formData.get('seanceId') as string | null;
+		const seanceId = (formData.get('seanceId') as string) || null;
 		const salleId = (formData.get('salleId') as string) || null;
 		const heureDebut = (formData.get('heureDebut') as string) || null;
 		const heureFin = (formData.get('heureFin') as string) || null;
+		const jour = (formData.get('jour') as string) || null;
 
 		if (!coursId) {
 			return fail(400, { error: 'Cours requis' });
@@ -223,6 +265,7 @@ export const actions: Actions = {
 					where: { id: seanceId },
 					data: {
 						salleId: salleId || undefined,
+						...(jour ? { jour } : {}),
 						...(heureDebut ? { heureDebut } : {}),
 						...(heureFin ? { heureFin } : {})
 					}
@@ -233,5 +276,43 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, `/classe/${params.id}/edt`);
+	},
+
+	// Pointage d'un cours directement depuis l'emploi du temps (fenetre
+	// "Demarrer le cours"). Renvoie un JSON (pas de redirection) pour que la
+	// fenetre popup puisse afficher le resultat.
+	enregistrer: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+		const dateRaw = (formData.get('date') as string) || '';
+		const heuresEffectueesRaw = formData.get('heuresEffectuees') as string;
+		const causeIncomplet = (formData.get('causeIncomplet') as string)?.trim() || null;
+		const absentIds = formData.getAll('absentIds').map(String).filter(Boolean);
+		const retardIds = formData.getAll('retardIds').map(String).filter(Boolean);
+		const profAbsent = formData.get('profAbsent') === 'true';
+		const motifProfAbsent = (formData.get('motifProfAbsent') as string)?.trim() || null;
+
+		const heuresEffectuees = parseFloat(heuresEffectueesRaw);
+
+		try {
+			const result = await registerPointage({
+				classeId: params.id,
+				coursId: (formData.get('coursId') as string) || '',
+				dateRaw,
+				heuresEffectuees,
+				causeIncomplet,
+				absentIds,
+				retardIds,
+				profAbsent,
+				motifProfAbsent,
+				locals
+			});
+			return { success: true, alertes: result.alertes };
+		} catch (e) {
+			if (e instanceof PointageError) {
+				return fail(e.status, { error: e.message });
+			}
+			console.error('Erreur pointage:', e);
+			return fail(500, { error: 'Erreur lors de l’enregistrement' });
+		}
 	}
 };

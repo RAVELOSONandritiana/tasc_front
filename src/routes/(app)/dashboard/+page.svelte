@@ -15,6 +15,7 @@
 		UserX,
 		Activity,
 		DoorOpen,
+		IdCard,
 	} from '@lucide/svelte/icons';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
@@ -49,6 +50,8 @@
 	const notesDistribution = $derived(chartData?.notesDistribution || []);
 	const avgNotesByClass = $derived(chartData?.avgNotesByClass || []);
 	const incidentsByClass = $derived(chartData?.incidentsByClass || []);
+	const pointagesByOperateur = $derived(chartData?.pointagesByOperateur || []);
+	const totalPointagesOperateur = $derived(data.totalPointagesOperateur || 0);
 	const evolution = $derived(chartData?.evolution || []);
 
 	const maxIncidentCount = $derived(Math.max(...incidentsByType.map((d) => d.count), 1));
@@ -97,6 +100,19 @@
 		})
 	);
 
+	const maxOperateur = $derived(Math.max(...pointagesByOperateur.map((d) => d.count), 1));
+	const operateurColors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#7c3aed', '#6d28d9'];
+	const operateurBarData = $derived(
+		pointagesByOperateur.map((item, i) => {
+			const barHeight = Math.max((item.count / maxOperateur) * 115, 2);
+			const gap = 460 / Math.max(pointagesByOperateur.length, 1);
+			const barW = Math.min(gap * 0.7, 50);
+			const x = 40 + i * gap + (gap - barW) / 2;
+			const y = 180 - barHeight;
+			return { item, barHeight, x, y, barW, color: operateurColors[i % operateurColors.length] };
+		})
+	);
+
 	const trendPoints = $derived(
 		incidentsTrend.map((d, i) => {
 			const stepX = 360 / Math.max(incidentsTrend.length - 1, 1);
@@ -121,7 +137,7 @@
 		notesDistribution.map((item, i) => {
 			const barHeight = Math.max((item.count / maxNotesDist) * 115, 2);
 			const gap = 320 / notesDistribution.length;
-			const barW = Math.min(gap * 0.7, 50);
+			const barW = Math.min(gap * 0.4, 50);
 			const x = 40 + i * gap + (gap - barW) / 2;
 			const y = 180 - barHeight;
 			return { item, barHeight, x, y, barW };
@@ -275,6 +291,18 @@
 						<p class="text-xs text-muted-foreground">Salles</p>
 					</div>
 				</div>
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
+				<a href="/operateur" class="flex items-center gap-3">
+					<div class="flex size-12 items-center justify-center rounded-lg bg-violet-500/10">
+						<IdCard class="size-6 text-violet-500" />
+					</div>
+					<div>
+						<p class="text-2xl font-bold">{stats.operateurs}</p>
+						<p class="text-xs text-muted-foreground">Opérateurs</p>
+					</div>
+				</a>
 			</Card>
 
 			<Card class="animate-slide-up opacity-0 p-5 hover:shadow-md transition-shadow">
@@ -666,6 +694,66 @@
 						<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Incidents</span>
 					</div>
 				{/if}
+			</Card>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<IdCard class="size-5 text-primary" />
+					<h2 class="font-semibold">Pointages par opérateur</h2>
+				</div>
+				{#if pointagesByOperateur.length === 0}
+					<p class="text-sm text-muted-foreground">Aucun pointage enregistré sur la période</p>
+				{:else}
+					<div class="h-[240px] w-full overflow-x-auto flex items-center justify-center">
+						<svg viewBox="0 0 500 260" class="h-full max-h-[210px] min-w-[320px]">
+							<text x="250" y="15" text-anchor="middle" class="fill-foreground text-sm font-semibold">
+								Nombre de pointages effectués
+							</text>
+							{#each operateurBarData as { item, barHeight, x, y, barW, color } (item.nom)}
+								<rect
+									x={x}
+									y={y}
+									width={barW}
+									height={barHeight}
+									fill={color}
+									rx="4"
+									opacity="0.8"
+									class="hover:opacity-100 transition-opacity"
+								/>
+								<text x={x + barW / 2} y={y - 8} text-anchor="middle" class="fill-foreground text-xs font-semibold">
+									{item.count}
+								</text>
+								<text x={x + barW / 2} y="220" text-anchor="middle" class="fill-muted-foreground text-xs">
+									{item.nom}
+								</text>
+							{/each}
+						</svg>
+					</div>
+				{/if}
+			</Card>
+
+			<Card class="animate-slide-up opacity-0 p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<IdCard class="size-5 text-primary" />
+					<h2 class="font-semibold">Activité des opérateurs</h2>
+				</div>
+				<div class="h-[240px] w-full flex items-center justify-center">
+					<div class="text-center">
+						<p class="text-5xl font-bold text-violet-500">{totalPointagesOperateur}</p>
+						<p class="text-sm text-muted-foreground mt-2">
+							{totalPointagesOperateur === 1 ? 'pointage effectué' : 'pointages effectués'}
+						</p>
+						<p class="text-xs text-muted-foreground mt-1">
+							par {stats.operateurs} opérateur{stats.operateurs > 1 ? 's' : ''}
+						</p>
+						<div class="mt-4 flex items-center justify-center gap-2">
+							<div class="h-2 w-2 rounded-full bg-violet-500"></div>
+							<span class="text-xs text-muted-foreground">du {data.rangeStart} au {data.rangeEnd}</span>
+						</div>
+					</div>
+				</div>
 			</Card>
 		</div>
 

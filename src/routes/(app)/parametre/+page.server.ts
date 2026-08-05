@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import {
 	getAnneeScolaires,
+	getActiveAnneeScolaire,
 	createAnneeScolaire,
 	setActiveAnneeScolaire,
 	prisma
@@ -10,6 +11,7 @@ import { hashPassword } from '$lib/server/auth';
 import { logActivity } from '$lib/server/activity';
 import { broadcastNotification, type NotificationScope } from '$lib/server/notifications';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { hasAdminPower } from '$lib/permissions';
 import { fail, redirect } from '@sveltejs/kit';
 
 function genererMotDePasse(longueur = 6): string {
@@ -89,7 +91,11 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	validerCompte: async ({ request }) => {
+	validerCompte: async ({ request, locals }) => {
+		if (!hasAdminPower(locals.user)) {
+			return fail(403, { error: 'Réservé à l’administrateur' });
+		}
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 
@@ -107,7 +113,11 @@ export const actions: Actions = {
 		throw redirect(303, '/parametre');
 	},
 
-	bloquerCompte: async ({ request }) => {
+	bloquerCompte: async ({ request, locals }) => {
+		if (!hasAdminPower(locals.user)) {
+			return fail(403, { error: 'Réservé à l’administrateur' });
+		}
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 
@@ -125,7 +135,11 @@ export const actions: Actions = {
 		throw redirect(303, '/parametre');
 	},
 
-	debloquerCompte: async ({ request }) => {
+	debloquerCompte: async ({ request, locals }) => {
+		if (!hasAdminPower(locals.user)) {
+			return fail(403, { error: 'Réservé à l’administrateur' });
+		}
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 
@@ -143,7 +157,11 @@ export const actions: Actions = {
 		throw redirect(303, '/parametre');
 	},
 
-	creerAnnee: async ({ request }) => {
+	creerAnnee: async ({ request, locals }) => {
+		if (!hasAdminPower(locals.user)) {
+			return fail(403, { error: 'Réservé à l’administrateur' });
+		}
+
 		const data = await request.formData();
 		const nom = data.get('nom') as string;
 		const seuilRaw = data.get('seuil') as string;
@@ -160,7 +178,11 @@ export const actions: Actions = {
 		throw redirect(303, '/parametre');
 	},
 
-	activerAnnee: async ({ request }) => {
+	activerAnnee: async ({ request, locals }) => {
+		if (!hasAdminPower(locals.user)) {
+			return fail(403, { error: 'Réservé à l’administrateur' });
+		}
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 
@@ -175,8 +197,73 @@ export const actions: Actions = {
 		throw redirect(303, '/parametre');
 	},
 
+	terminerAnnee: async ({ request, locals }) => {
+		if (!hasAdminPower(locals.user)) {
+			return fail(403, { error: 'Réservé à l’administrateur' });
+		}
+
+		const annee = await getActiveAnneeScolaire();
+		if (!annee) return fail(400, { error: 'Aucune année scolaire active' });
+
+		const inscriptions = await prisma.inscription.findMany({
+			where: { anneeId: annee.id, actif: true },
+			include: { eleve: { include: { notes: true } } }
+		});
+
+		// Coefficients des cours de l'année pour calculer la moyenne générale.
+		const cours = await prisma.cours.findMany({
+			where: { anneeId: annee.id },
+			select: { id: true, coefficient: true }
+		});
+		const coefCours = new Map<string, number>(cours.map((c) => [c.id, c.coefficient || 0]));
+
+		let majeres = 0;
+		let redoublants = 0;
+		for (const ins of inscriptions) {
+			const notes = (ins.eleve.notes ?? []).filter((n) => coefCours.has(n.coursId));
+
+			// Moyenne par matière (pondérée par le coefficient de la note ou du cours).
+			const parMatiere = new Map<string, { pts: number; coef: number }>();
+			for (const n of notes) {
+				const coef = n.coefficient || coefCours.get(n.coursId) || 0;
+				if (coef <= 0) continue;
+				const m = parMatiere.get(n.coursId) ?? { pts: 0, coef: 0 };
+				m.pts += n.valeur * coef;
+				m.coef += coef;
+				parMatiere.set(n.coursId, m);
+			}
+
+			let totalPts = 0;
+			let totalCoef = 0;
+			for (const [coursId, m] of parMatiere) {
+				if (m.coef <= 0) continue;
+				const cCoef = coefCours.get(coursId) || 0;
+				totalPts += (m.pts / m.coef) * cCoef;
+				totalCoef += cCoef;
+			}
+
+			// Sans note (aucun coefficient), on ne peut pas décider : on laisse tel quel.
+			if (totalCoef === 0) continue;
+
+			const moyenne = totalPts / totalCoef;
+			const redoublant = moyenne < 10;
+			if (redoublant) redoublants++;
+
+			await prisma.eleve.update({
+				where: { id: ins.eleve.id },
+				data: {
+					redoublant,
+					situation: redoublant ? 'R' : 'P'
+				}
+			});
+			majeres++;
+		}
+
+		return { termine: true, majeres, redoublants };
+	},
+
 	traiterReset: async ({ request, locals }) => {
-		if (locals.user?.role !== 'ADMINISTRATEUR') {
+		if (!hasAdminPower(locals.user)) {
 			return fail(403, { error: "Réservé à l'administrateur" });
 		}
 

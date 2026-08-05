@@ -6,8 +6,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 		return new Response('Unauthorized', { status: 401 });
 	}
 
-	const role = locals.user.role;
-
 	let unsubscribe: (() => void) | null = null;
 	let heartbeat: ReturnType<typeof setInterval> | null = null;
 
@@ -26,7 +24,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			controller.enqueue(encoder.encode(': connected\n\n'));
 
 			unsubscribe = subscribeToRealtime((event) => {
-				if (canSeeRealtime(event.scope ?? 'ALL', role)) {
+				if (canSeeRealtime(event.scope ?? 'ALL', locals.user)) {
 					send('realtime', event);
 				}
 			});

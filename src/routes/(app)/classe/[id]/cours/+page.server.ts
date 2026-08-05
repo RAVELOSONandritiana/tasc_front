@@ -25,6 +25,7 @@ import {
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { hasAdminPower } from '$lib/permissions';
 import { deletePbImage } from '$lib/pocketbase/pocketbase';
 import type { Cours, Examen, EleveCours } from '$lib/types/Materiel.type';
 import { formatClasseNom } from '$lib/utils';
@@ -80,6 +81,55 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		couleur: m.couleur || undefined
 	}));
 
+	// Resume des seances (pointages) par cours : nombre de seances, heures
+	// effectuees et volume d'absences / retards. Affiche directement sur la
+	// carte du cours pour donner l'etat d'assiduite de la matiere.
+	const coursIdsClasse = coursList.filter((c) => c.classeId === params.id).map((c) => c.id);
+	const pointagesClasse = coursIdsClasse.length
+		? await prisma.pointage.findMany({
+				where: { coursId: { in: coursIdsClasse } },
+				select: {
+					coursId: true,
+					date: true,
+					heuresEffectuees: true,
+					_count: { select: { absences: true, retards: true } }
+				}
+			})
+		: [];
+
+	const statsParCours = new Map<
+		string,
+		{
+			nbSeances: number;
+			heuresEffectuees: number;
+			absences: number;
+			retards: number;
+			derniereSeance: string | null;
+		}
+	>();
+	for (const coursId of coursIdsClasse) {
+		statsParCours.set(coursId, {
+			nbSeances: 0,
+			heuresEffectuees: 0,
+			absences: 0,
+			retards: 0,
+			derniereSeance: null
+		});
+	}
+	for (const p of pointagesClasse) {
+		const stat = statsParCours.get(p.coursId);
+		if (!stat) continue;
+		stat.nbSeances++;
+		stat.heuresEffectuees += p.heuresEffectuees || 0;
+		stat.absences += p._count.absences;
+		stat.retards += p._count.retards;
+		const iso = p.date.toISOString();
+		if (!stat.derniereSeance || iso > stat.derniereSeance) stat.derniereSeance = iso;
+	}
+	for (const stat of statsParCours.values()) {
+		stat.heuresEffectuees = Math.round(stat.heuresEffectuees * 100) / 100;
+	}
+
 	const enseignants = profs.map((p) => ({
 		id: p.id,
 		name: p.personne.name,
@@ -107,7 +157,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 						couleur: c.matiere.couleur || undefined
 					}
 				: undefined,
-			url: c.imageUrl || undefined
+			url: c.imageUrl || undefined,
+			stats: statsParCours.get(c.id) ?? {
+				nbSeances: 0,
+				heuresEffectuees: 0,
+				absences: 0,
+				retards: 0,
+				derniereSeance: null
+			}
 		}));
 
 	const listeExamens: Examen[] = examens.map((e) => ({
@@ -147,9 +204,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 					})
 				)?.personne?.professeur?.id ?? null)
 			: null,
-		userRole: locals.user?.role ?? null
-	};
+		userRole: locals.user?.role ?? null,
+		isAdmin: hasAdminPower(locals.user)
+	}
 };
+
 
 export const actions: Actions = {
 	createCours: async ({ request, locals, params }) => {
@@ -320,6 +379,10 @@ export const actions: Actions = {
 		const date = data.get('date') as string;
 		const periode = (data.get('periode') as string | null)?.trim() || '';
 
+		if (locals.user?.role === 'ENSEIGNANT') {
+			return fail(403, { error: 'Les professeurs ne peuvent pas créer d’examen' });
+		}
+
 		if (!nom || !date) {
 			return fail(400, { error: 'Nom et date requis' });
 		}
@@ -364,6 +427,10 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const id = (data.get('id') as string | null)?.trim() || '';
 
+		if (locals.user?.role === 'ENSEIGNANT') {
+			return fail(403, { error: 'Les professeurs ne peuvent pas supprimer d’examen' });
+		}
+
 		if (!id) {
 			return fail(400, { error: "id de l'examen requis" });
 		}
@@ -382,6 +449,10 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const examenId = (data.get('examenId') as string | null)?.trim() || '';
 		const nom = (data.get('nom') as string | null)?.trim() || '';
+
+		if (locals.user?.role === 'ENSEIGNANT') {
+			return fail(403, { error: 'Les professeurs ne peuvent pas créer de sous-examen' });
+		}
 
 		if (!examenId || !nom) {
 			return fail(400, { error: 'Examen et nom du sous-examen requis' });
@@ -405,6 +476,10 @@ export const actions: Actions = {
 	deleteSousExamen: async ({ request, locals }) => {
 		const data = await request.formData();
 		const id = (data.get('id') as string | null)?.trim() || '';
+
+		if (locals.user?.role === 'ENSEIGNANT') {
+			return fail(403, { error: 'Les professeurs ne peuvent pas supprimer de sous-examen' });
+		}
 
 		if (!id) {
 			return fail(400, { error: 'id du sous-examen requis' });

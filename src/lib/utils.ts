@@ -5,15 +5,15 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-export function formatClasseNom(niveau: number | undefined | null, nom: string | undefined | null): string {
+export function formatClasseNom(
+	niveau: number | undefined | null,
+	nom: string | undefined | null
+): string {
 	if (niveau === null || niveau === undefined) return 'Non affecté';
 	const label = niveau === 0 ? '2nd' : niveau === 1 ? '1ere' : 'Tle';
 
-	const prefixes = niveau === 0
-		? ['2nd', '2nde']
-		: niveau === 1
-			? ['1ere', '1ère', '1er']
-			: ['tle', 'terminale'];
+	const prefixes =
+		niveau === 0 ? ['2nd', '2nde'] : niveau === 1 ? ['1ere', '1ère', '1er'] : ['tle', 'terminale'];
 
 	let valeur = (nom || '').trim();
 
@@ -84,7 +84,25 @@ export function formatAge(dateNaissance: string | Date | null | undefined): stri
 	return `${age} an${age > 1 ? 's' : ''}`;
 }
 
-export function formatExamenNom(examen: { nom?: string | null; periode?: string | null } | null | undefined): string {
+/**
+ * Numero de classe d'un eleve (ex: « 3F », « 12G »). L'ordre est calcule par
+ * sexe, en triant sur « nom prenom » tels que fournis par l'appelant.
+ */
+export function numeroClasse<
+	T extends { id: string; nom: string; prenom: string; sexe?: string | null }
+>(eleve: T, tous: T[]): string {
+	const sexe = eleve.sexe === 'F' ? 'F' : 'G';
+	const ordre =
+		tous
+			.filter((e) => (e.sexe === 'F' ? 'F' : 'G') === sexe)
+			.sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'))
+			.findIndex((e) => e.id === eleve.id) + 1;
+	return `${ordre}${sexe}`;
+}
+
+export function formatExamenNom(
+	examen: { nom?: string | null; periode?: string | null } | null | undefined
+): string {
 	if (!examen) return '';
 	const periode = examen.periode?.trim();
 	const nom = examen.nom?.trim() || '';

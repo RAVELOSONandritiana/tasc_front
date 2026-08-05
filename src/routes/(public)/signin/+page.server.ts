@@ -31,7 +31,7 @@ export const actions: Actions = {
 
 		const compte = await prisma.compte.findUnique({
 			where: { matricule },
-			include: { personne: true }
+			include: { personne: { include: { surveillant: true } } }
 		});
 
 		if (!compte) {
@@ -52,7 +52,10 @@ export const actions: Actions = {
 			matricule: compte.matricule,
 			role: compte.role,
 			nom: compte.personne.lastname,
-			prenom: compte.personne.name
+			prenom: compte.personne.name,
+			isSurveillantGeneral:
+				compte.role === 'SURVEILLANT' &&
+				compte.personne.surveillant?.poste === 'Surveillant General'
 		};
 
 		const token = createSessionToken(session);
@@ -64,7 +67,9 @@ export const actions: Actions = {
 			maxAge: 60 * 60 * 24 * 7
 		});
 
-		logActivity(session, 'connexion', `Connexion réussie avec le matricule ${matricule}`).catch(() => {});
+		logActivity(session, 'connexion', `Connexion réussie avec le matricule ${matricule}`, ip).catch(
+			() => {}
+		);
 
 		throw redirect(303, '/dashboard');
 	},

@@ -27,8 +27,10 @@
 		History
 	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
+	import { hasAdminPower } from '$lib/permissions';
 
 	const { data, form }: PageProps = $props();
+	const isAdmin = $derived(hasAdminPower(data.user));
 
 	let isEditing = $state(false);
 	let saving = $state(false);
@@ -406,7 +408,7 @@
 		</form>
 
 		<!-- Activity History -->
-		{#if data.user?.role === 'ADMINISTRATEUR'}
+		{#if isAdmin}
 		<Card
 			class="animate-slide-up stagger-7 p-5 opacity-0 transition-all duration-200 hover:shadow-sm"
 		>

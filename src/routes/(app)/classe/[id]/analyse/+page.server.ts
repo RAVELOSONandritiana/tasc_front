@@ -1,6 +1,15 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
+import { fail } from '@sveltejs/kit';
+import { logActivity } from '$lib/server/activity';
+import { broadcastRealtime } from '$lib/server/realtime';
 import type { Cours, Examen } from '$lib/types/Materiel.type';
+
+/// Jours tels qu'ils sont stockes dans l'emploi du temps (SeanceEDT.jour).
+const JOURS_SEMAINE = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+/// Roles autorises a declarer / supprimer une absence d'enseignant.
+const ROLES_ABSENCE_PROF = ['ADMINISTRATEUR', 'SURVEILLANT', 'OPERATEUR'];
 
 function dureeHeures(heureDebut: string, heureFin: string): number {
 	const [dh, dm] = heureDebut.split(':').map(Number);
@@ -11,7 +20,18 @@ function dureeHeures(heureDebut: string, heureFin: string): number {
 	return diff > 0 ? Math.round((diff / 60) * 100) / 100 : 0;
 }
 
-export const load: PageServerLoad = async ({ params }) => {
+/// Heure locale "HH:MM" d'une date (l'heure de debut de la seance manquee est
+/// stockee dans la date de l'absence).
+function heureLocale(d: Date): string {
+	return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/// Date locale au format "AAAA-MM-JJ" (on evite toISOString qui bascule en UTC).
+function dateLocale(d: Date): string {
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const classe = await prisma.classe.findUnique({
 		where: { id: params.id },
 		include: { anneeScolaire: true }
@@ -148,12 +168,32 @@ export const load: PageServerLoad = async ({ params }) => {
 		include: { seances: true }
 	});
 	const edtSeances = (emploiDuTemps?.seances ?? []).map((s) => ({
+		id: s.id,
 		coursId: s.coursId,
 		jour: s.jour,
 		heureDebut: s.heureDebut,
 		heureFin: s.heureFin,
 		duree: dureeHeures(s.heureDebut, s.heureFin)
 	}));
+
+	// Seances de l'emploi du temps indexees par "cours + heure de debut" :
+	// une absence d'enseignant reference toujours une seance prevue a l'emploi
+	// du temps (sa date porte l'heure de debut de la seance manquee).
+	const seanceParCle = new Map(edtSeances.map((s) => [`${s.coursId}|${s.heureDebut}`, s]));
+	const nomCoursById = new Map(listeCours.map((c) => [c.id, c.nom]));
+
+	// Duree moyenne d'une seance par cours : sert de repli si la seance a ete
+	// supprimee ou deplacee dans l'emploi du temps depuis la declaration.
+	const dureeMoyenneParCours = new Map<string, number>();
+	for (const c of listeCours) {
+		const s = edtSeances.filter((x) => x.coursId === c.id);
+		if (s.length > 0) {
+			dureeMoyenneParCours.set(
+				c.id,
+				Math.round((s.reduce((t, x) => t + x.duree, 0) / s.length) * 100) / 100
+			);
+		}
+	}
 
 	// ---- Séances de cours en direct (assiduité des enseignants) ----
 	const seanceCours = anneeId
@@ -178,6 +218,67 @@ export const load: PageServerLoad = async ({ params }) => {
 		dateFin: s.dateFin ? s.dateFin.toISOString() : null
 	}));
 
+	// ---- Pointages effectués par les opérateurs / surveillants ----
+	// Ils alimentent aussi l'assiduité des enseignants (heures réalisées).
+	const pointages = anneeId
+		? await prisma.pointage.findMany({
+				where: { coursId: { in: coursIds }, anneeId },
+				select: {
+					id: true,
+					coursId: true,
+					professeurId: true,
+					date: true,
+					heuresPrevues: true,
+					heuresEffectuees: true,
+					causeIncomplet: true
+				}
+			})
+		: [];
+	const pointagesBruts = pointages.map((p) => ({
+		id: p.id,
+		coursId: p.coursId,
+		professeurId: p.professeurId,
+		date: p.date.toISOString(),
+		heuresPrevues: p.heuresPrevues ?? null,
+		heuresEffectuees: p.heuresEffectuees,
+		incomplet: Boolean(p.causeIncomplet),
+		motif: p.causeIncomplet || null
+	}));
+
+	// ---- Absences des enseignants ----
+	// Une absence d'enseignant = une seance de l'emploi du temps qui n'a pas
+	// ete assuree. Les heures manquees sont exactement celles de cette seance :
+	// on ne les deduit plus d'un cumul depuis le debut de l'annee scolaire.
+	const absencesProfBrutes =
+		anneeId && coursIds.length
+			? await prisma.absenceProf.findMany({
+					where: { anneeId, coursId: { in: coursIds } },
+					orderBy: { date: 'desc' },
+					include: { professeur: { include: { personne: true } } }
+				})
+			: [];
+
+	const absencesProf = absencesProfBrutes.map((a) => {
+		const heureDebut = heureLocale(a.date);
+		const seance = a.coursId ? seanceParCle.get(`${a.coursId}|${heureDebut}`) : undefined;
+		const heures =
+			seance?.duree ?? (a.coursId ? (dureeMoyenneParCours.get(a.coursId) ?? 0) : 0);
+		return {
+			id: a.id,
+			professeurId: a.professeurId,
+			professeurNom: `${a.professeur.personne.name} ${a.professeur.personne.lastname}`,
+			coursId: a.coursId,
+			coursNom: (a.coursId ? nomCoursById.get(a.coursId) : null) ?? 'Cours',
+			date: dateLocale(a.date),
+			jour: JOURS_SEMAINE[a.date.getDay()],
+			heureDebut,
+			heureFin: seance?.heureFin ?? null,
+			heures,
+			motif: a.motif || null,
+			justifie: a.justifie
+		};
+	});
+
 	return {
 		classe: classe
 			? {
@@ -192,6 +293,151 @@ export const load: PageServerLoad = async ({ params }) => {
 		eleves,
 		incidentsByEleve,
 		edtSeances,
-		seanceCours: seancesBrutes
+		seanceCours: seancesBrutes,
+		pointages: pointagesBruts,
+		absencesProf,
+		anneeActive: !!annee,
+		canGererAbsenceProf: ROLES_ABSENCE_PROF.includes(locals.user?.role ?? '')
 	};
+};
+
+export const actions: Actions = {
+	/**
+	 * Declare l'absence d'un enseignant sur une seance de l'emploi du temps.
+	 * La seance choisie determine le cours, l'enseignant et le nombre d'heures
+	 * manquees ; la date doit tomber le meme jour de la semaine que la seance.
+	 */
+	absenceProf: async ({ request, params, locals }) => {
+		if (!ROLES_ABSENCE_PROF.includes(locals.user?.role ?? '')) {
+			return fail(403, {
+				error: 'Réservé à l’administrateur, au surveillant ou à l’opérateur'
+			});
+		}
+
+		const form = await request.formData();
+		const seanceId = ((form.get('seanceId') as string) || '').trim();
+		const dateRaw = ((form.get('date') as string) || '').trim();
+		const motif = ((form.get('motif') as string) || '').trim() || null;
+		const justifie = form.get('justifie') === 'true' || form.get('justifie') === 'on';
+
+		if (!seanceId) return fail(400, { error: 'Séance de l’emploi du temps requise' });
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) return fail(400, { error: 'Date invalide' });
+
+		const annee = await getActiveAnneeScolaire();
+		if (!annee) return fail(400, { error: "Aucune année scolaire n'est active" });
+
+		const seance = await prisma.seanceEDT.findUnique({
+			where: { id: seanceId },
+			include: { cours: { include: { matiere: true, professeur: { include: { personne: true } } } } }
+		});
+		if (!seance) return fail(404, { error: 'Séance introuvable dans l’emploi du temps' });
+		if (seance.cours.classeId !== params.id) {
+			return fail(400, { error: 'Cette séance n’appartient pas à cette classe' });
+		}
+		if (!seance.cours.professeurId) {
+			return fail(400, { error: 'Aucun enseignant n’est affecté à ce cours' });
+		}
+
+		const date = new Date(`${dateRaw}T${seance.heureDebut}:00`);
+		if (Number.isNaN(date.getTime())) return fail(400, { error: 'Date invalide' });
+		const finDeJournee = new Date();
+		finDeJournee.setHours(23, 59, 59, 999);
+		if (date.getTime() > finDeJournee.getTime()) {
+			return fail(400, { error: 'Impossible de déclarer une absence sur une séance à venir' });
+		}
+
+		const existe = await prisma.absenceProf.findFirst({
+			where: { professeurId: seance.cours.professeurId, coursId: seance.coursId, date }
+		});
+		if (existe) return fail(400, { error: 'Cette séance est déjà déclarée comme absence' });
+
+		try {
+			const absence = await prisma.absenceProf.create({
+				data: {
+					date,
+					justifie,
+					motif,
+					professeurId: seance.cours.professeurId,
+					coursId: seance.coursId,
+					classeId: params.id,
+					anneeId: annee.id
+				}
+			});
+
+			await prisma.professeur
+				.update({
+					where: { id: seance.cours.professeurId },
+					data: { absences: { increment: 1 } }
+				})
+				.catch(() => {});
+
+			const nomProf = seance.cours.professeur
+				? `${seance.cours.professeur.personne.name} ${seance.cours.professeur.personne.lastname}`
+				: 'Enseignant';
+			logActivity(
+				locals.user ?? null,
+				'absence_enseignant',
+				`Absence de ${nomProf} — ${seance.cours.matiere.nom} du ${dateRaw} (${seance.heureDebut}-${seance.heureFin})`
+			).catch(() => {});
+
+			broadcastRealtime({
+				entity: 'enseignant',
+				action: 'update',
+				id: seance.cours.professeurId
+			});
+
+			return { success: true, absenceId: absence.id };
+		} catch (e) {
+			console.error('Erreur absence enseignant:', e);
+			return fail(500, { error: 'Erreur lors de l’enregistrement de l’absence' });
+		}
+	},
+
+	/** Annule une absence d'enseignant declaree par erreur. */
+	supprimerAbsenceProf: async ({ request, params, locals }) => {
+		if (!ROLES_ABSENCE_PROF.includes(locals.user?.role ?? '')) {
+			return fail(403, {
+				error: 'Réservé à l’administrateur, au surveillant ou à l’opérateur'
+			});
+		}
+
+		const form = await request.formData();
+		const id = ((form.get('id') as string) || '').trim();
+		if (!id) return fail(400, { error: 'Absence requise' });
+
+		const absence = await prisma.absenceProf.findUnique({
+			where: { id },
+			include: { cours: true }
+		});
+		if (!absence) return fail(404, { error: 'Absence introuvable' });
+		if (absence.classeId !== params.id && absence.cours?.classeId !== params.id) {
+			return fail(400, { error: 'Cette absence n’appartient pas à cette classe' });
+		}
+
+		try {
+			await prisma.absenceProf.delete({ where: { id } });
+			const prof = await prisma.professeur.findUnique({
+				where: { id: absence.professeurId },
+				select: { absences: true }
+			});
+			if (prof && prof.absences > 0) {
+				await prisma.professeur
+					.update({ where: { id: absence.professeurId }, data: { absences: { decrement: 1 } } })
+					.catch(() => {});
+			}
+
+			logActivity(
+				locals.user ?? null,
+				'absence_enseignant',
+				`Annulation d’une absence d’enseignant du ${dateLocale(absence.date)}`
+			).catch(() => {});
+
+			broadcastRealtime({ entity: 'enseignant', action: 'update', id: absence.professeurId });
+
+			return { success: true };
+		} catch (e) {
+			console.error('Erreur suppression absence enseignant:', e);
+			return fail(500, { error: 'Erreur lors de la suppression' });
+		}
+	}
 };

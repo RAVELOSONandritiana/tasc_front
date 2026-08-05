@@ -6,6 +6,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { createNotification } from '$lib/server/notifications';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { hasAdminPower } from '$lib/permissions';
 import { formatClasseNom } from '$lib/utils';
 
 /**
@@ -390,7 +391,7 @@ export const actions: Actions = {
 		if (
 			comment.authorId &&
 			comment.authorId !== locals.user?.userId &&
-			locals.user?.role !== 'ADMINISTRATEUR'
+			!hasAdminPower(locals.user)
 		) {
 			return fail(403, { error: 'Modification non autorisée' });
 		}

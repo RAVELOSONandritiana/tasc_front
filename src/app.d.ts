@@ -9,6 +9,9 @@ declare global {
 				role: string;
 				nom: string;
 				prenom: string;
+				isSurveillantGeneral: boolean;
+				ip?: string;
+				userAgent?: string;
 			} | null;
 		}
 		// interface Error {}

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import * as Avatar from '$lib/components/ui/avatar';
-	import { Gavel, AlertTriangle, UserX, Clock, Save } from '@lucide/svelte';
+	import { Gavel, AlertTriangle, UserX, Clock } from '@lucide/svelte';
 	import type { EleveCours, Note, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
 	import { formatClasseNom } from '$lib/utils';
-	import { deserialize } from '$app/forms';
 
 	const { data }: PageProps = $props();
 
@@ -13,8 +12,6 @@
 	let elevesClasse = $state<EleveCours[]>([...data.elevesClasse]);
 
 	let selectedId = $state<string | null>(elevesClasse[0]?.id ?? null);
-	let savingId = $state<string | null>(null);
-	let saveSuccessId = $state<string | null>(null);
 
 	const selected = $derived(
 		selectedId ? (elevesClasse.find((e) => e.id === selectedId) ?? null) : null
@@ -77,38 +74,6 @@
 				.findIndex((e) => e.id === eleve.id) + 1;
 		const suffix = eleve.sexe === 'F' ? 'F' : 'G';
 		return `${ordre}${suffix}`;
-	}
-
-	async function setResultat(eleveId: string, inscriptionId: string, resultat: string) {
-		savingId = eleveId;
-		try {
-			const fd = new FormData();
-			fd.append('inscriptionId', inscriptionId);
-			fd.append('resultat', resultat);
-			const res = await fetch(`?/setResultat`, {
-				method: 'POST',
-				headers: { 'x-sveltekit-action': 'true' },
-				body: fd,
-				credentials: 'same-origin'
-			});
-			const result = deserialize(await res.text());
-			if (result.type === 'success') {
-				const eleve = elevesClasse.find((e) => e.id === eleveId);
-				if (eleve) {
-					eleve.resultat = resultat as 'EN_ATTENTE' | 'ADMIS' | 'AJOURNE';
-				}
-				saveSuccessId = eleveId;
-				setTimeout(() => {
-					saveSuccessId = null;
-				}, 1500);
-			} else if (result.type === 'failure') {
-				alert(result.data?.error || 'Erreur lors de la délibération');
-			}
-		} catch {
-			alert('Erreur lors de la délibération');
-		} finally {
-			savingId = null;
-		}
 	}
 </script>
 
@@ -268,64 +233,6 @@
 							>
 								{decision(moyenneG)}
 							</span>
-						</div>
-						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-sm font-semibold">Résultat :</span>
-							{#if selected.resultat === 'ADMIS'}
-								<Button
-									size="sm"
-									variant="default"
-									class="bg-emerald-600 hover:bg-emerald-700"
-									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'AJOURNE')}
-								>
-									{#if savingId === selected.id}
-										<Save class="mr-1 size-3 animate-spin" />
-									{/if}
-									Passer en ajourné
-								</Button>
-							{:else if selected.resultat === 'AJOURNE'}
-								<Button
-									size="sm"
-									variant="default"
-									class="bg-destructive hover:bg-destructive/90"
-									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'ADMIS')}
-								>
-									{#if savingId === selected.id}
-										<Save class="mr-1 size-3 animate-spin" />
-									{/if}
-									Passer en admis
-								</Button>
-							{:else}
-								<Button
-									size="sm"
-									variant="outline"
-									class="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'ADMIS')}
-								>
-									{#if savingId === selected.id}
-										<Save class="mr-1 size-3 animate-spin" />
-									{/if}
-									Admis
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									class="border-destructive text-destructive hover:bg-destructive/5"
-									disabled={!selected.inscriptionId || savingId === selected.id}
-									onclick={() => setResultat(selected.id, selected.inscriptionId!, 'AJOURNE')}
-								>
-									{#if savingId === selected.id}
-										<Save class="mr-1 size-3 animate-spin" />
-									{/if}
-									Ajourné
-								</Button>
-							{/if}
-							{#if saveSuccessId === selected.id}
-								<span class="text-xs font-medium text-emerald-600">Sauvegardé</span>
-							{/if}
 						</div>
 						<div class="flex items-center gap-2 text-sm">
 							<span class="font-semibold">Mention :</span>

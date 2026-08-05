@@ -1,21 +1,24 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { fail, redirect } from '@sveltejs/kit';
-import { logActivity } from '$lib/server/activity';
-import { broadcastRealtime } from '$lib/server/realtime';
-import { createNotification } from '$lib/server/notifications';
+import { registerPointage, PointageError } from '$lib/server/pointage';
+import { numeroClasse } from '$lib/utils';
 
 type ElevePresence = {
 	id: string;
 	nom: string;
 	prenom: string;
+	sexe: string;
+	numero: string;
 	dateNaissance: string;
 	actif: boolean;
 	photoUrl?: string | null;
 	imageUrl?: string | null;
 };
 
-function heuresPrevuesCalc(seanceEDT: { heureDebut?: string | null; heureFin?: string | null } | null): number | null {
+function heuresPrevuesCalc(
+	seanceEDT: { heureDebut?: string | null; heureFin?: string | null } | null
+): number | null {
 	if (!seanceEDT?.heureDebut || !seanceEDT?.heureFin) return null;
 	const [h1, m1] = seanceEDT.heureDebut.split(':').map(Number);
 	const [h2, m2] = seanceEDT.heureFin.split(':').map(Number);
@@ -52,17 +55,32 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		include: { salle: true }
 	});
 
-	const eleves: ElevePresence[] = classe.inscriptions.map((inscription) => ({
+	const elevesBruts = classe.inscriptions.map((inscription) => ({
 		id: inscription.eleve.id,
 		nom: inscription.eleve.personne.lastname,
 		prenom: inscription.eleve.personne.name,
+		sexe: inscription.eleve.sexe || 'G',
 		dateNaissance: inscription.eleve.dateNaissance.toISOString().split('T')[0],
 		actif: inscription.actif,
 		photoUrl: inscription.eleve.photoUrl,
 		imageUrl: inscription.eleve.personne.imageUrl || null
 	}));
 
+	const eleves: ElevePresence[] = elevesBruts.map((e) => ({
+		...e,
+		numero: numeroClasse(e, elevesBruts)
+	}));
+
 	const annee = await getActiveAnneeScolaire();
+
+	const currentProfesseurId = locals.user
+		? ((
+				await prisma.compte.findUnique({
+					where: { id: locals.user.userId },
+					include: { personne: { include: { professeur: true } } }
+				})
+			)?.personne?.professeur?.id ?? null)
+		: null;
 
 	const historique = await prisma.pointage.findMany({
 		where: { coursId: coursId },
@@ -92,7 +110,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		seuilAbsence: annee?.seuilAbsenceConvoc ?? 3,
 		canEdit:
 			!!annee &&
-			(locals.user?.role === 'SURVEILLANT' || locals.user?.role === 'ADMINISTRATEUR'),
+			(locals.user?.role === 'SURVEILLANT' ||
+				locals.user?.role === 'OPERATEUR' ||
+				locals.user?.role === 'ADMINISTRATEUR' ||
+				(locals.user?.role === 'ENSEIGNANT' && cours.professeurId === currentProfesseurId)),
 		historique: historique.map((p) => ({
 			id: p.id,
 			date: p.date.toISOString(),
@@ -110,137 +131,37 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 export const actions: Actions = {
 	enregistrer: async ({ request, params, locals }) => {
-		const role = locals.user?.role;
-		if (role !== 'SURVEILLANT' && role !== 'ADMINISTRATEUR') {
-			return fail(403, { error: 'Réservé au surveillant ou à l’opérateur' });
-		}
-
 		const formData = await request.formData();
-		const coursId = params.coursId;
-		const classeId = params.id;
 		const dateRaw = (formData.get('date') as string) || '';
 		const heuresEffectueesRaw = formData.get('heuresEffectuees') as string;
 		const causeIncomplet = (formData.get('causeIncomplet') as string)?.trim() || null;
 		const absentIds = formData.getAll('absentIds').map(String).filter(Boolean);
 		const retardIds = formData.getAll('retardIds').map(String).filter(Boolean);
+		const profAbsent = formData.get('profAbsent') === 'true';
+		const motifProfAbsent = (formData.get('motifAbsence') as string)?.trim() || null;
 
 		const heuresEffectuees = parseFloat(heuresEffectueesRaw);
-		if (Number.isNaN(heuresEffectuees) || heuresEffectuees < 0) {
-			return fail(400, { error: 'Nombre d’heures effectuées invalide' });
-		}
-		if (!dateRaw) {
-			return fail(400, { error: 'Date requise' });
-		}
-
-		const annee = await getActiveAnneeScolaire();
-		if (!annee) {
-			return fail(400, { error: "Aucune année scolaire n'est sélectionnée" });
-		}
-
-		const cours = await prisma.cours.findUnique({
-			where: { id: coursId },
-			include: { matiere: true, classe: true }
-		});
-		if (!cours) return fail(400, { error: 'Cours introuvable' });
-
-		const seuil = annee.seuilAbsenceConvoc || 3;
-
-		// Inscriptions de la classe pour cette année (pour lier absences/retards).
-		const inscriptions = await prisma.inscription.findMany({
-			where: { classeId, anneeId: annee.id, actif: true },
-			select: { id: true, eleveId: true }
-		});
-		const inscriptionParEleve = new Map(inscriptions.map((i) => [i.eleveId, i.id]));
-		const motifCours = `Cours : ${cours.matiere.nom} (${cours.classe ? `${cours.classe.nom}` : ''})`;
-
-		const datePointage = new Date(dateRaw);
-
-		const seanceEDT = await prisma.seanceEDT.findFirst({
-			where: { coursId: coursId },
-			select: { heureDebut: true, heureFin: true }
-		});
-		const heuresPrevues = heuresPrevuesCalc(seanceEDT);
-
-		const pointage = await prisma.pointage.create({
-			data: {
-				coursId,
-				classeId,
-				professeurId: cours.professeurId || null,
-				anneeId: annee.id,
-				operateurId: locals.user?.userId ?? null,
-				date: datePointage,
-				heuresPrevues,
-				heuresEffectuees,
-				causeIncomplet
-			}
-		});
-
-		// Les élèves à traiter : absents en priorité, retards sur le reste.
-		const ensembleAbsents = new Set(absentIds);
-		const ensembleRetards = new Set(retardIds.filter((id) => !ensembleAbsents.has(id)));
-
-		const elevesConcernes = new Set<string>([...ensembleAbsents, ...ensembleRetards]);
 
 		try {
-			await prisma.$transaction(async (tx) => {
-				for (const eleveId of ensembleAbsents) {
-					await tx.absence.create({
-						data: {
-							eleveId,
-							inscriptionId: inscriptionParEleve.get(eleveId) || null,
-							date: datePointage,
-							motif: motifCours,
-							pointageId: pointage.id
-						}
-					});
-				}
-				for (const eleveId of ensembleRetards) {
-					await tx.retard.create({
-						data: {
-							eleveId,
-							inscriptionId: inscriptionParEleve.get(eleveId) || null,
-							date: datePointage,
-							duree: '—',
-							motif: motifCours,
-							pointageId: pointage.id
-						}
-					});
-				}
+			const result = await registerPointage({
+				classeId: params.id,
+				coursId: params.coursId,
+				dateRaw,
+				heuresEffectuees,
+				causeIncomplet,
+				absentIds,
+				retardIds,
+				profAbsent,
+				motifProfAbsent,
+				locals
 			});
+			return { success: true, alertes: result.alertes };
 		} catch (e) {
-			console.error('Erreur création absences/retards:', e);
+			if (e instanceof PointageError) {
+				return fail(e.status, { error: e.message });
+			}
+			console.error('Erreur pointage:', e);
 			return fail(500, { error: 'Erreur lors de l’enregistrement' });
 		}
-
-		// Alertes de convocation des parents aux multiples du seuil.
-		const alertes: string[] = [];
-		for (const eleveId of elevesConcernes) {
-			const total = await prisma.absence.count({
-				where: { eleveId, inscription: { anneeId: annee.id } }
-			});
-			if (total > 0 && total % seuil === 0) {
-				const eleve = await prisma.eleve.findUnique({
-					where: { id: eleveId },
-					include: { personne: true }
-				});
-				const nomComplet = eleve ? `${eleve.personne.name} ${eleve.personne.lastname}` : 'Un élève';
-				await createNotification({
-					title: 'Convocation des parents',
-					description: `${nomComplet} a atteint ${total} absences (seuil : ${seuil}). Convocation des parents requise.`,
-					scope: 'ALL',
-					actionType: 'CONVOCATION_PARENTS'
-				}).catch(() => {});
-				alertes.push(`${nomComplet} → ${total} absences`);
-				broadcastRealtime({ entity: 'eleve', action: 'update', id: eleveId });
-			}
-		}
-
-		await logActivity(
-			locals.user ?? null,
-			'pointage_cours',
-			`Pointage du cours ${cours.matiere.nom} (${heuresEffectuees}h)`
-		).catch(() => {});
-
-		return { success: true, alertes };
 	}
 };

@@ -4,6 +4,7 @@ export type RapportLigne = {
 	id: string;
 	type: TypeRapport;
 	date: string;
+	heure: string | null;
 	motif: string | null;
 	eleveNom: string;
 	elevePrenom: string;
@@ -40,6 +41,7 @@ export type AbsenceRetardItem = {
 	eleveId: string;
 	type: TypeRapport;
 	date: string;
+	heure: string | null;
 	motif: string | null;
 	justifie: boolean;
 };

@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { prisma, getCoursByProfesseurId, getEleveStats, getActiveAnneeScolaire } from '$lib/server/prisma';
+import { hasAdminPower } from '$lib/permissions';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	let compte = await prisma.compte.findUnique({
@@ -107,8 +108,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		: [];
 	const seuilAbsenceP = activeAnneeP?.seuilAbsenceConvoc ?? 3;
 
+	// Absences du professeur (cours manqués) pour l'année active.
+	const absencesProfP = personne?.professeur
+		? await prisma.absenceProf.findMany({
+				where: {
+					professeurId: personne.professeur.id,
+					...(activeAnneeP ? { anneeId: activeAnneeP.id } : {})
+				},
+				orderBy: { date: 'desc' },
+				take: 100,
+				include: { cours: { include: { matiere: true } } }
+			})
+		: [];
+
 	return {
 		viewerRole: locals.user?.role ?? null,
+		viewerIsAdmin: hasAdminPower(locals.user),
 		user: {
 			id: compte.id,
 			matricule: compte.matricule,
@@ -141,7 +156,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			justifie: r.justifie
 		})),
 		seuilAbsence: seuilAbsenceP,
-		totalAbsencesAnnee: absencesEleveP.length
+		totalAbsencesAnnee: absencesEleveP.length,
+		absencesProf: absencesProfP.map((a) => ({
+			id: a.id,
+			date: a.date.toISOString().split('T')[0],
+			motif: a.motif || null,
+			justifie: a.justifie,
+			cours: a.cours?.matiere?.nom || 'Cours'
+		}))
 	};
 
 	async function buildStats() {
@@ -157,9 +179,15 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		}
 		if (personne?.professeur) {
 			const profId = personne.professeur.id;
-			const coursIds = (
-				await prisma.cours.findMany({ where: { professeurId: profId }, select: { id: true } })
-			).map((c) => c.id);
+			const anneeS = await getActiveAnneeScolaire();
+			const anneeSId = anneeS?.id;
+			const coursProf = anneeSId
+				? await prisma.cours.findMany({
+						where: { professeurId: profId, anneeId: anneeSId },
+						select: { id: true }
+					})
+				: [];
+			const coursIds = coursProf.map((c) => c.id);
 			result.coursCount = coursIds.length;
 
 			// Élèves participants : union des listes de participants de ses cours.
@@ -172,6 +200,56 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				for (const p of c.participants ?? []) participantsSet.add(p);
 			}
 			result.elevesParticipants = participantsSet.size;
+
+			// Volume horaire prévu (emploi du temps) et heures réalisées (pointages).
+			let heuresPrevues = 0;
+			const dureeParSeance = new Map<string, number[]>();
+			if (coursIds.length) {
+				const seances = await prisma.seanceEDT.findMany({
+					where: { coursId: { in: coursIds } },
+					select: { coursId: true, heureDebut: true, heureFin: true }
+				});
+				for (const s of seances) {
+					const [h1, m1] = (s.heureDebut || '0:0').split(':').map(Number);
+					const [h2, m2] = (s.heureFin || '0:0').split(':').map(Number);
+					const diff = h2 * 60 + (m2 || 0) - (h1 * 60 + (m1 || 0));
+					if (diff > 0) {
+						heuresPrevues += diff / 60;
+						const liste = dureeParSeance.get(`${s.coursId}|${s.heureDebut}`) ?? [];
+						liste.push(diff / 60);
+						dureeParSeance.set(`${s.coursId}|${s.heureDebut}`, liste);
+					}
+				}
+			}
+			let heuresEffectuees = 0;
+			if (coursIds.length) {
+				const pts = await prisma.pointage.findMany({
+					where: { coursId: { in: coursIds }, anneeId: anneeSId },
+					select: { heuresEffectuees: true }
+				});
+				heuresEffectuees = pts.reduce((s, x) => s + (x.heuresEffectuees || 0), 0);
+			}
+
+			// Heures manquées : uniquement les séances de l'emploi du temps non
+			// assurées (absences déclarées), pas un cumul depuis le début de
+			// l'année scolaire.
+			const absencesDuProf = anneeSId
+				? await prisma.absenceProf.findMany({
+						where: { professeurId: profId, anneeId: anneeSId },
+						select: { coursId: true, date: true }
+					})
+				: [];
+			let heuresManquees = 0;
+			for (const a of absencesDuProf) {
+				const heure = `${String(a.date.getHours()).padStart(2, '0')}:${String(a.date.getMinutes()).padStart(2, '0')}`;
+				const durees = a.coursId ? dureeParSeance.get(`${a.coursId}|${heure}`) : undefined;
+				heuresManquees += durees?.[0] ?? 0;
+			}
+
+			result.heuresPrevues = Math.round(heuresPrevues * 100) / 100;
+			result.heuresEffectuees = Math.round(heuresEffectuees * 100) / 100;
+			result.absencesProf = absencesDuProf.length;
+			result.heuresManquees = Math.round(heuresManquees * 100) / 100;
 
 			let efficacite = 0;
 			let sansMoyenne = 0;

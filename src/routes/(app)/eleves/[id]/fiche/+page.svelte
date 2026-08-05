@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
 	import { Printer, User } from '@lucide/svelte';
-	import { enhance } from '$app/forms';
-	import type { PageProps } from '../$types';
-	import { formatClasseNom } from '$lib/utils';
+	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
 	const eleve = data.eleve;
@@ -15,6 +11,13 @@
 		duree?: string | null;
 		motif?: string | null;
 	}[];
+
+	// Tous les numeros de contact disponibles (eleve, pere, mere, tuteur).
+	const numeros = $derived(
+		[eleve.telephone, eleve.telephonePere, eleve.telephoneMere, eleve.telephoneTuteur].filter(
+			(n): n is string => Boolean(n)
+		)
+	);
 
 	function fmtDate(iso: string): string {
 		if (!iso) return '';
@@ -37,15 +40,13 @@
 
 	// Regroupe les absences par paquets de 3, séparés par le libellé
 	// "Aterin'ny Ray aman-dReny" (comme sur le carnet papier).
+	// Toujours 3 tableaux (même vides) pour l'impression du carnet.
 	const groupes = $derived.by(() => {
 		const g: typeof absences[] = [];
 		for (let i = 0; i < absences.length; i += 3) g.push(absences.slice(i, i + 3));
-		// Toujours au moins un groupe (même vide) pour l'impression.
-		return g.length ? g : [[] as typeof absences];
+		while (g.length < 3) g.push([] as typeof absences);
+		return g;
 	});
-
-	let saving = $state(false);
-	let savedMsg = $state(false);
 </script>
 
 <svelte:head>
@@ -61,77 +62,43 @@
 
 <div class="fiche-papier mx-auto max-w-3xl bg-white p-6 text-black shadow print:shadow-none">
 	<!-- En-tête : photo + identité -->
-	<div class="flex gap-4 border-b-2 border-black pb-4">
+	<div class="relative flex gap-4 pb-4">
+		<img
+			src="/logos/logo-right.png"
+			alt=""
+			class="pointer-events-none absolute inset-0 m-auto h-20 w-20 select-none opacity-10"
+		/>
 		<div class="photo-placeholder flex size-32 shrink-0 items-center justify-center border border-black">
 			<User class="size-10 text-gray-400" />
 		</div>
 		<div class="flex-1 text-sm leading-relaxed">
 			<p><span class="label-souligne">Nom :</span> <strong>{(eleve.nom || '').toUpperCase()}</strong></p>
 			<p><span class="label-souligne">Prénoms :</span> {eleve.prenom || ''}</p>
-			<p>
+			<p class="break-words">
 				<span class="label-souligne">Date de naissance :</span> {eleve.dateNaissance
 					? fmtDate(eleve.dateNaissance)
 					: '—'}
 				<span class="label-souligne ml-4">Lieu de naissance :</span> {eleve.lieuNaissance || '—'}
 			</p>
 			<p><span class="label-souligne">N° Matricule :</span> {eleve.im || '—'}</p>
+			<p><span class="label-souligne">Situation :</span> {situation(eleve)}</p>
 			<p>
-				<span class="label-souligne">Situation :</span> {situation(eleve)}
-				<span class="label-souligne ml-4">Classe :</span> {eleve.classe}
-				<span class="label-souligne ml-4">Numéro :</span> —F
+				<span class="label-souligne">Classe :</span> {eleve.classe}
+				<span class="label-souligne ml-4">Numéro :</span> {eleve.numeroClasse || '—'}
 			</p>
 			<p>
 				<span class="label-souligne">Tel parents ou tuteur :</span>
-				{eleve.telephone || eleve.telephonePere || eleve.telephoneMere || eleve.telephoneTuteur || '—'}
+				{#if numeros.length}
+					{numeros.join(' · ')}
+				{:else}
+					—
+				{/if}
 			</p>
 		</div>
 	</div>
 
-	<!-- Tableau de suivi des absences -->
-	<h2 class="mt-6 text-center font-bold underline">SUIVI DES ABSENCES</h2>
-
-	<form
-		method="POST"
-		action="?/addAbsence"
-		use:enhance={() => {
-			saving = true;
-			return async ({ result, update }) => {
-				saving = false;
-				if (result.type === 'success') {
-					await update({ invalidateAll: true });
-					savedMsg = true;
-					setTimeout(() => (savedMsg = false), 2000);
-				} else if (result.type === 'failure') {
-					alert((result.data as { error?: string })?.error ?? 'Enregistrement impossible');
-				}
-			};
-		}}
-		class="no-print mb-4 grid grid-cols-2 gap-2 rounded-md border p-3 text-sm md:grid-cols-4"
-	>
-		<div class="grid gap-1">
-			<Label class="text-xs" for="dateHeure">Date / Heure</Label>
-			<Input id="dateHeure" name="dateHeure" type="datetime-local" class="h-8" required />
-		</div>
-		<div class="grid gap-1">
-			<Label class="text-xs" for="duree">Durée abs.</Label>
-			<Input id="duree" name="duree" placeholder="ex: 2h" class="h-8" />
-		</div>
-		<div class="grid gap-1">
-			<Label class="text-xs" for="motif">Motif</Label>
-			<Input id="motif" name="motif" class="h-8" />
-		</div>
-		<div class="grid gap-1">
-			<Label class="text-xs" for="dateRetour">Date de retour</Label>
-			<Input id="dateRetour" name="dateRetour" type="date" class="h-8" />
-		</div>
-		<div class="col-span-2 flex items-end gap-2 md:col-span-4">
-			<Button type="submit" size="sm" disabled={saving}>{saving ? 'Enregistrement…' : 'Ajouter une absence'}</Button>
-			{#if savedMsg}<span class="text-xs text-emerald-600">Absence enregistrée.</span>{/if}
-		</div>
-	</form>
-
 	{#each groupes as groupe, gi (gi)}
-		<table class="abs-table mb-2 w-full border-collapse text-sm">
+		<table class="abs-table mb-2 w-full border-collapse text-sm {gi === 0 ? 'mt-4' : ''}">
 			<thead>
 				<tr>
 					<th class="w-1/5">DATE/HEURE</th>
@@ -145,24 +112,19 @@
 				{#each Array(3) as _, ri (ri)}
 					{@const a = groupe[ri]}
 					<tr>
-						<td>{a ? fmtDate(a.date) : ''}</td>
-						<td>{a?.duree ?? ''}</td>
-						<td class="text-left">{a?.motif ?? ''}</td>
+					<td>{a ? fmtDate(a.date) : ''}</td>
+					<td>{a?.duree ?? ''}</td>
+					<td class="text-left">{a?.motif ?? ''}</td>
 						<td></td>
 						<td></td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
-		<p class="separateur my-1 text-center text-sm font-bold italic underline">
+		<p class="separateur my-1 text-center text-sm font-bold italic">
 			Aterin'ny Ray aman-dReny
 		</p>
 	{/each}
-
-	<p class="mt-6 text-xs text-muted-foreground">
-		Les informations d'identité sont récupérées automatiquement depuis la base de données (champs
-		non éditables ici). La photo est un emplacement à remplir séparément.
-	</p>
 </div>
 
 <style>
@@ -179,15 +141,21 @@
 	.abs-table td {
 		border: 1px solid #333;
 		padding: 4px 6px;
-		height: 28px;
+		height: 56px;
 		text-align: left;
 	}
 	.abs-table th {
 		font-family: Georgia, 'Times New Roman', serif;
 		background: #f7f7f7;
+		text-align: center;
 	}
 	.separateur {
 		font-family: Georgia, 'Times New Roman', serif;
+	}
+
+	@page {
+		size: A4;
+		margin: 8mm;
 	}
 
 	@media print {
@@ -196,6 +164,12 @@
 		}
 		.fiche-papier {
 			box-shadow: none;
+			max-width: none;
+			width: 100%;
+			margin: 0;
+			padding: 0;
+			background: #fff;
+			font-size: 12px;
 		}
 	}
 </style>

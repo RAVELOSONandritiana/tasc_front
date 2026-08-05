@@ -7,7 +7,11 @@ await initDb();
 export const handle: Handle = async ({ event, resolve }) => {
 	const session = await validateSession(event.cookies.get(SESSION_COOKIE));
 	if (session) {
-		event.locals.user = session;
+		event.locals.user = {
+			...session,
+			ip: event.getClientAddress(),
+			userAgent: event.request.headers.get('user-agent') || undefined
+		};
 	}
 	return resolve(event);
 };

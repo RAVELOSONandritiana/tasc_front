@@ -42,6 +42,8 @@
 					.includes(searchCompte.toLowerCase())
 		)
 	);
+
+	let confirmTerminer = $state(false);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col bg-background text-foreground">
@@ -265,6 +267,46 @@
 						Année scolaire actuelle : <strong class="text-primary">{data.listeAnnees.find((a) => a.active)?.nom || 'Aucune'}</strong>
 					</p>
 				</div>
+
+				<div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+					<div>
+						<p class="text-sm font-medium">Clôturer l'année scolaire</p>
+						<p class="mt-1 text-xs text-muted-foreground">
+							Recalcule automatiquement la situation de tous les élèves de l'année active :
+							moyenne ≥ 10 → Passant, sinon → Redoublant.
+						</p>
+					</div>
+					<AlertDialog.Root bind:open={confirmTerminer}>
+						<AlertDialog.Trigger class={buttonVariants({ variant: 'destructive', size: 'sm' })}>
+							Terminer l'année scolaire
+						</AlertDialog.Trigger>
+						<AlertDialog.Content>
+							<AlertDialog.Header>
+								<AlertDialog.Title>Terminer l'année scolaire ?</AlertDialog.Title>
+								<AlertDialog.Description>
+									Tous les élèves de l'année active seront recalculés : ceux dont la moyenne
+									générale est inférieure à 10 passeront en <strong>Redoublant</strong>, les
+									autres en <strong>Passant</strong>. Les élèves sans note ne sont pas modifiés.
+								</AlertDialog.Description>
+							</AlertDialog.Header>
+							<AlertDialog.Footer>
+								<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
+								<form method="POST" action="?/terminerAnnee" use:loadingForm>
+									<AlertDialog.Action type="submit">Terminer l'année</AlertDialog.Action>
+								</form>
+							</AlertDialog.Footer>
+						</AlertDialog.Content>
+					</AlertDialog.Root>
+				</div>
+
+				{#if form?.termine}
+					<div class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
+						<p class="font-medium text-emerald-600">Année clôturée.</p>
+						<p class="mt-1">
+							{form.majeres} élève(s) recalculé(s), dont {form.redoublants} en redoublant.
+						</p>
+					</div>
+				{/if}
 
 				<div class="overflow-x-auto rounded-lg border">
 					<Table.Root>

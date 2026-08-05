@@ -18,6 +18,26 @@ export interface Session {
 	role: string;
 	nom: string;
 	prenom: string;
+	isSurveillantGeneral: boolean;
+}
+
+function toSession(compte: {
+	id: string;
+	matricule: string;
+	role: string;
+	personne: { lastname: string; name: string; surveillant?: { poste: string } | null } | null;
+}): Session {
+	const isSurveillantGeneral =
+		compte.role === 'SURVEILLANT' &&
+		compte.personne?.surveillant?.poste === 'Surveillant General';
+	return {
+		userId: compte.id,
+		matricule: compte.matricule,
+		role: compte.role,
+		nom: compte.personne?.lastname ?? '',
+		prenom: compte.personne?.name ?? '',
+		isSurveillantGeneral
+	};
 }
 
 export function createSessionToken(session: Session): string {
@@ -44,29 +64,21 @@ export async function validateSession(token: string | undefined | null): Promise
 
 	const compte = await prisma.compte.findUnique({
 		where: { id: session.userId },
-		include: { personne: true }
+		include: { personne: { include: { surveillant: true } } }
 	});
 
 	if (!compte || compte.statut !== 'ACTIF') return null;
-	return session;
+	return toSession(compte);
 }
 
 export async function authenticate(matricule: string, password: string): Promise<Session | null> {
 	const compte = await prisma.compte.findUnique({
 		where: { matricule },
-		include: { personne: true }
+		include: { personne: { include: { surveillant: true } } }
 	});
 
 	if (!compte || !verifyPassword(password, compte.password)) return null;
 	if (compte.statut !== 'ACTIF') return null;
 
-	const session = {
-		userId: compte.id,
-		matricule: compte.matricule,
-		role: compte.role,
-		nom: compte.personne.lastname,
-		prenom: compte.personne.name
-	};
-
-	return session;
+	return toSession(compte);
 }

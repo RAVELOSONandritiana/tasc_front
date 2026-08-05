@@ -4,8 +4,13 @@
 	import * as Table from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { TrendingUp, TrendingDown, BarChart3, Users, CalendarClock, AlertTriangle, Gavel, ShieldAlert, Star, Clock3 } from '@lucide/svelte';
+	import * as Accordion from '$lib/components/ui/accordion/index.js';
+	import AbsenceProfDialog from '$lib/components/user/classe/AbsenceProfDialog.svelte';
+	import { TrendingUp, TrendingDown, BarChart3, Users, CalendarClock, AlertTriangle, Gavel, ShieldAlert, Star, Clock3, UserX, Trash2 } from '@lucide/svelte';
 	import { formatClasseNom, formatExamenNom } from '$lib/utils';
+	import { invalidateAll } from '$app/navigation';
+	import { deserialize } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
 	import type { Cours, Examen } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
 
@@ -24,32 +29,73 @@
 		retards: { id: string; date: string; duree: string; justifie: boolean; motif: string | null }[];
 	};
 
-	const listeCours = $state<Cours[]>([...(data.listeCours || [])]);
-	const listeExamens = $state<Examen[]>([...(data.listeExamens || [])]);
-	const eleves = $state<EleveAnalyse[]>([...(data.eleves || [])]);
-	const incidentsByEleve = $state<Record<string, { INFO: number; ERREUR: number; NOTE: number; ABSENT: number; total: number }>>(
+	const listeCours = $derived<Cours[]>(data.listeCours || []);
+	const listeExamens = $derived<Examen[]>(data.listeExamens || []);
+	const eleves = $derived<EleveAnalyse[]>(data.eleves || []);
+	const incidentsByEleve = $derived<Record<string, { INFO: number; ERREUR: number; NOTE: number; ABSENT: number; total: number }>>(
 		data.incidentsByEleve || {}
 	);
-	const edtSeances = $state<{ coursId: string; jour: string; heureDebut: string; heureFin: string; duree: number }[]>(
-		data.edtSeances || []
-	);
-	const seanceCours = $state<
+	const edtSeances = $derived<
+		{ id: string; coursId: string; jour: string; heureDebut: string; heureFin: string; duree: number }[]
+	>(data.edtSeances || []);
+	const seanceCours = $derived<
 		{ id: string; coursId: string; professeurId: string | null; statut: string; dateDebut: string; dateFin: string | null }[]
 	>(data.seanceCours || []);
 
+	const pointages = $derived<
+		{
+			id: string;
+			coursId: string;
+			professeurId: string | null;
+			date: string;
+			heuresPrevues: number | null;
+			heuresEffectuees: number;
+			incomplet: boolean;
+			motif: string | null;
+		}[]
+	>(data.pointages || []);
+
+	// Absences des enseignants : une absence = une séance de l'emploi du temps
+	// qui n'a pas été assurée (les heures manquées sont celles de la séance).
+	const absencesProf = $derived<
+		{
+			id: string;
+			professeurId: string;
+			professeurNom: string;
+			coursId: string | null;
+			coursNom: string;
+			date: string;
+			jour: string;
+			heureDebut: string;
+			heureFin: string | null;
+			heures: number;
+			motif: string | null;
+			justifie: boolean;
+		}[]
+	>(data.absencesProf || []);
+
+	const canGererAbsenceProf = $derived(Boolean(data.canGererAbsenceProf));
+	const anneeActive = $derived(Boolean(data.anneeActive));
+
+	let absenceDialogOpen = $state(false);
+	let suppressionEnCours = $state<string | null>(null);
+	let erreurAbsence = $state<string | null>(null);
+
 	let searchEleve = $state('');
 
-	// Examen selection (par défaut tous)
-	let selectedExamens = $state<string[]>(listeExamens.map((e) => e.id));
+	// Examen selection (par défaut tous : `null` = aucun choix manuel).
+	let examensChoisis = $state<string[] | null>(null);
+	const selectedExamens = $derived(examensChoisis ?? listeExamens.map((e) => e.id));
 
 	const selectedOrdered = $derived(listeExamens.filter((e) => selectedExamens.includes(e.id)));
 	const selectedSet = $derived(new Set(selectedExamens));
 
 	function toggleExamen(id: string) {
-		if (selectedExamens.includes(id)) {
-			if (selectedExamens.length > 1) selectedExamens = selectedExamens.filter((x) => x !== id);
+		const courant = selectedExamens;
+		if (courant.includes(id)) {
+			if (courant.length > 1) examensChoisis = courant.filter((x) => x !== id);
 		} else {
-			selectedExamens = [...selectedExamens, id];
+			examensChoisis = [...courant, id];
 		}
 	}
 
@@ -69,6 +115,48 @@
 	function estParticipant(coursId: string, eleveId: string): boolean {
 		const p = coursById[coursId]?.participants || [];
 		return p.length === 0 || p.includes(eleveId);
+	}
+
+	// Séances proposées dans la fenêtre « Absence enseignant » : un enseignant
+	// n'est déclaré absent que sur une séance existante de l'emploi du temps.
+	const seancesAbsence = $derived(
+		edtSeances.map((s) => ({
+			id: s.id,
+			coursId: s.coursId,
+			coursNom: coursById[s.coursId]?.nom || 'Cours',
+			professeurId: coursById[s.coursId]?.professeurId ?? null,
+			professeurNom: coursById[s.coursId]?.professeur || 'Enseignant',
+			jour: s.jour,
+			heureDebut: s.heureDebut,
+			heureFin: s.heureFin,
+			duree: s.duree
+		}))
+	);
+
+	async function supprimerAbsenceProf(id: string) {
+		if (!canGererAbsenceProf || suppressionEnCours) return;
+		suppressionEnCours = id;
+		erreurAbsence = null;
+		try {
+			const fd = new FormData();
+			fd.append('id', id);
+			const res = await fetch(`/classe/${data.classe?.id}/analyse?/supprimerAbsenceProf`, {
+				method: 'POST',
+				body: fd
+			});
+			const result = deserialize(await res.text()) as ActionResult;
+			if (result.type === 'success') {
+				await invalidateAll();
+			} else if (result.type === 'failure') {
+				erreurAbsence = (result.data?.error as string) || 'Suppression impossible';
+			} else if (result.type === 'error') {
+				erreurAbsence = result.error?.message || 'Suppression impossible';
+			}
+		} catch {
+			erreurAbsence = 'Erreur réseau';
+		} finally {
+			suppressionEnCours = null;
+		}
 	}
 
 	function round(v: number): number {
@@ -143,6 +231,9 @@
 	const totalIncidents = $derived(incidentDistribution.total);
 
 	// ---- Assiduité des enseignants ----
+	// Les heures manquées ne sont plus déduites d'un cumul depuis le début de
+	// l'année : elles proviennent uniquement des absences déclarées (séances de
+	// l'emploi du temps non assurées) et des heures non complètes des pointages.
 	const profAnalyse = $derived.by(() => {
 		const profCours = new Map<string, { id: string; nom: string; coursIds: string[] }>();
 		for (const c of listeCours) {
@@ -153,47 +244,109 @@
 			}
 			profCours.get(pid)!.coursIds.push(c.id);
 		}
+		// Un enseignant qui a quitté la classe mais qui garde des absences
+		// déclarées reste visible dans le tableau.
+		for (const a of absencesProf) {
+			if (!profCours.has(a.professeurId)) {
+				profCours.set(a.professeurId, { id: a.professeurId, nom: a.professeurNom, coursIds: [] });
+			}
+		}
+
 		const profs = [...profCours.values()].map((p) => {
 			const coursIds = new Set(p.coursIds);
 			const seancesEDT = edtSeances.filter((s) => coursIds.has(s.coursId));
 			const heuresPrevues = Math.round(seancesEDT.reduce((s, x) => s + (x.duree || 0), 0) * 100) / 100;
 			const seancesCours = seanceCours.filter((s) => coursIds.has(s.coursId));
 			const effectuees = seancesCours.filter((s) => s.statut === 'TERMINE');
-			const enCours = seancesCours.filter((s) => s.statut === 'EN_COURS');
+
+			// Pointages saisis par les opérateurs / surveillants.
+			const pointagesProf = pointages.filter((p) => coursIds.has(p.coursId));
+			const pointagesEffectues = pointagesProf.filter((p) => !p.incomplet);
+			const pointagesIncomplets = pointagesProf.filter((p) => p.incomplet);
+
 			let heuresEffectuees = 0;
 			for (const s of effectuees) {
 				if (s.dateFin) heuresEffectuees += dureeHeures(s.dateDebut, s.dateFin);
 			}
-			heuresEffectuees = Math.round(heuresEffectuees * 100) / 100;
-			let semaines = 1;
-			const dates = effectuees.map((s) => new Date(s.dateDebut).getTime()).filter((t) => !Number.isNaN(t));
-			if (dates.length > 0) {
-				const min = Math.min(...dates);
-				const max = Math.max(...dates, Date.now());
-				const jours = Math.max(1, Math.ceil((max - min) / (1000 * 3600 * 24)));
-				semaines = Math.max(1, Math.round(jours / 7));
+			// Ajout des heures issues des pointages (opérateur / surveillant).
+			for (const p of pointagesEffectues) {
+				heuresEffectuees += p.heuresEffectuees || 0;
 			}
-			const heuresAttendues = Math.round(heuresPrevues * semaines * 100) / 100;
-			const taux = heuresAttendues > 0 ? heuresEffectuees / heuresAttendues : 1;
-			const manque = heuresAttendues - heuresEffectuees;
-			const alert = heuresAttendues > 0 && (taux < 0.8 || enCours.length > 0);
+			for (const p of pointagesIncomplets) {
+				heuresEffectuees += p.heuresEffectuees || 0;
+			}
+			heuresEffectuees = Math.round(heuresEffectuees * 100) / 100;
+
+			const seancesEffectueesTotal = effectuees.length + pointagesEffectues.length;
+
+			// Absences déclarées : séances de l'emploi du temps non assurées.
+			const absences = absencesProf
+				.filter((a) => a.professeurId === p.id)
+				.sort((a, b) => b.date.localeCompare(a.date) || b.heureDebut.localeCompare(a.heureDebut));
+			const heuresAbsences =
+				Math.round(absences.reduce((s, a) => s + (a.heures || 0), 0) * 100) / 100;
+			const absencesJustifiees = absences.filter((a) => a.justifie).length;
+
+			// Heures non complètes (pointage partiel) : le professeur était là,
+			// mais la séance n'a pas été assurée en entier.
+			const heuresIncompletes = pointagesIncomplets.map((x) => ({
+				date: x.date,
+				motif: x.motif || 'Heure non complète',
+				heures: x.heuresEffectuees || 0,
+				manque:
+					x.heuresPrevues != null
+						? Math.max(0, Math.round((x.heuresPrevues - x.heuresEffectuees) * 100) / 100)
+						: 0
+			}));
+			const heuresPartielles =
+				Math.round(heuresIncompletes.reduce((s, x) => s + x.manque, 0) * 100) / 100;
+
+			const heuresManquees = Math.round((heuresAbsences + heuresPartielles) * 100) / 100;
+
+			// Statut : basé uniquement sur les heures réellement manquées.
+			const statut: 'assidu' | 'attention' | 'surveiller' =
+				heuresManquees <= 0
+					? 'assidu'
+					: heuresPrevues > 0 && heuresManquees >= heuresPrevues
+						? 'surveiller'
+						: 'attention';
+
 			return {
 				id: p.id,
 				nom: p.nom,
 				heuresPrevues,
 				seancesPrevues: seancesEDT.length,
-				seancesEffectuees: effectuees.length,
-				seancesEnCours: enCours.length,
+				seancesEffectuees: seancesEffectueesTotal,
 				heuresEffectuees,
-				semaines,
-				heuresAttendues,
-				manque: Math.round(manque * 100) / 100,
-				taux: Math.round(taux * 100),
-				alert
+				absences,
+				nbAbsences: absences.length,
+				absencesJustifiees,
+				heuresAbsences,
+				heuresIncompletes,
+				heuresPartielles,
+				heuresManquees,
+				derniereAbsence: absences[0]?.date ?? null,
+				statut,
+				alert: statut !== 'assidu'
 			};
 		});
-		return profs.sort((a, b) => a.taux - b.taux);
+		return profs.sort((a, b) => b.heuresManquees - a.heuresManquees || a.nom.localeCompare(b.nom, 'fr'));
 	});
+
+	const totalHeuresManquees = $derived(
+		Math.round(profAnalyse.reduce((s, p) => s + p.heuresManquees, 0) * 100) / 100
+	);
+	const totalAbsencesProf = $derived(profAnalyse.reduce((s, p) => s + p.nbAbsences, 0));
+
+	// Détail par enseignant (absences déclarées + heures non complètes).
+	const detailAbsencesParProf = $derived(
+		profAnalyse.filter((p) => p.absences.length > 0 || p.heuresIncompletes.length > 0)
+	);
+
+	function formatDateFr(iso: string): string {
+		const [a, m, j] = iso.split('-');
+		return j && m && a ? `${j}/${m}/${a}` : iso;
+	}
 
 	function moyMatiere(eleve: EleveAnalyse, coursId: string, examenIds: string[]): number {
 		const ns = eleve.notes.filter(
@@ -465,30 +618,33 @@
 		}));
 	}
 
-	function buildBars(labels: string[], values: number[], colors?: string[]) {
-		const W = 640;
-		const H = 280;
-		const padL = 42;
-		const padR = 18;
-		const padT = 18;
-		const padB = 46;
-		const plotW = W - padL - padR;
+	const BAR = { padL: 46, padR: 18, padT: 18, padB: 74, H: 280, chartW: 640, barMax: 48 };
+
+	function buildBars(labels: string[], values: number[], colors?: string[], opts?: { barW?: number }) {
+		const { padL, padR, padT, padB, H, chartW, barMax } = BAR;
+		const plotW = chartW - padL - padR;
 		const plotH = H - padT - padB;
-		const maxY = Math.max(1, ...values);
 		const n = labels.length || 1;
 		const slot = plotW / n;
-		const barW = Math.min(60, slot * 0.6);
-		return labels.map((lab, i) => {
+		const barW = Math.min(opts?.barW ?? barMax, slot * 0.8);
+		const maxY = Math.max(1, ...values);
+		const bars = labels.map((lab, i) => {
 			const h = (values[i] / maxY) * plotH;
+			const x = padL + slot * i + (slot - barW) / 2;
+			const cx = x + barW / 2;
 			return {
 				label: lab,
 				value: values[i],
-				x: padL + slot * i + (slot - barW) / 2,
+				x,
 				y: padT + plotH - h,
 				h,
+				barW,
+				cx,
+				baseY: H - padB + 14,
 				color: colors ? colors[i % colors.length] : '#3b82f6'
 			};
 		});
+		return { chartW, H, padL, padR, padT, padB, plotW, plotH, bars };
 	}
 
 	const evolutionSeries = $derived(
@@ -545,6 +701,159 @@
 	);
 </script>
 
+{#snippet assiduiteEnseignants()}
+	<!-- Assiduité des enseignants -->
+	<CardUI class="p-5">
+		<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+			<h2 class="flex items-center gap-2 font-semibold">
+				<Gavel class="size-4 text-amber-500" /> Assiduité des enseignants
+			</h2>
+			<div class="flex items-center gap-3">
+				<span class="text-sm text-muted-foreground">
+					{totalAbsencesProf} absence{totalAbsencesProf > 1 ? 's' : ''} · {formatFr(totalHeuresManquees)} h manquées
+				</span>
+				{#if canGererAbsenceProf}
+					<Button
+						variant="destructive"
+						size="sm"
+						disabled={!anneeActive || edtSeances.length === 0}
+						onclick={() => (absenceDialogOpen = true)}
+					>
+						<UserX class="mr-2 size-4" /> Absence enseignant
+					</Button>
+				{/if}
+			</div>
+		</div>
+			{#if erreurAbsence}
+				<div class="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+					{erreurAbsence}
+				</div>
+			{/if}
+			{#if profAnalyse.length}
+
+			<div class="overflow-x-auto">
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head>Enseignant</Table.Head>
+							<Table.Head class="text-center">H./sem. prévues</Table.Head>
+							<Table.Head class="text-center">H. réalisées</Table.Head>
+							<Table.Head class="text-center">Absences</Table.Head>
+							<Table.Head class="text-center">H. manquées</Table.Head>
+							<Table.Head class="text-center">Statut</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each profAnalyse as p (p.id)}
+							<Table.Row class={p.alert ? 'bg-destructive/5' : ''}>
+								<Table.Cell class="font-medium">{p.nom}</Table.Cell>
+								<Table.Cell class="text-center">{formatFr(p.heuresPrevues)}</Table.Cell>
+								<Table.Cell class="text-center">{formatFr(p.heuresEffectuees)}</Table.Cell>
+								<Table.Cell class="text-center">
+									{p.nbAbsences}
+									{#if p.absencesJustifiees > 0}
+										<span class="text-[11px] text-muted-foreground"> ({p.absencesJustifiees} just.)</span>
+									{/if}
+								</Table.Cell>
+								<Table.Cell class="text-center">
+									<span class="font-bold {p.heuresManquees > 0 ? 'text-destructive' : 'text-emerald-500'}">
+										{formatFr(p.heuresManquees)}
+									</span>
+									{#if p.heuresPartielles > 0}
+										<span class="block text-[11px] text-muted-foreground">
+											dont {formatFr(p.heuresPartielles)} h non complètes
+										</span>
+									{/if}
+								</Table.Cell>
+								<Table.Cell class="text-center">
+									{#if p.statut === 'assidu'}
+										<span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-500">Assidu</span>
+									{:else if p.statut === 'attention'}
+										<span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600">Attention</span>
+									{:else}
+										<span class="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive">À surveiller</span>
+									{/if}
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
+
+			<p class="mt-2 text-xs text-muted-foreground">
+				Les heures manquées correspondent aux séances de l'emploi du temps non assurées
+				(absences déclarées) et aux heures non complètes relevées lors des pointages.
+			</p>
+
+			{#if detailAbsencesParProf.length > 0}
+				<div class="mt-4">
+					<p class="mb-2 text-sm font-semibold text-amber-600">Détail des heures manquées</p>
+					<Accordion.Root type="multiple" class="space-y-2">
+						{#each detailAbsencesParProf as prof (prof.id)}
+							<Accordion.Item value={prof.id} class="rounded-lg border border-sidebar-border">
+								<Accordion.Trigger class="flex w-full items-center justify-between px-3 py-2 text-sm">
+									<span class="font-medium">{prof.nom}</span>
+									<span class="text-[11px] text-muted-foreground">
+										{prof.nbAbsences} absence(s) · {formatFr(prof.heuresManquees)} h
+									</span>
+								</Accordion.Trigger>
+								<Accordion.Content class="px-3 pb-3">
+									<ul class="space-y-1.5">
+										{#each prof.absences as a (a.id)}
+											<li class="flex items-start justify-between gap-3 rounded-md bg-card/70 px-3 py-2 text-sm">
+												<span class="min-w-0">
+													<span class="font-medium">{formatDateFr(a.date)}</span>
+													<span class="text-muted-foreground">
+														· {a.jour} {a.heureDebut}{a.heureFin ? `-${a.heureFin}` : ''} · {a.coursNom}
+													</span>
+													{#if a.motif}
+														<span class="block text-[11px] text-muted-foreground">{a.motif}</span>
+													{/if}
+												</span>
+												<span class="flex shrink-0 items-center gap-2">
+													<span class="font-semibold text-destructive">−{formatFr(a.heures)} h</span>
+													{#if a.justifie}
+														<span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">Justifiée</span>
+													{/if}
+													{#if canGererAbsenceProf}
+														<button
+															type="button"
+															class="rounded-full p-1 hover:bg-muted disabled:opacity-50"
+															title="Annuler cette absence"
+															disabled={suppressionEnCours === a.id}
+															onclick={() => supprimerAbsenceProf(a.id)}
+														>
+															<Trash2 class="size-3.5 text-muted-foreground" />
+														</button>
+													{/if}
+												</span>
+											</li>
+										{/each}
+										{#each prof.heuresIncompletes as h, i (i)}
+											<li class="flex items-start justify-between gap-3 rounded-md bg-card/70 px-3 py-2 text-sm">
+												<span class="min-w-0">
+													<span class="font-medium">{new Date(h.date).toLocaleDateString('fr-FR')}</span>
+													<span class="text-muted-foreground"> · Heure non complète</span>
+													<span class="block text-[11px] text-muted-foreground">{h.motif}</span>
+												</span>
+												<span class="shrink-0 font-semibold text-amber-600">
+													{h.manque > 0 ? `−${formatFr(h.manque)} h` : `${formatFr(h.heures)} h faites`}
+												</span>
+											</li>
+										{/each}
+									</ul>
+								</Accordion.Content>
+							</Accordion.Item>
+						{/each}
+					</Accordion.Root>
+				</div>
+			{/if}
+		{:else}
+			<p class="text-sm text-muted-foreground">Aucun enseignant attribué à cette classe.</p>
+		{/if}
+	</CardUI>
+{/snippet}
+
 <div class="flex min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
 	<div class="flex-1 overflow-y-auto p-4 space-y-6">
 		<div class="flex flex-col gap-2">
@@ -559,8 +868,13 @@
 
 		{#if listeExamens.length === 0}
 			<CardUI class="p-8 text-center">
-				<p class="text-muted-foreground">Aucun examen n'a encore été créé pour cette classe.</p>
+				<p class="text-muted-foreground">
+					Aucun examen n'a encore été créé pour cette classe : l'analyse des notes sera disponible
+					dès le premier examen.
+				</p>
 			</CardUI>
+
+			{@render assiduiteEnseignants()}
 		{:else}
 			<!-- Sélection des examens -->
 			<CardUI class="p-4">
@@ -691,92 +1005,36 @@
 					<span class="text-sm text-muted-foreground">Total : {formatFr(totalHeuresSemaine)} h / semaine</span>
 				</div>
 				{#if heuresParCours.some((h) => h.heures > 0)}
-					<svg viewBox="0 0 640 280" class="h-auto w-full">
-						{#each heuresParCours.filter((h) => h.heures > 0) as b, i (b.cours.id)}
-							{@const maxY = Math.max(...heuresParCours.map((x) => x.heures), 1)}
-							{@const W = 640}
-							{@const H = 280}
-							{@const padL = 42}
-							{@const padR = 18}
-							{@const padT = 18}
-							{@const padB = 46}
-							{@const plotW = W - padL - padR}
-							{@const plotH = H - padT - padB}
-							{@const n = heuresParCours.filter((x) => x.heures > 0).length}
-							{@const slot = plotW / n}
-							{@const barW = Math.min(54, slot * 0.6)}
-							{@const h = (b.heures / maxY) * plotH}
-							{@const x = padL + slot * i + (slot - barW) / 2}
-							{@const y = padT + plotH - h}
-							<rect x={x} y={y} width={barW} height={Math.max(h, 1)} fill="#8b5cf6" rx="3" opacity="0.85" />
-							<text x={x + barW / 2} y={y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(b.heures)}h</text>
-							<text x={x + barW / 2} y={H - padB + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">{b.cours.nom}</text>
-						{/each}
-					</svg>
+					{@const vhN = heuresParCours.filter((h) => h.heures > 0).length}
+					<div class="overflow-x-auto">
+						<svg viewBox="0 0 {BAR.chartW} {BAR.H}" class="mx-auto block h-auto w-full max-w-[600px]">
+							{#each heuresParCours.filter((h) => h.heures > 0) as b, i (b.cours.id)}
+								{@const plotH = BAR.H - BAR.padT - BAR.padB}
+								{@const slot = (BAR.chartW - BAR.padL - BAR.padR) / (vhN || 1)}
+								{@const barW = Math.min(BAR.barMax, slot * 0.8)}
+								{@const x = BAR.padL + slot * i + (slot - barW) / 2}
+								{@const h = (b.heures / Math.max(1, ...heuresParCours.map((x) => x.heures))) * plotH}
+								{@const y = BAR.padT + plotH - h}
+								{@const cx = x + barW / 2}
+								{@const baseY = BAR.H - BAR.padB + 14}
+								<rect x={x} y={y} width={barW} height={Math.max(h, 1)} fill="#8b5cf6" rx="3" opacity="0.85" />
+								<text x={cx} y={y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(b.heures)}h</text>
+								<text transform="rotate(-35 {cx} {baseY})" x={cx} y={baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.cours.nom}</text>
+							{/each}
+						</svg>
+					</div>
 				{:else}
 					<p class="text-sm text-muted-foreground">Aucun emploi du temps défini pour cette classe.</p>
 				{/if}
 			</CardUI>
 
-			<!-- Assiduité des enseignants -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex items-center justify-between">
-					<h2 class="flex items-center gap-2 font-semibold">
-						<Gavel class="size-4 text-amber-500" /> Assiduité des enseignants
-					</h2>
-					<span class="text-sm text-muted-foreground">Heures prévues / réalisées</span>
-				</div>
-				{#if profAnalyse.length}
-					<div class="overflow-x-auto">
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Enseignant</Table.Head>
-									<Table.Head class="text-center">H./sem. prévues</Table.Head>
-									<Table.Head class="text-center">Séances faites</Table.Head>
-									<Table.Head class="text-center">H. réalisées</Table.Head>
-									<Table.Head class="text-center">Taux</Table.Head>
-									<Table.Head class="text-center">Statut</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each profAnalyse as p (p.id)}
-									<Table.Row class={p.alert ? 'bg-destructive/5' : ''}>
-										<Table.Cell class="font-medium">{p.nom}</Table.Cell>
-										<Table.Cell class="text-center">{formatFr(p.heuresPrevues)}h</Table.Cell>
-										<Table.Cell class="text-center">
-											{p.seancesEffectuees}{p.seancesEnCours > 0 ? ` (+${p.seancesEnCours} en cours)` : ''}
-											<span class="text-[11px] text-muted-foreground"> / {p.seancesPrevues}</span>
-										</Table.Cell>
-										<Table.Cell class="text-center">
-											{formatFr(p.heuresEffectuees)}h
-											{#if p.manque > 0}<span class="text-[11px] text-destructive"> (−{formatFr(p.manque)}h)</span>{/if}
-										</Table.Cell>
-										<Table.Cell class="text-center">
-											<span class="font-bold {p.taux < 80 ? 'text-destructive' : 'text-emerald-500'}">{p.taux}%</span>
-										</Table.Cell>
-										<Table.Cell class="text-center">
-											{#if p.alert}
-												<span class="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive">À surveiller</span>
-											{:else}
-												<span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-500">Assidu</span>
-											{/if}
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">Aucun enseignant attribué à cette classe.</p>
-				{/if}
-			</CardUI>
+			{@render assiduiteEnseignants()}
 
 			<!-- Évolution de la classe -->
 			<CardUI class="p-5">
 				<h2 class="mb-3 font-semibold">Évolution de la moyenne de la classe par examen</h2>
 				{#if evolutionSeries[0]?.points.length}
-					<svg viewBox="0 0 640 280" class="h-auto w-full">
+					<svg viewBox="0 0 640 280" class="h-72 w-full">
 						{#each [0, 5, 10, 15, 20] as grid}
 							{@const y = lineChartVM.padT + (lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
 							<line x1={lineChartVM.padL} y1={y} x2={640 - lineChartVM.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
@@ -812,19 +1070,23 @@
 			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<CardUI class="p-5">
 					<h2 class="mb-3 font-semibold">Moyenne par matière (classe)</h2>
-					{#if matiereBars.length}
-						<svg viewBox="0 0 640 280" class="h-auto w-full">
-							{#each [0, 5, 10, 15, 20] as grid}
-								{@const y = 18 + (280 - 18 - 46) * (1 - grid / 20)}
-								<line x1="42" y1={y} x2="622" y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-								<text x="36" y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
-							{/each}
-							{#each matiereBars as b (b.label)}
-								<rect x={b.x} y={b.y} width={b.h === 0 ? 0 : Math.max(b.h, 1)} height={b.h} fill={b.color} rx="3" opacity="0.85" />
-								<text x={b.x + 15} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value > 0 ? formatFr(b.value) : ''}</text>
-								<text x={b.x + 15} y={280 - 46 + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">{b.label}</text>
-							{/each}
-						</svg>
+					{#if matiereBars.bars.length}
+						<div class="overflow-x-auto">
+							<svg viewBox="0 0 {matiereBars.chartW} {matiereBars.H}" class="mx-auto block h-auto w-full">
+								{#each [0, 5, 10, 15, 20] as grid}
+									{@const y = matiereBars.padT + matiereBars.plotH * (1 - grid / 20)}
+									<line x1={matiereBars.padL} y1={y} x2={matiereBars.chartW - matiereBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
+									<text x={matiereBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
+								{/each}
+								{#each matiereBars.bars as b (b.label)}
+									<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill={b.color} rx="3" opacity="0.85" />
+									{#if b.value > 0}
+										<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(b.value)}</text>
+									{/if}
+									<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
+								{/each}
+							</svg>
+						</div>
 					{:else}
 						<p class="text-sm text-muted-foreground">Aucune donnée.</p>
 					{/if}
@@ -832,14 +1094,21 @@
 
 				<CardUI class="p-5">
 					<h2 class="mb-3 font-semibold">Distribution des notes</h2>
-					{#if distBars.some((b) => b.value > 0)}
-						<svg viewBox="0 0 640 280" class="h-auto w-full">
-							{#each distBars as b (b.label)}
-								<rect x={b.x} y={b.y} width={b.h === 0 ? 0 : Math.max(b.h, 1)} height={b.h} fill="#3b82f6" rx="3" opacity="0.85" />
-								<text x={b.x + 15} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value}</text>
-								<text x={b.x + 15} y={280 - 46 + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">{b.label}</text>
-							{/each}
-						</svg>
+					{#if distBars.bars.some((b) => b.value > 0)}
+						<div class="overflow-x-auto">
+							<svg viewBox="0 0 {distBars.chartW} {distBars.H}" class="mx-auto block h-auto w-full">
+								{#each [0, 5, 10, 15, 20] as grid}
+									{@const y = distBars.padT + distBars.plotH * (1 - grid / 20)}
+									<line x1={distBars.padL} y1={y} x2={distBars.chartW - distBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
+									<text x={distBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
+								{/each}
+								{#each distBars.bars as b (b.label)}
+									<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill={b.color} rx="3" opacity="0.85" />
+									<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value}</text>
+									<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
+								{/each}
+							</svg>
+						</div>
 					{:else}
 						<p class="text-sm text-muted-foreground">Aucune note saisie.</p>
 					{/if}
@@ -920,7 +1189,7 @@
 			<CardUI class="p-5">
 				<h2 class="mb-3 font-semibold">Évolution des 5 meilleurs élèves par examen</h2>
 				{#if top5Series[0]?.points.length}
-					<svg viewBox="0 0 640 280" class="h-auto w-full">
+					<svg viewBox="0 0 640 280" class="h-72 w-full">
 						{#each [0, 5, 10, 15, 20] as grid}
 							{@const y = lineChartVM.padT + (lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
 							<line x1={lineChartVM.padL} y1={y} x2={640 - lineChartVM.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
@@ -956,14 +1225,21 @@
 			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<CardUI class="p-5">
 					<h2 class="mb-3 font-semibold">Absences par mois</h2>
-					{#if absencesBars.length}
-						<svg viewBox="0 0 640 280" class="h-auto w-full">
-							{#each absencesBars as b (b.label)}
-								<rect x={b.x} y={b.y} width={b.h === 0 ? 0 : Math.max(b.h, 1)} height={b.h} fill="#f59e0b" rx="3" opacity="0.85" />
-								<text x={b.x + 15} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value}</text>
-								<text x={b.x + 15} y={280 - 46 + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">{b.label}</text>
-							{/each}
-						</svg>
+					{#if absencesBars.bars.length}
+						<div class="overflow-x-auto">
+							<svg viewBox="0 0 {absencesBars.chartW} {absencesBars.H}" class="mx-auto block h-auto w-full">
+								{#each [0, 5, 10, 15, 20] as grid}
+									{@const y = absencesBars.padT + absencesBars.plotH * (1 - grid / 20)}
+									<line x1={absencesBars.padL} y1={y} x2={absencesBars.chartW - absencesBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
+									<text x={absencesBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
+								{/each}
+								{#each absencesBars.bars as b (b.label)}
+									<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill="#f59e0b" rx="3" opacity="0.85" />
+									<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value}</text>
+									<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
+								{/each}
+							</svg>
+						</div>
 					{:else}
 						<p class="text-sm text-muted-foreground">Aucune absence enregistrée.</p>
 					{/if}
@@ -1106,3 +1382,11 @@
 		{/if}
 	</div>
 </div>
+
+<AbsenceProfDialog
+	bind:open={absenceDialogOpen}
+	classeId={data.classe?.id ?? ''}
+	seances={seancesAbsence}
+	canEdit={canGererAbsenceProf}
+	{anneeActive}
+/>

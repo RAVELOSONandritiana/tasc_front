@@ -10,6 +10,7 @@
 		listeExamens = [],
 		openCreateCours = $bindable(false),
 		openCreateExamen = $bindable(false),
+		peutGererExamens = true,
 		onManageSousExamens,
 		onDeleteExamen
 	}: {
@@ -17,6 +18,7 @@
 		listeExamens: { id: string; nom: string; date: string; periode?: string }[];
 		openCreateCours?: boolean;
 		openCreateExamen?: boolean;
+		peutGererExamens?: boolean;
 		onManageSousExamens?: (examenId: string) => void;
 		onDeleteExamen?: (examenId: string) => void;
 	} = $props();
@@ -38,12 +40,14 @@
 				</Dialog.Trigger>
 			</Dialog.Root>
 
-			<Dialog.Root bind:open={openCreateExamen}>
-				<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'gap-2' })}>
-					<Calendar class="size-4" />
-					Nouvel examen
-				</Dialog.Trigger>
-			</Dialog.Root>
+			{#if peutGererExamens}
+				<Dialog.Root bind:open={openCreateExamen}>
+					<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'gap-2' })}>
+						<Calendar class="size-4" />
+						Nouvel examen
+					</Dialog.Trigger>
+				</Dialog.Root>
+			{/if}
 		</div>
 	</div>
 
@@ -52,7 +56,7 @@
 			{#each listeExamens as examen (examen.id)}
 				<span class="flex items-center gap-1 rounded-md bg-sidebar-accent/30 px-3 py-1 text-sm">
 					{formatExamenNom(examen)} - {examen.date}
-					{#if onManageSousExamens}
+					{#if peutGererExamens && onManageSousExamens}
 						<button
 							type="button"
 							class="ml-1 inline-flex items-center text-muted-foreground hover:text-foreground"
@@ -62,7 +66,7 @@
 							<Layers class="size-3.5" />
 						</button>
 					{/if}
-					{#if onDeleteExamen}
+					{#if peutGererExamens && onDeleteExamen}
 						<button
 							type="button"
 							class="ml-0.5 inline-flex items-center text-muted-foreground hover:text-destructive"

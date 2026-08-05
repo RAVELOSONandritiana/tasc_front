@@ -29,10 +29,11 @@ export type ActivityAction =
 	| 'suppression_rapport'
 	| 'deliberation'
 	| 'changement_mot_de_passe'
-	| 'pointage_cours';
+	| 'pointage_cours'
+	| 'absence_enseignant';
 
 export async function logActivity(
-	session: Session | null,
+	session: (Session & { ip?: string; userAgent?: string }) | null,
 	action: ActivityAction,
 	description: string,
 	ipAddress?: string,
@@ -40,14 +41,17 @@ export async function logActivity(
 ) {
 	if (!session?.userId) return;
 
+	const ip = ipAddress || session.ip || '';
+	const ua = userAgent || session.userAgent || '';
+
 	try {
 		await prisma.activite.create({
 			data: {
 				compteId: session.userId,
 				action,
 				description,
-				ipAddress: ipAddress || '',
-				userAgent: userAgent || ''
+				ipAddress: ip,
+				userAgent: ua
 			}
 		});
 	} catch {

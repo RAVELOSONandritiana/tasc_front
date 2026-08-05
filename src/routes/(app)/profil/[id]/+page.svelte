@@ -119,6 +119,26 @@
 						color: 'text-red-500'
 					}
 				]
+			: []),
+		...(user.stats?.heuresEffectuees !== undefined
+			? [
+					{
+						label: 'Heures réalisées',
+						value: `${user.stats.heuresEffectuees}h`,
+						icon: Timer,
+						color: 'text-blue-500'
+					}
+				]
+			: []),
+		...(user.stats?.absencesProf !== undefined
+			? [
+					{
+						label: 'Cours manqués',
+						value: user.stats.absencesProf.toString(),
+						icon: UserX,
+						color: 'text-red-500'
+					}
+				]
 			: [])
 	]);
 
@@ -192,7 +212,7 @@
 				<ArrowLeft class="size-4" />
 				Retour
 			</Button>
-			{#if data.viewerRole === 'ADMINISTRATEUR'}
+			{#if data.viewerIsAdmin}
 				<Button variant="outline" class="gap-2" onclick={() => goto(`/profil/${user.id}/history`)}>
 					<History class="size-4" />
 					Historique
@@ -312,6 +332,61 @@
 						</div>
 					{/each}
 				</div>
+			</Card>
+		{/if}
+
+		{#if user.role === 'Enseignant' && user.stats?.heuresPrevues !== undefined}
+			<Card class="space-y-4 p-4">
+				<h3 class="flex items-center gap-2 font-semibold">
+					<CalendarClock class="size-4 text-primary" />
+					Assiduité
+				</h3>
+				<div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+					<div class="rounded-xl bg-blue-500/10 p-3 text-center">
+						<p class="text-lg font-bold text-blue-500">{user.stats.heuresPrevues}h</p>
+						<p class="text-xs text-muted-foreground">H./sem. prévues</p>
+					</div>
+					<div class="rounded-xl bg-emerald-500/10 p-3 text-center">
+						<p class="text-lg font-bold text-emerald-500">{user.stats.heuresEffectuees}h</p>
+						<p class="text-xs text-muted-foreground">Heures réalisées</p>
+					</div>
+					<div class="rounded-xl bg-red-500/10 p-3 text-center">
+						<p class="text-lg font-bold text-red-500">{user.stats.absencesProf ?? 0}</p>
+						<p class="text-xs text-muted-foreground">Cours manqués</p>
+					</div>
+					<div class="rounded-xl bg-amber-500/10 p-3 text-center">
+						<p class="text-lg font-bold text-amber-500">{user.stats.heuresManquees ?? 0}h</p>
+						<p class="text-xs text-muted-foreground">Heures manquées</p>
+					</div>
+				</div>
+			</Card>
+		{/if}
+
+		{#if user.role === 'Enseignant' && (data.absencesProf?.length ?? 0) > 0}
+			<Card class="space-y-4 p-4">
+				<div class="flex items-center justify-between gap-2">
+					<h3 class="flex items-center gap-2 font-semibold">
+						<UserX class="size-4 text-primary" />
+						Absences du professeur (cours manqués)
+					</h3>
+					<Badge variant="outline" class="text-xs">{data.absencesProf.length} cette année</Badge>
+				</div>
+				<ul class="space-y-1.5">
+					{#each data.absencesProf as a (a.id)}
+						<li class="flex items-center justify-between gap-3 rounded-md border border-sidebar-border px-3 py-2 text-sm">
+							<div class="min-w-0">
+								<p class="font-medium">{a.date}</p>
+								{#if a.motif}<p class="text-xs text-muted-foreground">{a.motif}</p>{/if}
+							</div>
+							<div class="shrink-0 text-right">
+								<p class="text-xs font-medium">{a.cours}</p>
+								<span class={a.justifie ? 'text-[11px] text-emerald-500' : 'text-[11px] text-amber-500'}>
+									{a.justifie ? 'Justifiée' : 'Non just.'}
+								</span>
+							</div>
+						</li>
+					{/each}
+				</ul>
 			</Card>
 		{/if}
 

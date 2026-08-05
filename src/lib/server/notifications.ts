@@ -59,6 +59,8 @@ export function broadcastNotification(notif: NotificationPayload) {
 	publish(notif);
 }
 
+import { hasAdminPower, type AdminPowerUser } from '$lib/permissions';
+
 /**
  * Détermine si une notification d'une portée donnée est visible pour un rôle.
  * Si la notification a un destinataire (userId), elle n'est visible que par ce
@@ -66,7 +68,7 @@ export function broadcastNotification(notif: NotificationPayload) {
  */
 export function canSeeNotification(
 	scope: string,
-	role: string | undefined,
+	user: AdminPowerUser | null | undefined,
 	userId?: string | null,
 	currentUserId?: string | null
 ): boolean {
@@ -74,7 +76,7 @@ export function canSeeNotification(
 		return userId === currentUserId;
 	}
 	if (scope === 'ADMIN') {
-		return role === 'ADMINISTRATEUR';
+		return hasAdminPower(user);
 	}
 	return true;
 }

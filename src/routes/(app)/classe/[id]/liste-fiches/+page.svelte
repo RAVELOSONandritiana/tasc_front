@@ -2,7 +2,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Printer } from '@lucide/svelte';
 	import type { PageProps } from './$types';
-	import { formatClasseNom } from '$lib/utils';
 
 	const { data }: PageProps = $props();
 
@@ -128,7 +127,6 @@
 		background: #f7f7f7;
 	}
 	.prenom-souligne {
-		text-decoration: underline;
 		text-decoration-color: #1d4ed8;
 		text-underline-offset: 2px;
 	}

@@ -1,6 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
+import { hasAdminPower } from '$lib/permissions';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -24,7 +25,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const notifications = await prisma.notification.findMany({
 		where: {
 			AND: [
-				compte.role === 'ADMINISTRATEUR' ? {} : { scope: { not: 'ADMIN' } },
+				hasAdminPower(locals.user) ? {} : { scope: { not: 'ADMIN' } },
 				{ OR: [{ userId: null }, { userId: compte.id }] }
 			]
 		},
@@ -40,7 +41,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			nom: compte.personne.lastname,
 			prenom: compte.personne.name,
 			imageUrl: compte.personne.imageUrl || null,
-			statut: compte.statut
+			statut: compte.statut,
+			isSurveillantGeneral: locals.user.isSurveillantGeneral
 		},
 		annees: annees.map((a) => ({ id: a.id, nom: a.nom, active: a.active })),
 		anneeActiveId: anneeActive?.id || '',

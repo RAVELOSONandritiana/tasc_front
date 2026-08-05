@@ -12,6 +12,8 @@
 
 export type RealtimeScope = 'ALL' | 'ADMIN';
 
+import { hasAdminPower, type AdminPowerUser } from '$lib/permissions';
+
 export type RealtimeEntity =
 	| 'personne'
 	| 'enseignant'
@@ -81,9 +83,9 @@ export function broadcastRealtime(event: RealtimeEvent) {
 /**
  * Détermine si un événement d'une portée donnée est visible pour un rôle.
  */
-export function canSeeRealtime(scope: string, role: string | undefined): boolean {
+export function canSeeRealtime(scope: string, user: AdminPowerUser | null | undefined): boolean {
 	if (scope === 'ADMIN') {
-		return role === 'ADMINISTRATEUR';
+		return hasAdminPower(user);
 	}
 	return true;
 }

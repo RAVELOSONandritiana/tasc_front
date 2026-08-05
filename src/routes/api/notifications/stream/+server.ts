@@ -6,7 +6,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 		return new Response('Unauthorized', { status: 401 });
 	}
 
-	const role = locals.user.role;
 	const currentUserId = locals.user.userId;
 
 	let unsubscribe: (() => void) | null = null;
@@ -27,7 +26,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			controller.enqueue(encoder.encode(': connected\n\n'));
 
 			unsubscribe = subscribe((notif) => {
-				if (canSeeNotification(notif.scope, role, notif.userId, currentUserId)) {
+				if (canSeeNotification(notif.scope, locals.user, notif.userId, currentUserId)) {
 					send('notification', notif);
 				}
 			});

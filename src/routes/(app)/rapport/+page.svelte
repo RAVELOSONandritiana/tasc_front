@@ -16,13 +16,12 @@
 		Search,
 		Trash2,
 		ShieldCheck,
-		Check,
 		Eye
 	} from '@lucide/svelte/icons';
 	import type { PageProps } from './$types';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { ActionResult } from '@sveltejs/kit';
-	import type { TypeRapport, Rapport } from '$lib/types/Rapport.type';
+	import type { TypeRapport, Rapport, AbsenceRetardItem } from '$lib/types/Rapport.type';
 	import ConfirmDeleteDialog from '$lib/components/user/ConfirmDeleteDialog.svelte';
 	import { page } from '$app/stores';
 
@@ -87,7 +86,7 @@
 		const total = r.lignes.length;
 		const mots = r.lignes.filter((l) => l.type === 'RETARD').length;
 		const abs = r.lignes.filter((l) => l.type === 'ABSENCE').length;
-		let detail = '';
+		let detail: string;
 		if (r.type === 'RETARD') detail = `${total} retard(s)`;
 		else if (r.type === 'ABSENCE') detail = `${total} absence(s)`;
 		else detail = `${mots} retard(s), ${abs} absence(s)`;
@@ -120,13 +119,15 @@
 		else selectedItems = selectedItems.filter((x) => x !== id);
 	}
 
-	function formatDate(iso: string) {
-		return new Date(iso).toLocaleString('fr-FR', {
+	function formatDate(iso: string, heure?: string | null) {
+		const jour = new Date(iso).toLocaleDateString('fr-FR', {
 			day: 'numeric',
-			month: 'short',
-			hour: '2-digit',
-			minute: '2-digit'
+			month: 'short'
 		});
+		// Le pointage ne stocke que la date (00:00). Pour un absent/retard
+		// rattache a un cours, on affiche l'heure reelle du cours d'apres
+		// l'emploi du temps plutot que « 00:00 ».
+		return heure ? `${jour} ${heure}` : jour;
 	}
 </script>
 
@@ -305,7 +306,7 @@
 												? 'bg-amber-500'
 												: 'bg-red-500'}"
 										></span>
-										{formatDate(l.date)}
+										{formatDate(l.date, l.heure)}
 									</span>
 									{#if l.motif}
 										<span class="truncate text-muted-foreground">{l.motif}</span>
@@ -454,16 +455,11 @@
 													class="mt-1"
 												/>
 												<div class="min-w-0 flex-1">
-													<p class="text-sm">{formatDate(item.date)}</p>
+													<p class="text-sm">{formatDate(item.date, item.heure)}</p>
 													{#if item.motif}
 														<p class="truncate text-xs text-muted-foreground">{item.motif}</p>
 													{/if}
 												</div>
-												{#if item.justifie}
-													<Badge class="shrink-0 bg-emerald-500/15 text-[10px] text-emerald-600">
-														<Check class="mr-1 size-3" /> Justifié
-													</Badge>
-												{/if}
 											</label>
 										{/each}
 									</div>

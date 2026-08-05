@@ -26,6 +26,7 @@ model AnneeScolaire {
   seancesCours        SeanceCours[]
   pointages           Pointage[]
   rapports            Rapport[]
+  absencesProf        AbsenceProf[]
 
   @@map("annees_scolaires")
 }
@@ -51,6 +52,7 @@ model Pointage {
   professeur       Professeur?  @relation(fields: [professeurId], references: [id])
   absences         Absence[]
   retards          Retard[]
+  absencesProf     AbsenceProf[]
 
   @@map("pointages")
 }
@@ -156,6 +158,7 @@ model Cours {
   seances       SeanceEDT[]
   seancesCours  SeanceCours[]
   pointages     Pointage[]
+  absencesProf  AbsenceProf[]
 
   @@map("cours")
 }
@@ -257,6 +260,7 @@ model Professeur {
   cours            Cours[]
   seancesCours     SeanceCours[]
   pointages        Pointage[]
+  absencesProf     AbsenceProf[]
   personne         Personne @relation(fields: [personneId], references: [id], onDelete: Cascade)
 
   @@map("professeurs")
@@ -482,9 +486,30 @@ model Absence {
   updatedAt     DateTime     @updatedAt
   eleve         Eleve        @relation(fields: [eleveId], references: [id], onDelete: Cascade)
   inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
-  rapports      RapportLigne[]
+  rapports        RapportLigne[]
 
   @@map("absences")
+}
+
+/// Absence d'un professeur (cours manqué parce que l'enseignant est absent).
+model AbsenceProf {
+  id            String        @id @default(uuid())
+  date          DateTime      @default(now())
+  justifie      Boolean       @default(false)
+  motif         String?
+  professeurId  String
+  coursId       String?
+  classeId      String?
+  anneeId       String
+  pointageId    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  professeur    Professeur    @relation(fields: [professeurId], references: [id], onDelete: Cascade)
+  anneeScolaire AnneeScolaire @relation(fields: [anneeId], references: [id], onDelete: Cascade)
+  pointage      Pointage?     @relation(fields: [pointageId], references: [id], onDelete: SetNull)
+  cours         Cours?        @relation(fields: [coursId], references: [id])
+
+  @@map("absences_prof")
 }
 
 /// Retard d'un eleve.
