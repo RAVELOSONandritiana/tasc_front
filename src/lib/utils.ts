@@ -146,6 +146,19 @@ export function formatExamenNom(
 	return periode ? `${periode} ${nom}`.trim() : nom;
 }
 
+/**
+ * Normalise une adresse IP : convertit les IPv4 mapping en IPv6
+ * (ex. "::ffff:172.18.0.2") en IPv4 classique ("172.18.0.2").
+ */
+export function normalizeIp(ip: string | null | undefined): string {
+	if (!ip) return '';
+	const trimmed = ip.trim();
+	// IPv4-mapped IPv6 (::ffff: + a.b.c.d) ou IPv4-compatible (::a.b.c.d).
+	const mapped = trimmed.match(/^::(ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+	if (mapped) return mapped[2];
+	return trimmed;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WithoutChild<T> = T extends { child?: any } ? Omit<T, 'child'> : T;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

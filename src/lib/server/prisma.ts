@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { capitalize } from '$lib/actions/capitalize';
-import { formatClasseNom, mergeSeries, normalizeSerie, SERIES_PAR_DEFAUT } from '$lib/utils';
+import { formatClasseNom, mergeSeries, normalizeSerie, normalizeIp, SERIES_PAR_DEFAUT } from '$lib/utils';
 import type { EleveStats } from '$lib/types/Personne.type';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -1249,7 +1249,7 @@ export async function getUserActivities(compteId: string, limit = 20) {
 		id: a.id,
 		action: a.action,
 		description: a.description,
-		ipAddress: a.ipAddress,
+		ipAddress: normalizeIp(a.ipAddress),
 		userAgent: a.userAgent,
 		latitude: a.latitude,
 		longitude: a.longitude,

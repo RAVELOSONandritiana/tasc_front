@@ -6,6 +6,7 @@ import { createNotification } from '$lib/server/notifications';
 import { prisma } from '$lib/server/prisma';
 import { GEO_COOKIE, type GeoPoint } from '$lib/geo';
 import { isRateLimited, getRateLimitReset } from '$lib/server/ratelimit';
+import { normalizeIp } from '$lib/utils';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
@@ -14,7 +15,7 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
 	login: async ({ request, cookies, getClientAddress }: RequestEvent) => {
-		const ip = getClientAddress();
+		const ip = normalizeIp(getClientAddress());
 		const data = await request.formData();
 		const matricule = data.get('matricule') as string;
 		const password = data.get('password') as string;

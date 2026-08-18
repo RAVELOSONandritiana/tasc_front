@@ -3,6 +3,7 @@ import { prisma } from '$lib/server/prisma';
 import { redirect } from '@sveltejs/kit';
 import type { RoleCompte } from '@prisma/client';
 import { hasAdminPower } from '$lib/permissions';
+import { normalizeIp } from '$lib/utils';
 
 type Activity = {
 	id: string;
@@ -85,7 +86,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		id: a.id,
 		action: a.action,
 		description: a.description,
-		ipAddress: a.ipAddress,
+		ipAddress: normalizeIp(a.ipAddress),
 		userAgent: a.userAgent,
 		latitude: a.latitude,
 		longitude: a.longitude,
