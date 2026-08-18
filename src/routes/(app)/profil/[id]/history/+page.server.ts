@@ -10,6 +10,9 @@ type Activity = {
 	description: string;
 	ipAddress: string | null;
 	userAgent: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	geoPrecision: number | null;
 	compteId: string;
 	createdAt: string;
 	compte: {
@@ -84,6 +87,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		description: a.description,
 		ipAddress: a.ipAddress,
 		userAgent: a.userAgent,
+		latitude: a.latitude,
+		longitude: a.longitude,
+		geoPrecision: a.geoPrecision,
 		compteId: a.compteId,
 		createdAt: a.createdAt.toISOString(),
 		compte: {

@@ -14,6 +14,8 @@ export class PointageError extends Error {
 export type RegisterPointageInput = {
 	classeId: string;
 	coursId: string;
+	/** Seance de l'emploi du temps pointee (facultatif : sert a calculer les heures prevues). */
+	seanceId?: string | null;
 	dateRaw: string;
 	heuresEffectuees: number;
 	causeIncomplet: string | null;
@@ -58,6 +60,7 @@ export async function registerPointage(input: RegisterPointageInput): Promise<Po
 	const {
 		classeId,
 		coursId,
+		seanceId,
 		dateRaw,
 		heuresEffectuees: heuresEffectueesRaw,
 		causeIncomplet,
@@ -134,10 +137,20 @@ export async function registerPointage(input: RegisterPointageInput): Promise<Po
 
 	const datePointage = new Date(dateRaw);
 
-	const seanceEDT = await prisma.seanceEDT.findFirst({
-		where: { coursId },
-		select: { heureDebut: true, heureFin: true }
-	});
+	// Heures prevues : on privilegie la seance reellement pointee (un cours peut
+	// avoir plusieurs creneaux dans la semaine) et on retombe sur le premier
+	// creneau du cours si la seance n'est pas connue.
+	const seanceEDT =
+		(seanceId
+			? await prisma.seanceEDT.findFirst({
+					where: { id: seanceId, coursId },
+					select: { heureDebut: true, heureFin: true }
+				})
+			: null) ??
+		(await prisma.seanceEDT.findFirst({
+			where: { coursId },
+			select: { heureDebut: true, heureFin: true }
+		}));
 	const heuresPrevues = heuresPrevuesCalc(seanceEDT);
 
 	const pointage = await prisma.pointage.create({

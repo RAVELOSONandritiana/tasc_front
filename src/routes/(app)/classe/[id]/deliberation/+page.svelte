@@ -5,8 +5,9 @@
 	import type { EleveCours, Note, Cours } from '$lib/types/Materiel.type';
 	import type { PageProps } from './$types';
 	import { formatClasseNom } from '$lib/utils';
+	import { enhance } from '$app/forms';
 
-	const { data }: PageProps = $props();
+	const { data, form }: PageProps = $props();
 
 	let listeCours = $state<Cours[]>([...data.listeCours]);
 	let elevesClasse = $state<EleveCours[]>([...data.elevesClasse]);
@@ -17,6 +18,20 @@
 		selectedId ? (elevesClasse.find((e) => e.id === selectedId) ?? null) : null
 	);
 	const total = $derived(elevesClasse.length);
+
+	// La série s'applique uniquement aux classes de 2nde (0) et de 1ère (1) :
+	// c'est à ce stade que l'élève est orienté vers une série du niveau suivant.
+	const classeAvecSerie = $derived(data.classe?.niveau === 0 || data.classe?.niveau === 1);
+	// Libellé du niveau suivant (affiché dans le bulletin : « admis en PREMIER S »).
+	const niveauSuivant = $derived(
+		data.classe?.niveau === 0 ? 'PREMIER' : data.classe?.niveau === 1 ? 'TERMINAL' : ''
+	);
+
+	let serieValue = $state<string>('');
+	// Synchronise le champ série avec l'élève sélectionné.
+	$effect(() => {
+		serieValue = selected?.serie ?? '';
+	});
 
 	function getCoefCours(coursId: string): number {
 		return listeCours.find((c) => c.id === coursId)?.coefficient ?? 0;
@@ -238,6 +253,31 @@
 							<span class="font-semibold">Mention :</span>
 							<span class="font-semibold text-foreground">{appreciation(moyenneG) || '—'}</span>
 						</div>
+
+						{#if classeAvecSerie}
+							<form
+								method="POST"
+								action="?/setSerie"
+								class="flex items-center gap-2 text-sm"
+								use:enhance={() =>
+									({ update }) =>
+										update({ reset: false })}
+							>
+								<input type="hidden" name="eleveId" value={selected.id} />
+								<label class="font-semibold" for="serie-input">Série :</label>
+								<input
+									id="serie-input"
+									name="serie"
+									bind:value={serieValue}
+									placeholder="Ex: S, L, ES"
+									class="h-8 w-20 rounded-md border border-input bg-background px-2 text-sm uppercase"
+								/>
+								<Button type="submit" size="sm" variant="outline">Enregistrer</Button>
+								{#if form?.success && form?.serie !== undefined}
+									<span class="text-xs text-emerald-600">Série enregistrée.</span>
+								{/if}
+							</form>
+						{/if}
 					</div>
 				</div>
 

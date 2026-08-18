@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Plus, Play, Trash2, Pencil, UserCog, UserX } from '@lucide/svelte/icons';
+	import { Plus, Play, Trash2, Pencil, UserX, AlertTriangle, CheckCircle2 } from '@lucide/svelte/icons';
 	import { invalidateAll } from '$app/navigation';
+	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import type { SeanceEDT } from '$lib/types/Materiel.type';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import * as NativeSelect from '$lib/components/ui/native-select';
+	import { deserialize } from '$app/forms';
+	import type { ActionResult } from '@sveltejs/kit';
 	import StartCoursDialog from './StartCoursDialog.svelte';
 
 	type EleveEDT = { id: string; nom: string; prenom: string; numero: string };
@@ -32,7 +35,13 @@
 		salles: { id: string; num: number; name: string; place: number }[];
 		heures: string[];
 		classeId: string;
-		cours?: { id: string; matiereNom: string; coefficient: number; professeur: string; professeurId?: string | null }[];
+		cours?: {
+			id: string;
+			matiereNom: string;
+			coefficient: number;
+			professeur: string;
+			professeurId?: string | null;
+		}[];
 		jours?: string[];
 		currentProfesseurId?: string | null;
 		userRole?: string | null;
@@ -41,6 +50,17 @@
 		seuilAbsence?: number;
 		anneeActive?: boolean;
 	} = $props();
+
+	/** Jours de la semaine tels qu'ils sont stockes dans l'emploi du temps. */
+	const JOURS_SEMAINE = [
+		'Dimanche',
+		'Lundi',
+		'Mardi',
+		'Mercredi',
+		'Jeudi',
+		'Vendredi',
+		'Samedi'
+	];
 
 	const professeurParCours = $derived(
 		(cours ?? []).reduce(
@@ -53,15 +73,16 @@
 	);
 
 	function estTitulaire(coursId: string): boolean {
-		return (
-			!!currentProfesseurId && professeurParCours[coursId] === currentProfesseurId
-		);
+		return !!currentProfesseurId && professeurParCours[coursId] === currentProfesseurId;
 	}
 
 	// Un surveillant ou un administrateur peut modifier/supprimer l'EDT,
 	// mais seul le professeur titulaire du cours peut le démarrer (lancer).
 	const peutModifierEDT = $derived(
-		userRole === 'SURVEILLANT' || userRole === 'ADMINISTRATEUR' || userRole === 'ENSEIGNANT' || userRole === 'OPERATEUR'
+		userRole === 'SURVEILLANT' ||
+			userRole === 'ADMINISTRATEUR' ||
+			userRole === 'ENSEIGNANT' ||
+			userRole === 'OPERATEUR'
 	);
 
 	// Grille horaire dynamique (pas de 15 min) pour gérer les créneaux non
@@ -89,15 +110,24 @@
 
 	let dialogOpen = $state(false);
 	let nouvelleSeance = $state({
-		heureDebut: '',
-		heureFin: '',
+		heureDebut: '07:00',
+		heureFin: '09:00',
 		coursId: '',
 		salleId: null as string | null
 	});
 
+	// Le créneau doit être cohérent, sinon la séance créée serait inexploitable
+	// (horaire vide = emploi du temps cassé et absence impossible à déclarer).
+	const nouvelleSeanceValide = $derived(
+		!!nouvelleSeance.coursId &&
+			!!nouvelleSeance.heureDebut &&
+			!!nouvelleSeance.heureFin &&
+			nouvelleSeance.heureFin > nouvelleSeance.heureDebut
+	);
+
 	function handleClose() {
 		dialogOpen = false;
-		nouvelleSeance = { heureDebut: '', heureFin: '', coursId: '', salleId: null };
+		nouvelleSeance = { heureDebut: '07:00', heureFin: '09:00', coursId: '', salleId: null };
 	}
 
 	let editDialogOpen = $state(false);
@@ -108,13 +138,15 @@
 	let editHeureFin = $state('');
 	let editJour = $state('');
 
+	const editSeanceValide = $derived(!!editHeureDebut && !!editHeureFin && editHeureFin > editHeureDebut);
+
 	function openEditSeance(seance: SeanceEDT) {
 		editSeance = seance;
 		editProfesseurId = professeurParCours[seance.coursId] ?? null;
 		editSalleId = seance.salleId ?? null;
-		editHeureDebut = seance.heureDebut || '';
-		editHeureFin = seance.heureFin || '';
-		editJour = seance.jour || '';
+		editHeureDebut = seance.heureDebut || '07:00';
+		editHeureFin = seance.heureFin || '09:00';
+		editJour = seance.jour || jour;
 		editDialogOpen = true;
 	}
 
@@ -141,62 +173,133 @@
 	}
 
 	// Quatrieme bouton : declarer l'absence du professeur (cours manque) pour la
-	// seance affichee. Réservé aux roles pouvant declare une absence d'enseignant
-	// (surveillant, opérateur, administrateur).
+	// seance affichee. Réservé aux roles pouvant declarer une absence
+	// d'enseignant (surveillant, opérateur, administrateur).
 	const rolePeutDeclarerAbsenceProf = $derived(
 		userRole === 'SURVEILLANT' || userRole === 'ADMINISTRATEUR' || userRole === 'OPERATEUR'
 	);
 
 	let absenceDialogOpen = $state(false);
+	let seanceAbsence = $state<SeanceEDT | null>(null);
+	let dateAbsence = $state('');
 	let motifAbsenceProf = $state('');
 	let submittingAbsence = $state(false);
 	let erreurAbsence = $state<string | null>(null);
-	let succesAbsence = $state(false);
+	let succesAbsence = $state<string | null>(null);
 
-	async function declarerAbsenceProf(seance: SeanceEDT) {
-		if (!rolePeutDeclarerAbsenceProf) return;
-		submittingAbsence = true;
+	/** Date du jour au format "AAAA-MM-JJ" (heure locale, pas UTC). */
+	function aujourdHui(): string {
+		const d = new Date();
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	}
+
+	/**
+	 * Dernière date passée (ou aujourd'hui) qui tombe le jour de la séance :
+	 * une absence se déclare forcément sur un créneau réellement prévu.
+	 */
+	function derniereOccurrence(jourSeance: string): string {
+		const index = JOURS_SEMAINE.indexOf(jourSeance);
+		const d = new Date();
+		if (index >= 0) d.setDate(d.getDate() - ((d.getDay() - index + 7) % 7));
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	}
+
+	const jourDeLaDateAbsence = $derived(
+		/^\d{4}-\d{2}-\d{2}$/.test(dateAbsence)
+			? JOURS_SEMAINE[new Date(`${dateAbsence}T00:00:00`).getDay()]
+			: ''
+	);
+
+	const dateAbsenceCoherente = $derived(
+		!!seanceAbsence && !!jourDeLaDateAbsence && jourDeLaDateAbsence === seanceAbsence.jour
+	);
+
+	/** Durée (en heures) de la séance : ce sont les heures comptées manquées. */
+	function dureeSeance(seance: SeanceEDT | null): number {
+		if (!seance?.heureDebut || !seance?.heureFin) return 0;
+		const [dh, dm] = seance.heureDebut.split(':').map(Number);
+		const [fh, fm] = seance.heureFin.split(':').map(Number);
+		if ([dh, dm, fh, fm].some((n) => Number.isNaN(n))) return 0;
+		const diff = fh * 60 + fm - (dh * 60 + dm);
+		return diff > 0 ? Math.round((diff / 60) * 100) / 100 : 0;
+	}
+
+	function ouvrirAbsenceProf(seance: SeanceEDT) {
+		seanceAbsence = seance;
+		dateAbsence = derniereOccurrence(seance.jour || jour);
+		motifAbsenceProf = '';
 		erreurAbsence = null;
-		succesAbsence = false;
-		const aujourdhui = new Date();
-		const dateRaw = `${aujourdhui.getFullYear()}-${String(aujourdhui.getMonth() + 1).padStart(2, '0')}-${String(aujourdhui.getDate()).padStart(2, '0')}`;
+		succesAbsence = null;
+		submittingAbsence = false;
+		absenceDialogOpen = true;
+	}
+
+	async function declarerAbsenceProf() {
+		const seance = seanceAbsence;
+		if (!rolePeutDeclarerAbsenceProf || !seance || submittingAbsence) return;
+		erreurAbsence = null;
+		succesAbsence = null;
+
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(dateAbsence)) {
+			erreurAbsence = 'Choisissez la date de la séance manquée.';
+			return;
+		}
+		if (!dateAbsenceCoherente) {
+			erreurAbsence = `Le ${dateAbsence} est un ${jourDeLaDateAbsence.toLowerCase()} : cette séance a lieu le ${(seance.jour || jour).toLowerCase()}.`;
+			return;
+		}
+		if (!motifAbsenceProf.trim()) {
+			erreurAbsence = 'Le motif est obligatoire.';
+			return;
+		}
+
+		submittingAbsence = true;
 		const fd = new FormData();
 		fd.append('seanceId', seance.id);
-		fd.append('date', dateRaw);
-		if (motifAbsenceProf.trim()) fd.append('motif', motifAbsenceProf.trim());
+		fd.append('date', dateAbsence);
+		fd.append('motif', motifAbsenceProf.trim());
+
 		try {
-			const res = await fetch(`/classe/${classeId}/analyse?/absenceProf`, {
+			const res = await fetch(`/classe/${classeId}/edt?/absenceProf`, {
 				method: 'POST',
 				body: fd
 			});
-			const result = await res.json().catch(() => null);
-			if (res.ok && result?.type === 'success') {
-				succesAbsence = true;
+			// Une action SvelteKit renvoie un ActionResult sérialisé : sans
+			// deserialize(), le message d'erreur du serveur était perdu et la
+			// fenêtre affichait toujours « Échec de la déclaration ».
+			const result = deserialize(await res.text()) as ActionResult;
+			if (result.type === 'success') {
+				succesAbsence =
+					(result.data?.message as string) || 'Absence du professeur enregistrée.';
 				await invalidateAll();
-				absenceDialogOpen = false;
-				motifAbsenceProf = '';
-			} else {
-				erreurAbsence =
-					result?.data?.error ||
-					(result && 'error' in result ? result.error : null) ||
-					'Échec de la déclaration';
+				setTimeout(() => {
+					absenceDialogOpen = false;
+				}, 1200);
+			} else if (result.type === 'failure') {
+				erreurAbsence = (result.data?.error as string) || 'Échec de la déclaration';
+			} else if (result.type === 'error') {
+				erreurAbsence = result.error?.message || 'Échec de la déclaration';
+			} else if (result.type === 'redirect') {
+				erreurAbsence = 'Votre session a expiré : reconnectez-vous puis réessayez.';
 			}
 		} catch {
-			erreurAbsence = 'Erreur réseau';
+			erreurAbsence = 'Erreur réseau : vérifiez votre connexion puis réessayez.';
 		} finally {
 			submittingAbsence = false;
 		}
 	}
-
 </script>
 
-<div class="rounded-xl bg-card/50 p-4">
+<div class="rounded-xl bg-card/50 p-2 sm:p-3">
 	<Dialog.Root bind:open={dialogOpen}>
-		<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm', class: 'mb-3 w-full gap-2' })} disabled={!peutModifierEDT}>
+		<Dialog.Trigger
+			class={buttonVariants({ variant: 'outline', size: 'sm', class: 'mb-3 w-full gap-2' })}
+			disabled={!peutModifierEDT}
+		>
 			<Plus class="size-3.5" />
 			Ajouter une séance
 		</Dialog.Trigger>
-		<Dialog.Content class="sm:max-w-100">
+		<Dialog.Content class="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
 			<form method="POST" action="?/createSeance" use:loadingForm>
 				<Dialog.Header>
 					<Dialog.Title>Ajouter une séance pour {jour}</Dialog.Title>
@@ -204,13 +307,15 @@
 				</Dialog.Header>
 				<div class="grid gap-4 py-4">
 					<input type="hidden" name="jour" value={jour} />
-					<div class="grid grid-cols-2 gap-3">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<div class="grid gap-2">
-							<Label for="heure_debut">Début *</Label>
+							<Label for="heure-debut-{jour}">Début *</Label>
 							<NativeSelect.Root
+								id="heure-debut-{jour}"
 								bind:value={nouvelleSeance.heureDebut}
 								class="w-full"
 								name="heureDebut"
+								required
 							>
 								{#each creneaux as h (h)}
 									<NativeSelect.Option value={h}>{h}</NativeSelect.Option>
@@ -218,11 +323,13 @@
 							</NativeSelect.Root>
 						</div>
 						<div class="grid gap-2">
-							<Label for="heure_fin">Fin *</Label>
+							<Label for="heure-fin-{jour}">Fin *</Label>
 							<NativeSelect.Root
+								id="heure-fin-{jour}"
 								bind:value={nouvelleSeance.heureFin}
 								class="w-full"
 								name="heureFin"
+								required
 							>
 								{#each creneaux as h (h)}
 									<NativeSelect.Option value={h}>{h}</NativeSelect.Option>
@@ -231,27 +338,62 @@
 						</div>
 					</div>
 					<div class="grid gap-2">
-						<Label for="cours">Matière *</Label>
-						<NativeSelect.Root bind:value={nouvelleSeance.coursId} class="w-full" name="coursId">
+						<Label for="cours-{jour}">Matière *</Label>
+						<NativeSelect.Root
+							id="cours-{jour}"
+							bind:value={nouvelleSeance.coursId}
+							class="w-full"
+							name="coursId"
+							required
+						>
 							<NativeSelect.Option value="" disabled>Sélectionner une matière</NativeSelect.Option>
 							{#each cours as c (c.id)}
-								<NativeSelect.Option value={c.id}>{c.matiereNom} {c.professeur ? `(${c.professeur})` : ''}</NativeSelect.Option>
+								<NativeSelect.Option value={c.id}>
+									{c.matiereNom}
+									{c.professeur ? `(${c.professeur})` : ''}
+								</NativeSelect.Option>
 							{/each}
 						</NativeSelect.Root>
 					</div>
 					<div class="grid gap-2">
-						<Label for="salle">Salle</Label>
-						<NativeSelect.Root bind:value={nouvelleSeance.salleId} class="w-full" name="salleId">
+						<Label for="salle-{jour}">Salle</Label>
+						<NativeSelect.Root
+							id="salle-{jour}"
+							bind:value={nouvelleSeance.salleId}
+							class="w-full"
+							name="salleId"
+						>
 							<NativeSelect.Option value={null}>Sélectionner</NativeSelect.Option>
 							{#each salles as s (s.id)}
 								<NativeSelect.Option value={s.id}>{s.name} ({s.place} places)</NativeSelect.Option>
 							{/each}
 						</NativeSelect.Root>
 					</div>
+					{#if !nouvelleSeanceValide}
+						<p class="text-[11px] text-muted-foreground">
+							Choisissez une matière et une heure de fin postérieure à l'heure de début.
+						</p>
+					{/if}
 				</div>
-				<Dialog.Footer>
-					<Button variant="outline" size="sm" type="button" onclick={handleClose}>Annuler</Button>
-					<Button variant="default" size="sm" type="submit">Ajouter</Button>
+				<Dialog.Footer class="gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						type="button"
+						class="w-full sm:w-auto"
+						onclick={handleClose}
+					>
+						Annuler
+					</Button>
+					<Button
+						variant="default"
+						size="sm"
+						type="submit"
+						class="w-full sm:w-auto"
+						disabled={!nouvelleSeanceValide}
+					>
+						Ajouter
+					</Button>
 				</Dialog.Footer>
 			</form>
 		</Dialog.Content>
@@ -262,40 +404,60 @@
 			<p class="text-xs text-muted-foreground italic">Aucune séance</p>
 		{:else}
 			{#each seancesTriees as seance (seance.id)}
+				{@const horaireIncomplet = !seance.heureDebut || !seance.heureFin}
+				{@const sansProfesseur = !professeurParCours[seance.coursId]}
 				<div class="rounded-md border border-sidebar-border bg-sidebar-accent/30 p-2 text-xs">
-					<div class="flex items-start justify-between">
-						<div>
-							<p class="font-medium">{seance.heureDebut} - {seance.heureFin}</p>
-							<p class="text-muted-foreground">{seance.coursNom || seance.coursId}</p>
+					<div class="flex flex-wrap items-start justify-between gap-x-2 gap-y-1.5">
+						<div class="min-w-0 flex-1 basis-32">
+							<p class="font-medium">
+								{#if horaireIncomplet}
+									<span class="text-destructive">Horaire à compléter</span>
+								{:else}
+									{seance.heureDebut} - {seance.heureFin}
+								{/if}
+							</p>
+							<p class="truncate text-muted-foreground" title={seance.coursNom || seance.coursId}>
+								{seance.coursNom || seance.coursId}
+							</p>
 							{#if seance.salleId}
-								<p class="text-muted-foreground/70">
+								<p class="truncate text-muted-foreground/70">
 									Salle: {salles.find((s: { id: string; name: string }) => s.id === seance.salleId)
 										?.name || 'Inconnu'}
 								</p>
 							{/if}
+							{#if sansProfesseur}
+								<p class="mt-1 flex items-start gap-1 text-[11px] text-amber-600">
+									<AlertTriangle class="mt-0.5 size-3 shrink-0" />
+									<span>Aucun professeur affecté</span>
+								</p>
+							{/if}
 						</div>
-						<div class="flex items-center gap-1">
-						<Button
-							variant="default"
-							size="sm"
-							class="h-6 px-2"
-							disabled={!peutDemarrerCours(seance.coursId)}
-							title={peutDemarrerCours(seance.coursId)
-								? 'Démarrer le cours'
-								: 'Réservé au professeur titulaire du cours'}
-							onclick={() => ouvrirStartCours(seance)}
-						>
-							<Play class="size-3" />
-						</Button>
+						<div class="flex flex-wrap items-center justify-end gap-1">
+							<Button
+								variant="default"
+								size="sm"
+								class="h-6 px-2"
+								disabled={!peutDemarrerCours(seance.coursId)}
+								title={peutDemarrerCours(seance.coursId)
+									? 'Démarrer le cours'
+									: 'Réservé au professeur titulaire du cours'}
+								onclick={() => ouvrirStartCours(seance)}
+							>
+								<Play class="size-3" />
+								<span class="sr-only">Démarrer le cours</span>
+							</Button>
 							<Button
 								variant="outline"
 								size="sm"
 								class="h-6 px-2"
 								disabled={!peutModifierEDT}
-								title={peutModifierEDT ? 'Modifier le cours' : 'Réservé aux surveillants, administrateurs ou au professeur titulaire'}
+								title={peutModifierEDT
+									? 'Modifier le cours'
+									: 'Réservé aux surveillants, administrateurs ou au professeur titulaire'}
 								onclick={() => openEditSeance(seance)}
 							>
 								<Pencil class="size-3" />
+								<span class="sr-only">Modifier la séance</span>
 							</Button>
 							<Button
 								variant="destructive"
@@ -305,12 +467,10 @@
 								title={!rolePeutDeclarerAbsenceProf
 									? 'Réservé aux surveillants, opérateurs et administrateurs'
 									: 'Déclarer le professeur absent (cours manqué)'}
-								onclick={() => {
-									seanceEnCours = seance;
-									absenceDialogOpen = true;
-								}}
+								onclick={() => ouvrirAbsenceProf(seance)}
 							>
 								<UserX class="size-3" />
+								<span class="sr-only">Déclarer le professeur absent</span>
 							</Button>
 							<form method="POST" action="?/deleteSeance" use:loadingForm>
 								<input type="hidden" name="id" value={seance.id} />
@@ -325,6 +485,7 @@
 										: 'Réservé aux surveillants, administrateurs ou au professeur titulaire'}
 								>
 									<Trash2 class="size-3" />
+									<span class="sr-only">Supprimer la séance</span>
 								</Button>
 							</form>
 						</div>
@@ -335,7 +496,7 @@
 	</div>
 
 	<Dialog.Root bind:open={editDialogOpen}>
-		<Dialog.Content class="sm:max-w-100">
+		<Dialog.Content class="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
 			<Dialog.Header>
 				<Dialog.Title>Modifier le cours</Dialog.Title>
 				<Dialog.Description>
@@ -350,17 +511,23 @@
 					<input type="hidden" name="seanceId" value={editSeance.id} />
 					<div class="grid gap-4 py-4">
 						<div class="grid gap-2">
-							<Label for="edit-jour">Jour *</Label>
-							<NativeSelect.Root bind:value={editJour} class="w-full" name="jour">
+							<Label for="edit-jour-{jour}">Jour *</Label>
+							<NativeSelect.Root
+								id="edit-jour-{jour}"
+								bind:value={editJour}
+								class="w-full"
+								name="jour"
+							>
 								{#each jours as j (j)}
 									<NativeSelect.Option value={j}>{j}</NativeSelect.Option>
 								{/each}
 							</NativeSelect.Root>
 						</div>
-						<div class="grid grid-cols-2 gap-3">
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 							<div class="grid gap-2">
-								<Label for="edit-heure-debut">Début *</Label>
+								<Label for="edit-heure-debut-{jour}">Début *</Label>
 								<NativeSelect.Root
+									id="edit-heure-debut-{jour}"
 									bind:value={editHeureDebut}
 									class="w-full"
 									name="heureDebut"
@@ -371,8 +538,9 @@
 								</NativeSelect.Root>
 							</div>
 							<div class="grid gap-2">
-								<Label for="edit-heure-fin">Fin *</Label>
+								<Label for="edit-heure-fin-{jour}">Fin *</Label>
 								<NativeSelect.Root
+									id="edit-heure-fin-{jour}"
 									bind:value={editHeureFin}
 									class="w-full"
 									name="heureFin"
@@ -384,8 +552,9 @@
 							</div>
 						</div>
 						<div class="grid gap-2">
-							<Label for="edit-professeur">Professeur</Label>
+							<Label for="edit-professeur-{jour}">Professeur</Label>
 							<NativeSelect.Root
+								id="edit-professeur-{jour}"
 								bind:value={editProfesseurId}
 								class="w-full"
 								name="professeurId"
@@ -397,24 +566,45 @@
 							</NativeSelect.Root>
 						</div>
 						<div class="grid gap-2">
-							<Label for="edit-salle">Salle</Label>
+							<Label for="edit-salle-{jour}">Salle</Label>
 							<NativeSelect.Root
+								id="edit-salle-{jour}"
 								bind:value={editSalleId}
 								class="w-full"
 								name="salleId"
 							>
 								<NativeSelect.Option value={null}>Sélectionner</NativeSelect.Option>
 								{#each salles as s (s.id)}
-									<NativeSelect.Option value={s.id}>{s.name} ({s.place} places)</NativeSelect.Option>
+									<NativeSelect.Option value={s.id}>{s.name} ({s.place} places)</NativeSelect.Option
+									>
 								{/each}
 							</NativeSelect.Root>
 						</div>
+						{#if !editSeanceValide}
+							<p class="text-[11px] text-destructive">
+								L'heure de fin doit être postérieure à l'heure de début.
+							</p>
+						{/if}
 					</div>
-					<Dialog.Footer>
-						<Button variant="outline" size="sm" type="button" onclick={() => (editDialogOpen = false)}
-							>Annuler</Button
+					<Dialog.Footer class="gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							type="button"
+							class="w-full sm:w-auto"
+							onclick={() => (editDialogOpen = false)}
 						>
-						<Button variant="default" size="sm" type="submit">Enregistrer</Button>
+							Annuler
+						</Button>
+						<Button
+							variant="default"
+							size="sm"
+							type="submit"
+							class="w-full sm:w-auto"
+							disabled={!editSeanceValide}
+						>
+							Enregistrer
+						</Button>
 					</Dialog.Footer>
 				</form>
 			{/if}
@@ -425,6 +615,7 @@
 		<StartCoursDialog
 			bind:open={startDialogOpen}
 			{classeId}
+			seanceId={seanceEnCours.id}
 			coursId={seanceEnCours.coursId}
 			coursNom={seanceEnCours.coursNom || seanceEnCours.coursId}
 			salleNom={seanceEnCours.salleNom}
@@ -438,56 +629,109 @@
 	{/if}
 
 	<Dialog.Root bind:open={absenceDialogOpen}>
-		<Dialog.Content class="sm:max-w-md">
+		<Dialog.Content class="max-h-[92dvh] overflow-y-auto sm:max-w-md">
 			<Dialog.Header>
-				<Dialog.Title class="flex items-center gap-2">
-					<UserX class="size-4 text-destructive" /> Professeur absent
+				<Dialog.Title class="flex items-center gap-2 text-base">
+					<UserX class="size-4 shrink-0 text-destructive" /> Professeur absent
 				</Dialog.Title>
-				<Dialog.Description>
-					Déclarer le cours manqué pour {seanceEnCours?.coursNom || 'ce cours'}{seanceEnCours
-						?.jour
-						? ` · ${seanceEnCours.jour}`
-						: ''}{seanceEnCours?.heureDebut
-						? ` · ${seanceEnCours.heureDebut} - ${seanceEnCours.heureFin}`
-						: ''}.
-					<br />
-					L’heure prévue de la séance est comptée comme heure manquée (profil du professeur et
-					classe).
+				<Dialog.Description class="text-xs sm:text-sm">
+					Déclarez la séance qui n'a pas été assurée. Sa durée est comptée comme heures manquées
+					(profil du professeur et fiche de la classe).
 				</Dialog.Description>
 			</Dialog.Header>
-			<div class="grid gap-2">
-				<Label for="motif-absence-prof">Motif (optionnel)</Label>
-				<Textarea
-					id="motif-absence-prof"
-					rows={2}
-					placeholder="Ex: maladie, convocation…"
-					bind:value={motifAbsenceProf}
-				/>
+
+			{#if seanceAbsence}
+				<div class="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs">
+					<p class="font-semibold text-destructive">
+						{seanceAbsence.coursNom || 'Cours'}
+					</p>
+					<p class="text-muted-foreground">
+						{seanceAbsence.jour || jour} · {seanceAbsence.heureDebut} - {seanceAbsence.heureFin}
+						{#if dureeSeance(seanceAbsence) > 0}
+							· <span class="font-semibold">{dureeSeance(seanceAbsence)} h manquée(s)</span>
+						{/if}
+					</p>
+				</div>
+			{/if}
+
+			{#if !anneeActive}
+				<div
+					class="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+				>
+					<AlertTriangle class="mt-0.5 size-4 shrink-0" />
+					<span>Aucune année scolaire active : déclaration impossible.</span>
+				</div>
+			{/if}
+
+			<div class="grid gap-4">
+				<div class="grid gap-2">
+					<Label for="date-absence-prof">Date de la séance manquée</Label>
+					<Input
+						id="date-absence-prof"
+						type="date"
+						max={aujourdHui()}
+						bind:value={dateAbsence}
+						disabled={submittingAbsence || !!succesAbsence}
+					/>
+					{#if jourDeLaDateAbsence && !dateAbsenceCoherente}
+						<p class="text-[11px] text-amber-600">
+							Le {dateAbsence} est un {jourDeLaDateAbsence.toLowerCase()} : cette séance a lieu le
+							{(seanceAbsence?.jour || jour).toLowerCase()}.
+						</p>
+					{:else if jourDeLaDateAbsence}
+						<p class="text-[11px] text-muted-foreground">{jourDeLaDateAbsence}</p>
+					{/if}
+				</div>
+
+				<div class="grid gap-2">
+					<Label for="motif-absence-prof">Motif *</Label>
+					<Textarea
+						id="motif-absence-prof"
+						rows={2}
+						placeholder="Ex: maladie, convocation…"
+						bind:value={motifAbsenceProf}
+						disabled={submittingAbsence || !!succesAbsence}
+					/>
+				</div>
+
+				{#if erreurAbsence}
+					<div
+						class="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+					>
+						{erreurAbsence}
+					</div>
+				{/if}
+				{#if succesAbsence}
+					<div
+						class="flex items-start gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-600"
+					>
+						<CheckCircle2 class="mt-0.5 size-4 shrink-0" />
+						<span>{succesAbsence}</span>
+					</div>
+				{/if}
 			</div>
-			{#if erreurAbsence}
-				<div
-					class="mt-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+
+			<Dialog.Footer class="mt-4 gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					type="button"
+					class="w-full sm:w-auto"
+					onclick={() => (absenceDialogOpen = false)}
 				>
-					{erreurAbsence}
-				</div>
-			{/if}
-			{#if succesAbsence}
-				<div
-					class="mt-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-600"
-				>
-					Absence du professeur enregistrée.
-				</div>
-			{/if}
-			<Dialog.Footer class="mt-4">
-				<Button variant="outline" size="sm" type="button" onclick={() => (absenceDialogOpen = false)}
-					>Annuler</Button
-				>
+					Annuler
+				</Button>
 				<Button
 					variant="destructive"
 					size="sm"
 					type="button"
-					disabled={submittingAbsence || !seanceEnCours}
-					onclick={() => seanceEnCours && declarerAbsenceProf(seanceEnCours)}
+					class="w-full sm:w-auto"
+					disabled={submittingAbsence ||
+						!!succesAbsence ||
+						!seanceAbsence ||
+						!anneeActive ||
+						!rolePeutDeclarerAbsenceProf}
+					onclick={declarerAbsenceProf}
 				>
 					{submittingAbsence ? 'Enregistrement…' : 'Confirmer l’absence'}
 				</Button>

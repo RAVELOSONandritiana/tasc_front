@@ -71,7 +71,7 @@
 				<thead>
 					<tr>
 						<th class="w-8">N°</th>
-						<th class="w-8">SEXE</th>
+						<th class="w-12">SEXE</th>
 						<th class="w-16">IM</th>
 						<th class="w-40">NOM</th>
 						<th>PRÉNOMS</th>
@@ -84,16 +84,16 @@
 			<tbody>
 				{#each bloc.lignes as e (e.id)}
 					<tr>
-						<td class="text-center {bloc.cercles.has(e.numero) ? 'cercle' : ''}">{e.numero}</td>
-						<td class="text-center">{bloc.sexe}</td>
-						<td class="text-center">{e.im ?? ''}</td>
-						<td class="font-semibold">{e.nom}</td>
+						<td class="w-8 text-center {bloc.cercles.has(e.numero) ? 'cercle' : ''}">{e.numero}</td>
+						<td class="w-12 text-center">{bloc.sexe}</td>
+						<td class="w-16 text-center">{e.im ?? ''}</td>
+						<td class="w-40 font-semibold">{e.nom}</td>
 						<td class="prenom-souligne">{e.prenom}</td>
-						<td class="text-center">{fmtDate(e.dateNaissance)}</td>
-						<td class="text-center">
+						<td class="w-28 text-center">{fmtDate(e.dateNaissance)}</td>
+						<td class="w-10 text-center">
 							<span class="badge-sit {sit(e) === 'R' ? 'sit-r' : 'sit-p'}">{sit(e)}</span>
 						</td>
-						<td class="text-center">{data.classe}</td>
+						<td class="w-16 text-center">{data.classe}</td>
 					</tr>
 				{/each}
 				{#if bloc.lignes.length === 0}
@@ -115,11 +115,17 @@
 		font-family: 'Courier New', 'Lucida Console', monospace;
 		letter-spacing: 0.5px;
 	}
+	.fiche-table {
+		table-layout: fixed;
+	}
 	.fiche-table th,
 	.fiche-table td {
 		border: 1px solid #333;
 		padding: 3px 6px;
 		vertical-align: middle;
+	}
+	.fiche-table td {
+		overflow-wrap: break-word;
 	}
 	.fiche-table th {
 		font-family: Georgia, 'Times New Roman', serif;

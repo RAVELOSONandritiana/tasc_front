@@ -6,7 +6,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as Table from '$lib/components/ui/table';
 	import * as Pagination from '$lib/components/ui/pagination';
-	import { ArrowLeft, Search, Clock, Globe } from '@lucide/svelte/icons';
+	import { ArrowLeft, Search, Clock, Globe, Monitor, MapPin } from '@lucide/svelte/icons';
 	import { goto, afterNavigate } from '$app/navigation';
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
@@ -126,6 +126,35 @@
 		});
 	}
 
+	// Extrait un résumé lisible (navigateur · système) de la chaîne User-Agent.
+	function parseUserAgent(ua: string | null | undefined): string {
+		if (!ua) return '—';
+		let browser = 'Navigateur';
+		if (/Firefox\//.test(ua)) browser = 'Firefox';
+		else if (/Edg\//.test(ua)) browser = 'Edge';
+		else if (/OPR\//.test(ua)) browser = 'Opera';
+		else if (/Chrome\//.test(ua)) browser = 'Chrome';
+		else if (/Safari\//.test(ua) && /Version\//.test(ua)) browser = 'Safari';
+		let os = '';
+		if (/Windows NT/.test(ua)) os = 'Windows';
+		else if (/Android/.test(ua)) os = 'Android';
+		else if (/(iPhone|iPad|iPod)/.test(ua)) os = 'iOS';
+		else if (/Mac OS X/.test(ua)) os = 'macOS';
+		else if (/Linux/.test(ua)) os = 'Linux';
+		return [browser, os].filter(Boolean).join(' · ');
+	}
+
+	function geoLabel(act: (typeof data.activities)[number]): string | null {
+		if (act.latitude == null || act.longitude == null) return null;
+		const precision = act.geoPrecision != null ? ` ±${Math.round(act.geoPrecision)} m` : '';
+		return `${act.latitude.toFixed(4)}, ${act.longitude.toFixed(4)}${precision}`;
+	}
+
+	function geoLink(act: (typeof data.activities)[number]): string | null {
+		if (act.latitude == null || act.longitude == null) return null;
+		return `https://www.openstreetmap.org/?mlat=${act.latitude}&mlon=${act.longitude}#map=12/${act.latitude}/${act.longitude}`;
+	}
+
 	const profileId = data.activities[0]?.compteId || '';
 </script>
 
@@ -181,17 +210,19 @@
 				<Table.Root>
 					<Table.Header>
 						<Table.Row>
-							<Table.Head>Action</Table.Head>
-							<Table.Head>Description</Table.Head>
-							<Table.Head>Utilisateur</Table.Head>
-							<Table.Head>Date</Table.Head>
-							<Table.Head class="text-right">IP</Table.Head>
+						<Table.Head>Action</Table.Head>
+						<Table.Head>Description</Table.Head>
+						<Table.Head>Utilisateur</Table.Head>
+						<Table.Head>Date</Table.Head>
+						<Table.Head>Appareil</Table.Head>
+						<Table.Head>Localisation</Table.Head>
+						<Table.Head class="text-right">IP</Table.Head>
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
 						{#if data.activities.length === 0}
 							<Table.Row>
-								<Table.Cell colspan={5} class="h-24 text-center text-muted-foreground">
+								<Table.Cell colspan={7} class="h-24 text-center text-muted-foreground">
 									Aucune activité enregistrée
 								</Table.Cell>
 							</Table.Row>
@@ -209,6 +240,30 @@
 									</Table.Cell>
 									<Table.Cell>
 										<span class="text-sm text-muted-foreground">{formatDate(act.createdAt)}</span>
+									</Table.Cell>
+									<Table.Cell>
+										<span
+											class="flex items-center gap-1 text-xs text-muted-foreground"
+											title={act.userAgent || ''}
+										>
+											<Monitor class="size-3 shrink-0" />
+											{parseUserAgent(act.userAgent)}
+										</span>
+									</Table.Cell>
+									<Table.Cell>
+										{#if geoLabel(act)}
+											<a
+												href={geoLink(act)}
+												target="_blank"
+												rel="noreferrer"
+												class="flex items-center gap-1 text-xs text-primary hover:underline"
+											>
+												<MapPin class="size-3 shrink-0" />
+												{geoLabel(act)}
+											</a>
+										{:else}
+											<span class="text-xs text-muted-foreground">—</span>
+										{/if}
 									</Table.Cell>
 									<Table.Cell class="text-right">
 										{#if act.ipAddress}

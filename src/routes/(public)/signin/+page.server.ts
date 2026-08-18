@@ -4,6 +4,7 @@ import { authenticate, createSessionToken, SESSION_COOKIE } from '$lib/server/au
 import { logActivity } from '$lib/server/activity';
 import { createNotification } from '$lib/server/notifications';
 import { prisma } from '$lib/server/prisma';
+import { GEO_COOKIE, type GeoPoint } from '$lib/geo';
 import { isRateLimited, getRateLimitReset } from '$lib/server/ratelimit';
 import type { RequestEvent } from '@sveltejs/kit';
 
@@ -14,13 +15,6 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
 	login: async ({ request, cookies, getClientAddress }: RequestEvent) => {
 		const ip = getClientAddress();
-		if (isRateLimited(`login:${ip}`)) {
-			const reset = Math.ceil(getRateLimitReset(`login:${ip}`) / 1000);
-			return fail(429, {
-				error: `Trop de tentatives. Réessayez dans ${reset} seconde(s).`
-			});
-		}
-
 		const data = await request.formData();
 		const matricule = data.get('matricule') as string;
 		const password = data.get('password') as string;
@@ -29,22 +23,36 @@ export const actions: Actions = {
 			return fail(400, { error: 'Matricule et mot de passe requis' });
 		}
 
+		// Limite de tentatives par IP et par compte pour freiner le brute-force.
+		if (isRateLimited(`login:ip:${ip}`) || isRateLimited(`login:mat:${matricule}`)) {
+			const resetIp = Math.ceil(getRateLimitReset(`login:ip:${ip}`) / 1000);
+			const resetMat = Math.ceil(getRateLimitReset(`login:mat:${matricule}`) / 1000);
+			const reset = Math.max(resetIp, resetMat);
+			return fail(429, {
+				error: `Trop de tentatives. Réessayez dans ${reset} seconde(s).`
+			});
+		}
+
 		const compte = await prisma.compte.findUnique({
 			where: { matricule },
 			include: { personne: { include: { surveillant: true } } }
 		});
 
-		if (!compte) {
-			return fail(401, { error: 'Matricule incorrect' });
-		}
-
-		const { verifyPassword } = await import('$lib/server/auth');
-		if (!verifyPassword(password, compte.password)) {
-			return fail(401, { error: 'Mot de passe incorrect' });
+		const { verifyPassword, hashPassword } = await import('$lib/server/auth');
+		if (!compte || !verifyPassword(password, compte.password)) {
+			return fail(401, { error: 'Matricule ou mot de passe incorrect' });
 		}
 
 		if (compte.statut !== 'ACTIF') {
 			return fail(403, { error: 'Compte inactif ou bloqué' });
+		}
+
+		// Migration transparente : les anciens mots de passe (sha256 non salé)
+		// sont re-hachés en scrypt dès la première connexion réussie.
+		if (!compte.password.startsWith('scrypt$')) {
+			await prisma.compte
+				.update({ where: { id: compte.id }, data: { password: hashPassword(password) } })
+				.catch(() => {});
 		}
 
 		const session = {
@@ -62,14 +70,30 @@ export const actions: Actions = {
 		cookies.set(SESSION_COOKIE, token, {
 			path: '/',
 			httpOnly: true,
-			secure: false,
-			sameSite: 'lax',
+			secure: import.meta.env.PROD,
+			sameSite: 'strict',
 			maxAge: 60 * 60 * 24 * 7
 		});
 
-		logActivity(session, 'connexion', `Connexion réussie avec le matricule ${matricule}`, ip).catch(
-			() => {}
-		);
+		let geo: GeoPoint | null = null;
+		const rawGeo = cookies.get(GEO_COOKIE);
+		if (rawGeo) {
+			try {
+				geo = JSON.parse(rawGeo) as GeoPoint;
+			} catch {
+				geo = null;
+			}
+		}
+		const userAgent = request.headers.get('user-agent') || undefined;
+
+		logActivity(
+			session,
+			'connexion',
+			`Connexion réussie avec le matricule ${matricule}`,
+			ip,
+			userAgent,
+			geo
+		).catch(() => {});
 
 		throw redirect(303, '/dashboard');
 	},

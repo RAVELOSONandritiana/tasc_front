@@ -55,6 +55,7 @@ export type EleveCours = {
 	sexe?: string | null;
 	redoublant?: boolean;
 	situation?: string;
+	serie?: string | null;
 	actif: boolean;
 	resultat?: 'EN_ATTENTE' | 'ADMIS' | 'AJOURNE';
 	inscriptionId?: string;
@@ -118,10 +119,11 @@ export type SeanceEDT = {
 	jour: string;
 	heureDebut: string;
 	heureFin: string;
-	coursId: string;
-	coursNom?: string;
-	salleId?: string;
-	salleNom?: string;
+  coursId: string;
+  coursNom?: string;
+  salleId?: string;
+  salleNom?: string;
+  salleNum?: number;
 };
 
 export type EmploiDuTemps = {

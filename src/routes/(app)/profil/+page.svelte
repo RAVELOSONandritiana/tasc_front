@@ -447,6 +447,11 @@
 										minute: '2-digit'
 									})}
 								</p>
+								<p class="mt-0.5 text-[11px] text-muted-foreground/70">
+									{act.ipAddress || 'IP inconnue'}{act.latitude != null && act.longitude != null
+										? ` · ${act.latitude.toFixed(4)}, ${act.longitude.toFixed(4)}`
+										: ''}
+								</p>
 							</div>
 						</div>
 					{/each}

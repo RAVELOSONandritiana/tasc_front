@@ -82,6 +82,33 @@
 	let erreurAbsence = $state<string | null>(null);
 
 	let searchEleve = $state('');
+	let searchSelectEleve = $state('');
+
+	// Sélection des élèves affichés dans le graphique d'évolution individuelle.
+	// `null` = tous les élèves (aucun choix manuel).
+	let elevesChoisis = $state<string[] | null>(null);
+	const selectedEleveIds = $derived(elevesChoisis ?? eleves.map((e) => e.id));
+	const selectedElevesSet = $derived(new Set(selectedEleveIds));
+	const selectedElevesList = $derived(
+		selectedEleveIds
+			.map((id) => eleves.find((e) => e.id === id))
+			.filter((e): e is EleveAnalyse => Boolean(e))
+	);
+
+	const elevesFiltresChoix = $derived(
+		eleves.filter((e) =>
+			`${e.nom} ${e.prenom}`.toLowerCase().includes(searchSelectEleve.toLowerCase())
+		)
+	);
+
+	function toggleEleve(id: string) {
+		const courant = selectedEleveIds;
+		if (courant.includes(id)) {
+			if (courant.length > 1) elevesChoisis = courant.filter((x) => x !== id);
+		} else {
+			elevesChoisis = [...courant, id];
+		}
+	}
 
 	// Examen selection (par défaut tous : `null` = aucun choix manuel).
 	let examensChoisis = $state<string[] | null>(null);
@@ -579,9 +606,6 @@
 		}
 	}
 
-	// Top 5 élèves pour le graphique d'évolution individuelle
-	const top5 = $derived([...classement].slice(0, 5).map((x) => x.eleve));
-
 	const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
 
 	// ---- Helpers graphiques SVG ----
@@ -692,7 +716,7 @@
 	const top5Series = $derived(
 		buildLineSeries(
 			selectedOrdered.map((e) => formatExamenNom(e)),
-			top5.map((e, i) => ({
+			selectedElevesList.map((e, i) => ({
 				name: `${e.nom} ${e.prenom}`,
 				color: palette[i % palette.length],
 				values: selectedOrdered.map((ex) => moyGenerale(e, [ex.id]))
@@ -1185,9 +1209,39 @@
 				</div>
 			</CardUI>
 
-			<!-- Évolution individuelle top 5 -->
+			<!-- Évolution individuelle des élèves sélectionnés -->
 			<CardUI class="p-5">
-				<h2 class="mb-3 font-semibold">Évolution des 5 meilleurs élèves par examen</h2>
+				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+					<h2 class="font-semibold">
+						Évolution des élèves sélectionnés par examen
+						<span class="text-sm font-normal text-muted-foreground">
+							({selectedElevesList.length} affiché{selectedElevesList.length > 1 ? 's' : ''})
+						</span>
+					</h2>
+					<div class="flex items-center gap-2">
+						<Button variant="outline" size="sm" onclick={() => (elevesChoisis = null)}>Tous</Button>
+						<Button variant="outline" size="sm" onclick={() => (elevesChoisis = [])}>Aucun</Button>
+					</div>
+				</div>
+
+				<!-- Sélecteur d'élèves -->
+				<div class="mb-4 rounded-lg border border-sidebar-border p-3">
+					<Input placeholder="Filtrer les élèves..." bind:value={searchSelectEleve} />
+					<div class="mt-2 flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+						{#each elevesFiltresChoix as e (e.id)}
+							<button
+								type="button"
+								onclick={() => toggleEleve(e.id)}
+								class="rounded-full border px-3 py-1 text-xs transition-colors {selectedElevesSet.has(e.id)
+									? 'border-primary bg-primary/15 text-primary'
+									: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
+							>
+								{e.nom} {e.prenom}
+							</button>
+						{/each}
+					</div>
+				</div>
+
 				{#if top5Series[0]?.points.length}
 					<svg viewBox="0 0 640 280" class="h-72 w-full">
 						{#each [0, 5, 10, 15, 20] as grid}

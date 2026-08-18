@@ -179,8 +179,8 @@
 			onclick={() => (filtre = 'RETARD')}
 			class="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors {filtre ===
 			'RETARD'
-				? 'bg-amber-500 text-white'
-				: 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'}"
+				? 'bg-primary text-primary-foreground'
+				: 'bg-muted text-muted-foreground hover:bg-muted/70'}"
 		>
 			<Clock class="size-3.5" /> Retards ({counts.retards})
 		</button>
@@ -189,8 +189,8 @@
 			onclick={() => (filtre = 'ABSENCE')}
 			class="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors {filtre ===
 			'ABSENCE'
-				? 'bg-red-500 text-white'
-				: 'bg-red-500/10 text-red-600 hover:bg-red-500/20'}"
+				? 'bg-primary text-primary-foreground'
+				: 'bg-muted text-muted-foreground hover:bg-muted/70'}"
 		>
 			<UserX class="size-3.5" /> Absences ({counts.absences})
 		</button>
@@ -256,8 +256,8 @@
 									<p class="truncate font-semibold">{r.elevePrenom} {r.eleveNom}</p>
 									<Badge
 										class="shrink-0 text-[10px] {r.type === 'RETARD'
-											? 'bg-amber-500/15 text-amber-600'
-											: 'bg-red-500/15 text-red-600'}"
+											? 'bg-muted text-muted-foreground'
+											: 'bg-muted text-muted-foreground'}"
 									>
 										{r.type === 'RETARD' ? 'Retard' : 'Absence'}
 									</Badge>
@@ -303,8 +303,8 @@
 									<span class="flex items-center gap-1.5">
 										<span
 											class="size-1.5 rounded-full {l.type === 'RETARD'
-												? 'bg-amber-500'
-												: 'bg-red-500'}"
+												? 'bg-muted-foreground/50'
+												: 'bg-muted-foreground/50'}"
 										></span>
 										{formatDate(l.date, l.heure)}
 									</span>

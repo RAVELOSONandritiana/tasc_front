@@ -14,11 +14,14 @@
 	import { Pencil } from '@lucide/svelte/icons';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	const { classe: cl, id: classeId, deleteAction = '', enseignants = [], ondelete = () => {} }: {
+	import { formatSerie, normalizeSerie, NOUVELLE_SERIE } from '$lib/utils';
+	const { classe: cl, id: classeId, deleteAction = '', enseignants = [], series = [], onserie = () => {}, ondelete = () => {} }: {
 		classe: typeof cl;
 		id: string;
 		deleteAction?: string;
 		enseignants?: Personne[];
+		series?: string[];
+		onserie?: (serie: string) => void;
 		ondelete?: (id: string) => void;
 	} = $props();
 
@@ -101,6 +104,7 @@
 	let editNom = $state('');
 	let editNiveau = $state('0');
 	let editSerie = $state('');
+	let editNouvelleSerieNom = $state('');
 	let editSelectedProf: Personne | null = $state(null);
 	let editSearchProf = $state('');
 	let editSubmitting = $state(false);
@@ -120,7 +124,8 @@
 	function openEditDialog() {
 		editNom = c.nom || '';
 		editNiveau = c.niveau.toString();
-		editSerie = c.series || '';
+		editSerie = normalizeSerie(c.series);
+		editNouvelleSerieNom = '';
 		editSelectedProf = (c.titulaireId && enseignants.find((p) => p.id === c.titulaireId)) || null;
 		editSearchProf = editSelectedProf
 			? `${editSelectedProf.name} ${editSelectedProf.lastname}`
@@ -130,10 +135,18 @@
 		openEdit = true;
 	}
 
+	/** Séries proposées : celles connues + celle de la classe si elle est absente. */
+	const editSeriesOptions = $derived(
+		c.series && !series.includes(normalizeSerie(c.series))
+			? [...series, normalizeSerie(c.series)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr'))
+			: series
+	);
+
 	function resetEditForm() {
 		editNom = '';
 		editNiveau = '0';
 		editSerie = '';
+		editNouvelleSerieNom = '';
 		editSearchProf = '';
 		editSelectedProf = null;
 		editErrors = {};
@@ -248,6 +261,7 @@
 									c.titulaire = updatedClasse.titulaire;
 									c.titulaireId = updatedClasse.titulaireId;
 									c.eleves = updatedClasse.eleves;
+									if (updatedClasse.series) onserie(updatedClasse.series);
 								}
 								editSuccess = true;
 								setTimeout(() => {
@@ -284,12 +298,28 @@
 
 						<div class="grid gap-2">
 							<Label for="serie">Série</Label>
-							<NativeSelect.Root class="w-full" bind:value={editSerie} name="serie">
+							<NativeSelect.Root class="w-full" bind:value={editSerie}>
 								<NativeSelect.Option value="">Aucune</NativeSelect.Option>
-								<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
-								<NativeSelect.Option value="s">S</NativeSelect.Option>
-								<NativeSelect.Option value="l">L</NativeSelect.Option>
+								{#each editSeriesOptions as s (s)}
+									<NativeSelect.Option value={s}>{formatSerie(s)}</NativeSelect.Option>
+								{/each}
+								<NativeSelect.Option value={NOUVELLE_SERIE}>+ Nouvelle série</NativeSelect.Option>
 							</NativeSelect.Root>
+							{#if editSerie === NOUVELLE_SERIE}
+								<Input
+									class="w-full"
+									name="serieNom"
+									bind:value={editNouvelleSerieNom}
+									placeholder="Nom de la nouvelle série"
+									maxlength={30}
+									required
+								/>
+							{:else if editSerie}
+								<input type="hidden" name="serie" value={editSerie} />
+							{/if}
+							{#if editErrors.serie}
+								<p class="text-xs text-destructive">{editErrors.serie}</p>
+							{/if}
 						</div>
 
 						<div class="grid gap-3">

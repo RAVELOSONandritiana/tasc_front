@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { capitalize } from '$lib/actions/capitalize';
-import { formatClasseNom } from '$lib/utils';
+import { formatClasseNom, mergeSeries, normalizeSerie, SERIES_PAR_DEFAUT } from '$lib/utils';
 import type { EleveStats } from '$lib/types/Personne.type';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -476,6 +476,22 @@ export async function getClasses(anneeId?: string) {
 		}
 	});
 	return sortByLower(classes, (c) => c.nom);
+}
+
+/**
+ * Liste des séries distinctes utilisées par les classes d'une année scolaire.
+ * Les valeurs sont normalisées (minuscules) et triées.
+ */
+export async function getSeries(anneeId?: string) {
+	const rows = await prisma.classe.findMany({
+		where: anneeId ? { anneeId, serie: { not: null } } : { serie: { not: null } },
+		select: { serie: true },
+		distinct: ['serie']
+	});
+	return mergeSeries(
+		rows.map((r) => r.serie),
+		SERIES_PAR_DEFAUT
+	);
 }
 
 export async function getClasseById(id: string) {
@@ -978,13 +994,14 @@ export async function createClasse(data: {
 	if (!annee) {
 		throw new Error('Aucune année scolaire active');
 	}
+	const serie = normalizeSerie(data.serie);
 	return prisma.classe.create({
 		data: {
 			nom:
 				data.nom ||
-				`${data.niveau === 0 ? '2nd' : data.niveau === 1 ? '1ere' : 'Tle'}${data.serie ? ' ' + data.serie.toUpperCase() : ''}`,
+				`${data.niveau === 0 ? '2nd' : data.niveau === 1 ? '1ere' : 'Tle'}${serie ? ' ' + serie.toUpperCase() : ''}`,
 			niveau: data.niveau,
-			serie: data.serie || null,
+			serie: serie || null,
 			titulaireId: data.titulaireId || null,
 			anneeId: annee.id
 		},
@@ -1012,7 +1029,7 @@ export async function updateClasse(
 		data: {
 			nom: data.nom,
 			niveau: data.niveau,
-			serie: data.serie || null,
+			serie: normalizeSerie(data.serie) || null,
 			titulaireId: data.titulaireId || null
 		},
 		include: {
@@ -1234,6 +1251,9 @@ export async function getUserActivities(compteId: string, limit = 20) {
 		description: a.description,
 		ipAddress: a.ipAddress,
 		userAgent: a.userAgent,
+		latitude: a.latitude,
+		longitude: a.longitude,
+		geoPrecision: a.geoPrecision,
 		compteId: a.compteId,
 		createdAt: a.createdAt.toISOString(),
 		compte: {

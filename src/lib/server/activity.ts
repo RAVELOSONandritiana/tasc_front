@@ -1,5 +1,6 @@
 import { prisma } from '$lib/server/prisma';
 import type { Session } from './auth';
+import type { GeoPoint } from '$lib/geo';
 
 export type ActivityAction =
 	| 'connexion'
@@ -32,17 +33,25 @@ export type ActivityAction =
 	| 'pointage_cours'
 	| 'absence_enseignant';
 
+type ActivitySession = Session & {
+	ip?: string;
+	userAgent?: string;
+	geo?: GeoPoint | null;
+};
+
 export async function logActivity(
-	session: (Session & { ip?: string; userAgent?: string }) | null,
+	session: ActivitySession | null,
 	action: ActivityAction,
 	description: string,
 	ipAddress?: string,
-	userAgent?: string
+	userAgent?: string,
+	geo?: GeoPoint | null
 ) {
 	if (!session?.userId) return;
 
 	const ip = ipAddress || session.ip || '';
 	const ua = userAgent || session.userAgent || '';
+	const g = geo ?? session.geo ?? null;
 
 	try {
 		await prisma.activite.create({
@@ -51,7 +60,10 @@ export async function logActivity(
 				action,
 				description,
 				ipAddress: ip,
-				userAgent: ua
+				userAgent: ua,
+				latitude: g ? g.latitude : null,
+				longitude: g ? g.longitude : null,
+				geoPrecision: g ? g.accuracy : null
 			}
 		});
 	} catch {

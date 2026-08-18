@@ -305,6 +305,9 @@ model Eleve {
   sexe            String?
   redoublant      Boolean      @default(false)
   situation       SituationEleve @default(P)
+  /// Série attribuée à l'élève (ex: « S », « L », « ES ») lors de la
+  /// délibération des classes de 2nde et de 1ère (décision manuelle).
+  serie           String?
   cin             String?
   lieuNaissance   String?
   communeNaissance String?
@@ -377,14 +380,17 @@ model Profil {
 
 /// Historique des actions utilisateur.
 model Activite {
-  id          String   @id @default(uuid())
-  action      String
-  description String
-  ipAddress   String?
-  userAgent   String?
-  compteId    String
-  createdAt   DateTime @default(now())
-  compte      Compte   @relation(fields: [compteId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  action       String
+  description  String
+  ipAddress    String?
+  userAgent    String?
+  latitude     Float?
+  longitude    Float?
+  geoPrecision Float?
+  compteId     String
+  createdAt    DateTime @default(now())
+  compte       Compte   @relation(fields: [compteId], references: [id], onDelete: Cascade)
 
   @@map("activites")
 }

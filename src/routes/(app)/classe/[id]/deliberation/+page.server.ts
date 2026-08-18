@@ -131,6 +131,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			im: i.eleve.im ?? null,
 			sexe: i.eleve.sexe ?? null,
 			redoublant: i.eleve.redoublant ?? false,
+			serie: i.eleve.serie ?? null,
 			actif: i.actif,
 			resultat: i.resultat || 'EN_ATTENTE',
 			inscriptionId: i.id,
@@ -221,7 +222,7 @@ export const actions: Actions = {
 
 		if (!(await peutDeliberer(locals, inscription.classe.titulaire?.personneId))) {
 			return fail(403, {
-				error: 'Vous n\'avez pas le droit de délibérer pour cette classe'
+				error: "Vous n'avez pas le droit de délibérer pour cette classe"
 			});
 		}
 
@@ -255,6 +256,56 @@ export const actions: Actions = {
 			return { success: true, resultat: updated.resultat };
 		} catch (e: any) {
 			return fail(500, { error: e?.message || 'Erreur lors de la délibération' });
+		}
+	},
+
+	// Attribue la série (ex: « S », « L », « ES ») à un élève admis d'une
+	// classe de 2nde ou de 1ère. Renseignée manuellement lors de la délibération.
+	setSerie: async ({ request, params, locals }) => {
+		const data = await request.formData();
+		const eleveId = (data.get('eleveId') as string) || '';
+		const serie = ((data.get('serie') as string) || '').trim().toUpperCase() || null;
+
+		if (!eleveId) {
+			return fail(400, { error: 'eleveId requis' });
+		}
+
+		const inscription = await prisma.inscription.findFirst({
+			where: { eleveId, classeId: params.id },
+			include: { classe: { include: { titulaire: true } } }
+		});
+
+		if (!inscription?.classe) {
+			return fail(404, { error: 'Inscription introuvable' });
+		}
+
+		// La série n'a de sens que pour les classes de 2nde (0) et de 1ère (1),
+		// qui préparent l'orientation vers le niveau suivant.
+		if (inscription.classe.niveau !== 0 && inscription.classe.niveau !== 1) {
+			return fail(400, { error: 'La série ne s’applique qu’aux classes de 2nde et de 1ère' });
+		}
+
+		if (!(await peutDeliberer(locals, inscription.classe.titulaire?.personneId))) {
+			return fail(403, { error: "Vous n'avez pas le droit de délibérer pour cette classe" });
+		}
+
+		try {
+			await prisma.eleve.update({
+				where: { id: eleveId },
+				data: { serie }
+			});
+
+			logActivity(
+				locals.user,
+				'deliberation' as any,
+				`Délibération : série de l'élève mise à jour → ${serie ?? '—'}`
+			).catch(() => {});
+
+			broadcastRealtime({ entity: 'eleve', action: 'update', id: eleveId });
+
+			return { success: true, serie };
+		} catch (e: any) {
+			return fail(500, { error: e?.message || 'Erreur lors de l’enregistrement de la série' });
 		}
 	}
 };

@@ -8,6 +8,12 @@
 	import Card from '$lib/components/ui/card/card.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
+	import { onMount } from 'svelte';
+	import { captureGeo } from '$lib/geo';
+
+	onMount(() => {
+		captureGeo();
+	});
 
 	let { form } = $props();
 	let matricule = $state('');

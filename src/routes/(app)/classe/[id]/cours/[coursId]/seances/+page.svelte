@@ -170,22 +170,22 @@
 				</p>
 			</div>
 
-			<div class="rounded-2xl border border-red-500/30 bg-red-500/5 p-3">
+			<div class="rounded-2xl border border-sidebar-border bg-card/60 p-3">
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<UserX class="size-3.5" /> Absences
 				</div>
-				<p class="mt-1 text-2xl font-bold text-red-500">{data.stats.totalAbsences}</p>
+				<p class="mt-1 text-2xl font-bold">{data.stats.totalAbsences}</p>
 				<p class="text-[11px] text-muted-foreground">
 					dont {data.stats.absencesJustifiees}
 					{pluriel(data.stats.absencesJustifiees, 'justifiée')}
 				</p>
 			</div>
 
-			<div class="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
+			<div class="rounded-2xl border border-sidebar-border bg-card/60 p-3">
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<Clock class="size-3.5" /> Retards
 				</div>
-				<p class="mt-1 text-2xl font-bold text-amber-500">{data.stats.totalRetards}</p>
+				<p class="mt-1 text-2xl font-bold">{data.stats.totalRetards}</p>
 				<p class="text-[11px] text-muted-foreground">
 					dont {data.stats.retardsJustifies}
 					{pluriel(data.stats.retardsJustifies, 'justifié')}
@@ -216,18 +216,6 @@
 				</p>
 			</div>
 		</div>
-
-		{#if data.creneaux.length > 0}
-			<div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-				<span class="font-medium">Créneaux à l'emploi du temps :</span>
-				{#each data.creneaux as c (c.id)}
-					<Badge variant="outline">
-						{c.jour}
-						{c.heureDebut}–{c.heureFin}{c.salle ? ` · ${c.salle}` : ''}
-					</Badge>
-				{/each}
-			</div>
-		{/if}
 
 		<!-- Filtres -->
 		<div
@@ -368,7 +356,7 @@
 									class="grid gap-3 border-t border-sidebar-border bg-muted/20 p-3 sm:grid-cols-2"
 								>
 									<div>
-										<p class="mb-1.5 text-xs font-semibold text-red-500">
+										<p class="mb-1.5 text-xs font-semibold">
 											Absents ({seance.absents.length})
 										</p>
 										{#if seance.absents.length === 0}
@@ -402,7 +390,7 @@
 										{/if}
 									</div>
 									<div>
-										<p class="mb-1.5 text-xs font-semibold text-amber-500">
+										<p class="mb-1.5 text-xs font-semibold">
 											Retards ({seance.retards.length})
 										</p>
 										{#if seance.retards.length === 0}
@@ -441,7 +429,7 @@
 								</div>
 							{:else}
 								<p
-									class="border-t border-sidebar-border bg-emerald-500/5 px-3 py-1.5 text-xs text-emerald-600"
+									class="border-t border-sidebar-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground"
 								>
 									Classe au complet : aucune absence ni retard.
 								</p>

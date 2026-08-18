@@ -10,6 +10,8 @@
 	import YearSwitcher from '$lib/components/YearSwitcher.svelte';
 	import { enhance } from '$app/forms';
 	import { loadingForm } from '$lib/actions/loadingForm';
+	import { onMount } from 'svelte';
+	import { captureGeo } from '$lib/geo';
 	import {
 		LayoutDashboard,
 		UserSquare2,
@@ -33,6 +35,12 @@
 	if (browser) {
 		initRealtime();
 	}
+
+	// Capture la position géographique du navigateur pour l'associer à
+	// l'historique d'activité (mesure de sécurité).
+	onMount(() => {
+		captureGeo();
+	});
 
 	const allPaths = [
 		{
@@ -99,7 +107,7 @@
 <Sidebar.Provider>
 	<LoadingBar />
 	<PageLoader />
-	<div class="flex h-screen w-full overflow-hidden">
+	<div class="app-shell flex h-screen w-full overflow-hidden">
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
 				<div class="flex items-center gap-2.5">
@@ -156,7 +164,7 @@
 			</Sidebar.Footer>
 		</Sidebar.Root>
 
-		<div class="flex flex-1 flex-col min-h-0 bg-background text-foreground">
+		<div class="app-main flex flex-1 flex-col min-h-0 bg-background text-foreground">
 		<header
 			class="relative z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm print:hidden"
 		>
@@ -175,7 +183,7 @@
 					/>
 				</div>
 			</header>
-			<div class="flex flex-1 flex-col overflow-y-auto">
+			<div class="app-content flex flex-1 flex-col overflow-y-auto">
 				{@render children()}
 			</div>
 		</div>
@@ -187,6 +195,24 @@
 		:global([data-slot='sidebar']),
 		:global([data-slot='sidebar-container']) {
 			display: none !important;
+		}
+		/* Libère les conteneurs de l'application pour l'impression :
+		   sinon h-screen + overflow-hidden/auto découpent le contenu
+		   (un seul écran visible) et font apparaître la scrollbar dans le PDF. */
+		:global(.app-shell),
+		:global(.app-main),
+		:global(.app-content) {
+			display: block !important;
+			height: auto !important;
+			min-height: 0 !important;
+			max-height: none !important;
+			overflow: visible !important;
+			flex: none !important;
+		}
+		:global(body),
+		:global(html) {
+			height: auto !important;
+			overflow: visible !important;
 		}
 	}
 </style>

@@ -242,7 +242,7 @@
 							}}
 						>
 							<input type="hidden" name="eleveId" value={selectedExistingId} />
-							<Button type="submit" variant="outline" size="sm" disabled={!selectedExistingId}>
+							<Button type="submit" variant="default" size="sm" disabled={!selectedExistingId}>
 								<UserCheck class="mr-2 size-4" />
 								Ajouter
 							</Button>
@@ -394,8 +394,9 @@
 			<table class="w-full border-collapse border border-black text-sm">
 				<thead>
 					<tr>
+						<th class="border border-black px-2 py-1 text-left">Matricule</th>
 						<th class="border border-black px-2 py-1 text-left">Nom</th>
-						<th class="border border-black px-2 py-1 text-left">Prénom</th>
+						<th class="border border-black px-2 py-1 text-left">Prénoms</th>
 						<th class="border border-black px-2 py-1 text-left">N° classe</th>
 						<th class="border border-black px-2 py-1 text-left">Présent / Absent</th>
 					</tr>
@@ -403,6 +404,7 @@
 				<tbody>
 					{#each elevesInscrits as eleve (eleve.id)}
 						<tr>
+							<td class="border border-black px-2 py-2">{eleve.im ?? '—'}</td>
 							<td class="border border-black px-2 py-2">{eleve.nom}</td>
 							<td class="border border-black px-2 py-2">{eleve.prenom}</td>
 							<td class="border border-black px-2 py-2">{numeroClasse(eleve)}</td>

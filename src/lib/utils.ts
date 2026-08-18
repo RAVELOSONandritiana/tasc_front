@@ -42,6 +42,43 @@ export function formatClasseNom(
 	return `${label} ${valeur}`.trim();
 }
 
+/** Valeur sentinelle du `<select>` déclenchant la saisie d'une nouvelle série. */
+export const NOUVELLE_SERIE = '__new__';
+
+/** Séries proposées par défaut, même lorsqu'aucune classe n'en utilise encore. */
+export const SERIES_PAR_DEFAUT = ['ose', 's', 'l'];
+
+/**
+ * Normalise une série pour le stockage : espaces compactés, minuscules.
+ * Retourne une chaîne vide pour une valeur absente ou pour la sentinelle
+ * « nouvelle série ».
+ */
+export function normalizeSerie(value: string | null | undefined): string {
+	const valeur = (value || '').replace(/\s+/g, ' ').trim();
+	if (!valeur || valeur === NOUVELLE_SERIE) return '';
+	return valeur.toLowerCase();
+}
+
+/** Libellé d'affichage d'une série (ex: « ose » → « OSE »). */
+export function formatSerie(value: string | null | undefined): string {
+	return normalizeSerie(value).toUpperCase();
+}
+
+/**
+ * Fusionne des séries (existantes + défauts), dédoublonne sans tenir compte de
+ * la casse et trie alphabétiquement.
+ */
+export function mergeSeries(...listes: (string | null | undefined)[][]): string[] {
+	const uniques = new Set<string>();
+	for (const liste of listes) {
+		for (const valeur of liste) {
+			const serie = normalizeSerie(valeur);
+			if (serie) uniques.add(serie);
+		}
+	}
+	return [...uniques].sort((a, b) => a.localeCompare(b, 'fr'));
+}
+
 /**
  * Met la première lettre de chaque mot en majuscule (ex: « jean pierre » →
  * « Jean Pierre »). Ne touche pas au reste de la casse des mots.

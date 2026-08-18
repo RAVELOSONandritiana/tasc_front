@@ -19,7 +19,6 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { UserX, CheckCircle2, AlertTriangle, CalendarX } from '@lucide/svelte/icons';
 	import { invalidateAll } from '$app/navigation';
 	import { deserialize } from '$app/forms';
@@ -50,7 +49,6 @@
 	let date = $state(aujourdHui());
 	let seanceId = $state('');
 	let motif = $state('');
-	let justifie = $state(false);
 
 	let submitting = $state(false);
 	let erreur = $state<string | null>(null);
@@ -83,22 +81,33 @@
 		date = aujourdHui();
 		seanceId = '';
 		motif = '';
-		justifie = false;
 		erreur = null;
 		success = false;
+		submitting = false;
 	}
+
+	// bits-ui n'appelle pas onOpenChange quand l'ouverture est pilotée par le
+	// parent : on remet le formulaire à zéro à chaque ouverture.
+	let etaitOuvert = false;
+	$effect(() => {
+		if (open && !etaitOuvert) reset();
+		etaitOuvert = open;
+	});
 
 	async function enregistrer() {
 		if (!editable || !seanceChoisie) return;
-		submitting = true;
 		erreur = null;
 		success = false;
+		if (!motif.trim()) {
+			erreur = 'Le motif est obligatoire.';
+			return;
+		}
+		submitting = true;
 
 		const fd = new FormData();
 		fd.append('seanceId', seanceChoisie.id);
 		fd.append('date', date);
-		fd.append('motif', motif);
-		fd.append('justifie', justifie ? 'true' : 'false');
+		fd.append('motif', motif.trim());
 
 		try {
 			const res = await fetch(`/classe/${classeId}/analyse?/absenceProf`, {
@@ -128,13 +137,8 @@
 	}
 </script>
 
-<Dialog.Root
-	bind:open
-	onOpenChange={(v) => {
-		if (v) reset();
-	}}
->
-	<Dialog.Content class="sm:max-w-md">
+<Dialog.Root bind:open>
+	<Dialog.Content class="max-h-[92dvh] overflow-y-auto sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
 				<UserX class="size-4 text-destructive" /> Absence d’un enseignant
@@ -214,7 +218,7 @@
 			{/if}
 
 			<div class="grid gap-2">
-				<Label for="absence-prof-motif">Motif (facultatif)</Label>
+				<Label for="absence-prof-motif">Motif *</Label>
 				<Textarea
 					id="absence-prof-motif"
 					rows={2}
@@ -222,11 +226,6 @@
 					bind:value={motif}
 					disabled={!editable}
 				/>
-			</div>
-
-			<div class="flex items-center gap-2">
-				<Checkbox id="absence-prof-justifie" bind:checked={justifie} disabled={!editable} />
-				<Label for="absence-prof-justifie" class="text-sm font-normal">Absence justifiée</Label>
 			</div>
 
 			{#if erreur}

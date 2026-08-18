@@ -13,6 +13,7 @@
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { page } from '$app/stores';
+	import { mergeSeries, normalizeSerie, formatSerie, NOUVELLE_SERIE } from '$lib/utils';
 	import type { PageProps } from './$types';
 
 	const { data }: PageProps = $props();
@@ -21,6 +22,7 @@
 
 	let listClasse = $state(data.listClasse);
 	const enseignants = $state<Personne[]>(data.enseignants || []);
+	let series = $state<string[]>(data.series || []);
 	let submitting = $state(false);
 	let success = $state(false);
 	let errors = $state<Record<string, string>>({});
@@ -29,8 +31,16 @@
 	let nom = $state('');
 	let niveau = $state('0');
 	let serie = $state('');
+	let nouvelleSerieNom = $state('');
 	let searchProf = $state('');
 	let selectedProf: Personne | null = $state(null);
+
+	function ajouterSerie(valeur: string | null | undefined) {
+		const nouvelle = normalizeSerie(valeur);
+		if (nouvelle && !series.includes(nouvelle)) {
+			series = mergeSeries(series, [nouvelle]);
+		}
+	}
 
 	const searchResults = $derived(
 		searchProf.trim().length > 0 && !selectedProf
@@ -51,6 +61,7 @@
 		nom = '';
 		niveau = '0';
 		serie = '';
+		nouvelleSerieNom = '';
 		searchProf = '';
 		selectedProf = null;
 		errors = {};
@@ -121,6 +132,7 @@
 											if (result.type === 'success') {
 												const newClasse = result.data?.classe;
 												if (newClasse) {
+													ajouterSerie(newClasse.serie);
 													const niveauLibelle =
 														newClasse.niveau === 0
 															? '2nd'
@@ -180,12 +192,30 @@
 
 										<div class="grid gap-2">
 											<Label for="serie">Série</Label>
-											<NativeSelect.Root class="w-full" bind:value={serie} name="serie">
+											<NativeSelect.Root class="w-full" bind:value={serie}>
 												<NativeSelect.Option value="">Aucune</NativeSelect.Option>
-												<NativeSelect.Option value="ose">OSE</NativeSelect.Option>
-												<NativeSelect.Option value="s">S</NativeSelect.Option>
-												<NativeSelect.Option value="l">L</NativeSelect.Option>
+												{#each series as s (s)}
+													<NativeSelect.Option value={s}>{formatSerie(s)}</NativeSelect.Option>
+												{/each}
+												<NativeSelect.Option value={NOUVELLE_SERIE}>
+													+ Nouvelle série
+												</NativeSelect.Option>
 											</NativeSelect.Root>
+											{#if serie === NOUVELLE_SERIE}
+												<Input
+													class="w-full"
+													name="serieNom"
+													bind:value={nouvelleSerieNom}
+													placeholder="Nom de la nouvelle série"
+													maxlength={30}
+													required
+												/>
+											{:else if serie}
+												<input type="hidden" name="serie" value={serie} />
+											{/if}
+											{#if errors.serie}
+												<p class="text-xs text-destructive">{errors.serie}</p>
+											{/if}
 										</div>
 									</div>
 
@@ -309,6 +339,8 @@
 								id={l.id}
 								deleteAction="?/delete"
 								{enseignants}
+								{series}
+								onserie={ajouterSerie}
 								ondelete={(id: string) => (listClasse = listClasse.filter((c) => c.id !== id))}
 							/>
 						</div>

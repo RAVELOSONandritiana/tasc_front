@@ -9,10 +9,16 @@ declare global {
 				role: string;
 				nom: string;
 				prenom: string;
-				isSurveillantGeneral: boolean;
-				ip?: string;
-				userAgent?: string;
+			isSurveillantGeneral: boolean;
+			ip?: string;
+			userAgent?: string;
+			geo?: {
+				latitude: number;
+				longitude: number;
+				accuracy: number;
+				timestamp: number;
 			} | null;
+		} | null;
 		}
 		// interface Error {}
 		// interface PageData {}

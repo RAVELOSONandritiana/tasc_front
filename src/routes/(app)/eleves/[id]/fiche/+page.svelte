@@ -38,12 +38,12 @@
 		return 'P';
 	}
 
-	// Regroupe les absences par paquets de 3, séparés par le libellé
-	// "Aterin'ny Ray aman-dReny" (comme sur le carnet papier).
+	// Tableaux laissés volontairement vides : ce sont les parents/tuteurs qui
+	// les remplissent manuellement sur le carnet papier. Le système n'y inscrit
+	// aucune donnée (seules les infos élève en en-tête sont remplies par le système).
 	// Toujours 3 tableaux (même vides) pour l'impression du carnet.
 	const groupes = $derived.by(() => {
 		const g: typeof absences[] = [];
-		for (let i = 0; i < absences.length; i += 3) g.push(absences.slice(i, i + 3));
 		while (g.length < 3) g.push([] as typeof absences);
 		return g;
 	});

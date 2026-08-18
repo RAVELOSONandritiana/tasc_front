@@ -1,7 +1,6 @@
+import crypto from 'crypto';
 import { prisma } from './prisma';
 import { hashPassword } from './auth';
-
-const ADMIN_PASSWORD = '666666';
 
 export async function ensureAdmin() {
 	const DEFAULT_MATRICULE = '666666';
@@ -18,6 +17,20 @@ export async function ensureAdmin() {
 	});
 
 	if (existing) return existing;
+
+	// Mot de passe initial : fourni par variable d'environnement, sinon généré
+	// aléatoirement et journalisé une fois pour la première configuration. On ne
+	// garde jamais un mot de passe codé en dur et devinable.
+	const ADMIN_PASSWORD =
+		process.env.ADMIN_PASSWORD ||
+		(() => {
+			const gen = crypto.randomBytes(9).toString('base64url');
+			console.warn(
+				`[SECURITE] Compte administrateur initial cree. Mot de passe genere : ${gen} ` +
+					`— connectez-vous (matricule ${DEFAULT_MATRICULE}) et changez-le immediatement.`
+			);
+			return gen;
+		})();
 
 	const personne = await prisma.personne.create({
 		data: {

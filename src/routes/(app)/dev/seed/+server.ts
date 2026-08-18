@@ -1,9 +1,14 @@
-import { json, type RequestHandler } from '@sveltejs/kit';
+import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { hashPassword } from '$lib/server/auth';
-import { fail } from '@sveltejs/kit';
+import { hasAdminPower } from '$lib/permissions';
+import type { RequestEvent } from '@sveltejs/kit';
 
-export const POST: RequestHandler = async () => {
+export const POST: RequestHandler = async ({ locals }: RequestEvent) => {
+	// Endpoint de remplissage de démonstration : réservé aux administrateurs.
+	if (!locals.user || !hasAdminPower(locals.user)) {
+		throw error(403, 'Accès refusé');
+	}
 	try {
 		const result = await prisma.$transaction(async (tx) => {
 			const annee = await tx.anneeScolaire.create({
@@ -217,6 +222,6 @@ export const POST: RequestHandler = async () => {
 		return json({ success: true, data: result });
 	} catch (e) {
 		console.error('Seed error:', e);
-		return fail(500, { error: (e as Error).message || 'Erreur lors du seed' });
+		throw error(500, (e as Error).message || 'Erreur lors du seed');
 	}
 };

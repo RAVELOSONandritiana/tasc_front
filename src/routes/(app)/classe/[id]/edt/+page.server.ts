@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma, getProfesseurs, updateCours, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { registerPointage, PointageError } from '$lib/server/pointage';
+import { AbsenceProfError, declareAbsenceProf, normaliserHeure } from '$lib/server/absenceProf';
 import { redirect, fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -57,7 +58,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		coursId: seance.cours.id,
 		coursNom: seance.cours.matiere.nom,
 		salleId: seance.salle?.id,
-		salleNom: seance.salle?.nom
+		salleNom: seance.salle?.nom,
+		salleNum: seance.salle?.num
 	}));
 
 	const coursList = await prisma.cours.findMany({
@@ -129,6 +131,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		classe,
+		annee: annee?.nom || '',
 		seances,
 		salles: salles.map((s) => ({
 			id: s.id,
@@ -154,8 +157,29 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 const MODIFIABLE_ROLES = ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT', 'OPERATEUR'];
 
+const JOURS_VALIDES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
 function peutModifierEDT(role: string | undefined): boolean {
 	return !!role && MODIFIABLE_ROLES.includes(role);
+}
+
+/**
+ * Valide le creneau d'une seance. Sans ce controle, un champ vide creait une
+ * seance sans horaire, ce qui cassait l'affichage de l'emploi du temps et la
+ * declaration d'absence (date invalide).
+ */
+function validerCreneau(
+	jour: string | null,
+	heureDebut: string | null,
+	heureFin: string | null
+): { jour: string; heureDebut: string; heureFin: string } | { error: string } {
+	if (!jour || !JOURS_VALIDES.includes(jour)) return { error: 'Jour invalide' };
+	const debut = normaliserHeure(heureDebut);
+	const fin = normaliserHeure(heureFin);
+	if (!debut) return { error: 'Heure de début requise' };
+	if (!fin) return { error: 'Heure de fin requise' };
+	if (fin <= debut) return { error: 'L’heure de fin doit être après l’heure de début' };
+	return { jour, heureDebut: debut, heureFin: fin };
 }
 
 export const actions: Actions = {
@@ -164,31 +188,41 @@ export const actions: Actions = {
 			return fail(403, { error: 'Action non autorisée' });
 		}
 		const formData = await request.formData();
-		const jour = formData.get('jour') as string;
-		const heureDebut = formData.get('heureDebut') as string;
-		const heureFin = formData.get('heureFin') as string;
-		const coursId = formData.get('coursId') as string;
+		const coursId = (formData.get('coursId') as string) || '';
 		const salleId = formData.get('salleId') as string | null;
 		const classeId = params.id;
+
+		const creneau = validerCreneau(
+			formData.get('jour') as string | null,
+			formData.get('heureDebut') as string | null,
+			formData.get('heureFin') as string | null
+		);
+		if ('error' in creneau) return fail(400, { error: creneau.error });
+		if (!coursId) return fail(400, { error: 'Matière requise' });
+
+		const cours = await prisma.cours.findFirst({ where: { id: coursId, classeId } });
+		if (!cours) return fail(400, { error: 'Cette matière n’appartient pas à cette classe' });
 
 		let emploiDuTemps = await prisma.emploiDuTemps.findFirst({
 			where: { classeId: classeId }
 		});
 
 		if (!emploiDuTemps) {
+			const annee = await getActiveAnneeScolaire();
+			if (!annee) return fail(400, { error: "Aucune année scolaire n'est active" });
 			emploiDuTemps = await prisma.emploiDuTemps.create({
 				data: {
 					classeId: classeId,
-					anneeId: (await prisma.anneeScolaire.findFirst({ where: { active: true } }))?.id || ''
+					anneeId: annee.id
 				}
 			});
 		}
 
 		await prisma.seanceEDT.create({
 			data: {
-				jour,
-				heureDebut,
-				heureFin,
+				jour: creneau.jour,
+				heureDebut: creneau.heureDebut,
+				heureFin: creneau.heureFin,
 				edtId: emploiDuTemps.id,
 				coursId,
 				salleId: salleId || undefined
@@ -204,17 +238,21 @@ export const actions: Actions = {
 		}
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
-		const jour = formData.get('jour') as string;
-		const heureDebut = formData.get('heureDebut') as string;
-		const heureFin = formData.get('heureFin') as string;
 		const salleId = formData.get('salleId') as string | null;
+
+		const creneau = validerCreneau(
+			formData.get('jour') as string | null,
+			formData.get('heureDebut') as string | null,
+			formData.get('heureFin') as string | null
+		);
+		if ('error' in creneau) return fail(400, { error: creneau.error });
 
 		await prisma.seanceEDT.update({
 			where: { id },
 			data: {
-				jour,
-				heureDebut,
-				heureFin,
+				jour: creneau.jour,
+				heureDebut: creneau.heureDebut,
+				heureFin: creneau.heureFin,
 				salleId: salleId || undefined
 			}
 		});
@@ -257,6 +295,13 @@ export const actions: Actions = {
 			return fail(400, { error: 'Cours requis' });
 		}
 
+		// Le creneau n'est valide que si la seance est modifiee : on refuse une
+		// heure vide ou incoherente plutot que d'enregistrer un horaire casse.
+		if (seanceId) {
+			const creneau = validerCreneau(jour, heureDebut, heureFin);
+			if ('error' in creneau) return fail(400, { error: creneau.error });
+		}
+
 		try {
 			await updateCours(coursId, { professeurId: professeurId || undefined });
 
@@ -266,8 +311,8 @@ export const actions: Actions = {
 					data: {
 						salleId: salleId || undefined,
 						...(jour ? { jour } : {}),
-						...(heureDebut ? { heureDebut } : {}),
-						...(heureFin ? { heureFin } : {})
+						...(heureDebut ? { heureDebut: normaliserHeure(heureDebut) ?? heureDebut } : {}),
+						...(heureFin ? { heureFin: normaliserHeure(heureFin) ?? heureFin } : {})
 					}
 				});
 			}
@@ -276,6 +321,33 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, `/classe/${params.id}/edt`);
+	},
+
+	/**
+	 * Declare le professeur absent (cours manque) pour une seance de l'emploi
+	 * du temps. Renvoie un JSON pour la fenetre de l'emploi du temps.
+	 */
+	absenceProf: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+		try {
+			const absence = await declareAbsenceProf({
+				classeId: params.id,
+				seanceId: (formData.get('seanceId') as string) || '',
+				dateRaw: (formData.get('date') as string) || '',
+				motif: (formData.get('motif') as string) || null,
+				justifie: formData.get('justifie') === 'true' || formData.get('justifie') === 'on',
+				locals
+			});
+			return {
+				success: true,
+				absenceId: absence.absenceId,
+				message: `Absence de ${absence.professeurNom} enregistrée (${absence.heures} h manquée(s)).`
+			};
+		} catch (e) {
+			if (e instanceof AbsenceProfError) return fail(e.status, { error: e.message });
+			console.error('Erreur absence enseignant:', e);
+			return fail(500, { error: 'Erreur lors de l’enregistrement de l’absence' });
+		}
 	},
 
 	// Pointage d'un cours directement depuis l'emploi du temps (fenetre
@@ -290,6 +362,7 @@ export const actions: Actions = {
 		const retardIds = formData.getAll('retardIds').map(String).filter(Boolean);
 		const profAbsent = formData.get('profAbsent') === 'true';
 		const motifProfAbsent = (formData.get('motifProfAbsent') as string)?.trim() || null;
+		const seanceId = (formData.get('seanceId') as string) || null;
 
 		const heuresEffectuees = parseFloat(heuresEffectueesRaw);
 
@@ -297,6 +370,7 @@ export const actions: Actions = {
 			const result = await registerPointage({
 				classeId: params.id,
 				coursId: (formData.get('coursId') as string) || '',
+				seanceId,
 				dateRaw,
 				heuresEffectuees,
 				causeIncomplet,

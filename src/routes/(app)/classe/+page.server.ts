@@ -1,13 +1,15 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseImage, deleteClasse, getActiveAnneeScolaire, prisma } from '$lib/server/prisma';
+import { getClasses, getProfesseurs, createClasse, updateClasse, updateClasseImage, deleteClasse, getActiveAnneeScolaire, getSeries, prisma } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
 import { deletePbImage } from '$lib/pocketbase/pocketbase';
+import { mergeSeries, normalizeSerie, SERIES_PAR_DEFAUT } from '$lib/utils';
 
 export const load: PageServerLoad = async () => {
 	const annee = await getActiveAnneeScolaire();
 	const classes = annee ? await getClasses(annee.id) : [];
+	const series = annee ? await getSeries(annee.id) : mergeSeries(SERIES_PAR_DEFAUT);
 	const listClasse = classes.map(
 		(c): { id: string; nom: string; niveau: number; series: string; titulaire: string; titulaireId: string | null; eleves: number; url?: string } => ({
 			id: c.id,
@@ -30,7 +32,8 @@ export const load: PageServerLoad = async () => {
 	}));
 	return {
 		listClasse,
-		enseignants
+		enseignants,
+		series
 	};
 };
 
@@ -40,13 +43,22 @@ export const actions: Actions = {
 
 		const nom = (data.get('nom') as string | null)?.trim() || '';
 		const niveau = parseInt((data.get('niveau') as string) || '0', 10);
-		const serie = (data.get('serie') as string | null)?.trim() || '';
+		const serieNom = (data.get('serieNom') as string | null) || '';
+		const serie = normalizeSerie(serieNom || (data.get('serie') as string | null));
 		const titulaireId = (data.get('titulaireId') as string | null)?.trim() || undefined;
 
 		const errors: Record<string, string> = {};
 
 		if (isNaN(niveau) || niveau < 0 || niveau > 2) {
 			errors.niveau = 'Niveau invalide';
+		}
+
+		if (serieNom.trim() && !serie) {
+			errors.serie = 'Nom de série invalide';
+		}
+
+		if (serie.length > 30) {
+			errors.serie = 'Nom de série trop long (30 caractères max)';
 		}
 
 		if (Object.keys(errors).length > 0) {
@@ -107,7 +119,8 @@ export const actions: Actions = {
 		const id = data.get('id') as string;
 		const nom = (data.get('nom') as string | null)?.trim() || '';
 		const niveau = parseInt((data.get('niveau') as string) || '0', 10);
-		const serie = (data.get('serie') as string | null)?.trim() || '';
+		const serieNom = (data.get('serieNom') as string | null) || '';
+		const serie = normalizeSerie(serieNom || (data.get('serie') as string | null));
 		const titulaireId = (data.get('titulaireId') as string | null)?.trim() || '';
 
 		const errors: Record<string, string> = {};
@@ -118,6 +131,14 @@ export const actions: Actions = {
 
 		if (isNaN(niveau) || niveau < 0 || niveau > 2) {
 			errors.niveau = 'Niveau invalide';
+		}
+
+		if (serieNom.trim() && !serie) {
+			errors.serie = 'Nom de série invalide';
+		}
+
+		if (serie.length > 30) {
+			errors.serie = 'Nom de série trop long (30 caractères max)';
 		}
 
 		if (Object.keys(errors).length > 0) {

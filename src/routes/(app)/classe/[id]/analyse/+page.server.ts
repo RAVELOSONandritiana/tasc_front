@@ -3,13 +3,13 @@ import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import {
+	AbsenceProfError,
+	JOURS_SEMAINE,
+	ROLES_ABSENCE_PROF,
+	declareAbsenceProf
+} from '$lib/server/absenceProf';
 import type { Cours, Examen } from '$lib/types/Materiel.type';
-
-/// Jours tels qu'ils sont stockes dans l'emploi du temps (SeanceEDT.jour).
-const JOURS_SEMAINE = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-
-/// Roles autorises a declarer / supprimer une absence d'enseignant.
-const ROLES_ABSENCE_PROF = ['ADMINISTRATEUR', 'SURVEILLANT', 'OPERATEUR'];
 
 function dureeHeures(heureDebut: string, heureFin: string): number {
 	const [dh, dm] = heureDebut.split(':').map(Number);
@@ -308,86 +308,24 @@ export const actions: Actions = {
 	 * manquees ; la date doit tomber le meme jour de la semaine que la seance.
 	 */
 	absenceProf: async ({ request, params, locals }) => {
-		if (!ROLES_ABSENCE_PROF.includes(locals.user?.role ?? '')) {
-			return fail(403, {
-				error: 'Réservé à l’administrateur, au surveillant ou à l’opérateur'
-			});
-		}
-
 		const form = await request.formData();
 		const seanceId = ((form.get('seanceId') as string) || '').trim();
 		const dateRaw = ((form.get('date') as string) || '').trim();
 		const motif = ((form.get('motif') as string) || '').trim() || null;
 		const justifie = form.get('justifie') === 'true' || form.get('justifie') === 'on';
 
-		if (!seanceId) return fail(400, { error: 'Séance de l’emploi du temps requise' });
-		if (!/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) return fail(400, { error: 'Date invalide' });
-
-		const annee = await getActiveAnneeScolaire();
-		if (!annee) return fail(400, { error: "Aucune année scolaire n'est active" });
-
-		const seance = await prisma.seanceEDT.findUnique({
-			where: { id: seanceId },
-			include: { cours: { include: { matiere: true, professeur: { include: { personne: true } } } } }
-		});
-		if (!seance) return fail(404, { error: 'Séance introuvable dans l’emploi du temps' });
-		if (seance.cours.classeId !== params.id) {
-			return fail(400, { error: 'Cette séance n’appartient pas à cette classe' });
-		}
-		if (!seance.cours.professeurId) {
-			return fail(400, { error: 'Aucun enseignant n’est affecté à ce cours' });
-		}
-
-		const date = new Date(`${dateRaw}T${seance.heureDebut}:00`);
-		if (Number.isNaN(date.getTime())) return fail(400, { error: 'Date invalide' });
-		const finDeJournee = new Date();
-		finDeJournee.setHours(23, 59, 59, 999);
-		if (date.getTime() > finDeJournee.getTime()) {
-			return fail(400, { error: 'Impossible de déclarer une absence sur une séance à venir' });
-		}
-
-		const existe = await prisma.absenceProf.findFirst({
-			where: { professeurId: seance.cours.professeurId, coursId: seance.coursId, date }
-		});
-		if (existe) return fail(400, { error: 'Cette séance est déjà déclarée comme absence' });
-
 		try {
-			const absence = await prisma.absenceProf.create({
-				data: {
-					date,
-					justifie,
-					motif,
-					professeurId: seance.cours.professeurId,
-					coursId: seance.coursId,
-					classeId: params.id,
-					anneeId: annee.id
-				}
+			const absence = await declareAbsenceProf({
+				classeId: params.id,
+				seanceId,
+				dateRaw,
+				motif,
+				justifie,
+				locals
 			});
-
-			await prisma.professeur
-				.update({
-					where: { id: seance.cours.professeurId },
-					data: { absences: { increment: 1 } }
-				})
-				.catch(() => {});
-
-			const nomProf = seance.cours.professeur
-				? `${seance.cours.professeur.personne.name} ${seance.cours.professeur.personne.lastname}`
-				: 'Enseignant';
-			logActivity(
-				locals.user ?? null,
-				'absence_enseignant',
-				`Absence de ${nomProf} — ${seance.cours.matiere.nom} du ${dateRaw} (${seance.heureDebut}-${seance.heureFin})`
-			).catch(() => {});
-
-			broadcastRealtime({
-				entity: 'enseignant',
-				action: 'update',
-				id: seance.cours.professeurId
-			});
-
-			return { success: true, absenceId: absence.id };
+			return { success: true, absenceId: absence.absenceId };
 		} catch (e) {
+			if (e instanceof AbsenceProfError) return fail(e.status, { error: e.message });
 			console.error('Erreur absence enseignant:', e);
 			return fail(500, { error: 'Erreur lors de l’enregistrement de l’absence' });
 		}
