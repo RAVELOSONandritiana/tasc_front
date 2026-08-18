@@ -149,7 +149,7 @@
 		<div class="flex items-center gap-3">
 			<Button variant="outline" size="sm" onclick={() => goto('/analyse')}><ArrowLeft class="mr-2 size-4" /> Retour</Button>
 			<div>
-				<h1 class="text-2xl font-bold">{data.eleve.prenom} {data.eleve.nom}</h1>
+				<h1 class="text-2xl font-bold">{data.eleve.nom} {data.eleve.prenom}</h1>
 				<p class="text-sm text-muted-foreground">
 					Analyse détaillée du parcours
 					{#if data.eleve.im}· IM {data.eleve.im}{/if}

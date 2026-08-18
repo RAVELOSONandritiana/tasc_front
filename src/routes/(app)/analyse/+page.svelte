@@ -200,12 +200,13 @@
 	});
 
 	function setSort(key: SortKey) {
-		if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-		else {
-			sortKey = key;
-			sortDir = key === 'nom' ? 'asc' : 'desc';
-		}
+		sortKey = key;
 	}
+	function toggleDir() {
+		sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+	}
+	// Matière utilisée pour le tri (si le tri se fait par matière).
+	const sortMatiere = $derived(matieres.find((m) => m.id === sortKey) ?? null);
 
 	// ---- Indicateurs ----
 	const nbEleves = $derived(eleves.length);
@@ -298,16 +299,178 @@
 		return moyenneGenerale(eleve, coursByClasse.get(eleve.classeId ?? '') || [], coursById, examenIds);
 	}
 
-	// ---- Comparaison par classe et par matière (repérer un professeur en difficulté) ----
-	const comparaisonClasses = $derived.by(() => {
+	// ---- Sélection des matières pour le graphe de comparaison (un seul graphe) ----
+	let matieresComparees = $state<string[] | null>(null);
+	const matieresCompareesList = $derived(matieresComparees ?? matieres.map((m) => m.id));
+	function toggleMatiereCompare(id: string) {
+		const courant = matieresCompareesList;
+		if (courant.includes(id)) {
+			if (courant.length > 1) matieresComparees = courant.filter((x) => x !== id);
+		} else {
+			matieresComparees = [...courant, id];
+		}
+	}
+
+	// ---- Comparaison des classes (un seul graphe, matières choisies) ----
+	type CompBar = { x: number; y: number; h: number; barW: number; val: number; color: string; classeId: string };
+	const compGraph = $derived.by<{
+		ms: { id: string; nom: string; couleur?: string | null }[];
+		cls: ClasseInfo[];
+		bars: CompBar[];
+		slot: number;
+		plotH: number;
+		padT: number;
+		padB: number;
+		padL: number;
+		padR: number;
+		chartW: number;
+		H: number;
+	}>(() => {
+		const ms = matieres.filter((m) => matieresCompareesList.includes(m.id));
 		const cls = classes.filter((c) => selectedIds.includes(c.id));
-		return matieres.map((m) => ({
-			matiere: m,
-			parClasse: cls.map((c) => ({
-				classe: c,
-				val: moyClasseMatiereParClasse(c.id, m.id)
-			}))
-		}));
+		const nG = ms.length || 1;
+		const nS = cls.length || 1;
+		const slot = (BAR.chartW - BAR.padL - BAR.padR) / nG;
+		const innerPad = slot * 0.12;
+		const barW = Math.min(BAR.barMax, (slot - innerPad * 2) / nS);
+		const totalBarsW = barW * nS;
+		const plotH = BAR.H - BAR.padT - BAR.padB;
+		const bars: CompBar[] = [];
+		ms.forEach((m, gi) => {
+			cls.forEach((c, bi) => {
+				const val = moyClasseMatiereParClasse(c.id, m.id);
+				if (val === null) return;
+				const x = BAR.padL + slot * gi + (slot - totalBarsW) / 2 + bi * barW;
+				const h = (val / 20) * plotH;
+				bars.push({ x, y: BAR.padT + plotH - h, h, barW, val, color: palette[bi % palette.length], classeId: c.id });
+			});
+		});
+		return {
+			ms,
+			cls,
+			bars,
+			slot,
+			plotH,
+			padT: BAR.padT,
+			padB: BAR.padB,
+			padL: BAR.padL,
+			padR: BAR.padR,
+			chartW: BAR.chartW,
+			H: BAR.H
+		};
+	});
+
+	// ---- Analyse séparée par classe ----
+	type AnalyseClasse = {
+		classe: ClasseInfo;
+		nb: number;
+		moyenne: number;
+		taux: number;
+		abs: number;
+		ret: number;
+		inc: number;
+		forts: { matiere: { id: string; nom: string; couleur?: string | null }; moy: number }[];
+		faiblesses: { matiere: { id: string; nom: string; couleur?: string | null }; moy: number }[];
+		classement: {
+			eleve: EleveSel;
+			moy: number;
+			rang: number;
+			absences: number;
+			retards: number;
+			incidents: number;
+			erreurs: number;
+			matieres: Map<string, number>;
+		}[];
+		matrice: {
+			matiere: { id: string; nom: string; couleur?: string | null };
+			parExamen: { examen: ExamenSel; val: number; sous: { sous: { id: string; nom: string }; val: number }[] }[];
+			moy: number;
+		}[];
+	};
+	const analysesParClasse = $derived.by<AnalyseClasse[]>(() => {
+		const dir = sortDir === 'asc' ? 1 : -1;
+		return classes
+			.filter((c) => selectedIds.includes(c.id))
+			.map((c) => {
+				const coursC = coursByClasse.get(c.id) || [];
+				const els = eleves.filter((e) => e.classeId === c.id);
+
+				const rows = els.map((e) => ({
+					eleve: e,
+					moy: moyenneGenerale(e, coursC, coursById, selectedExamens),
+					absences: e.absences.length,
+					retards: e.retards.length,
+					incidents: e.incidents.length,
+					erreurs: e.incidents.filter((i) => i.type === 'ERREUR').length,
+					matieres: new Map(matieres.map((m) => [m.id, moyEleveMatiere(e, m.id)]))
+				}));
+				rows.sort((a, b) => {
+					let av: number | string;
+					let bv: number | string;
+					if (sortKey === 'nom') {
+						av = `${a.eleve.nom} ${a.eleve.prenom}`;
+						bv = `${b.eleve.nom} ${b.eleve.prenom}`;
+						return (av as string).localeCompare(bv as string, 'fr') * dir;
+					}
+					if (sortKey === 'moy') {
+						av = a.moy;
+						bv = b.moy;
+					} else {
+						av = a.matieres.get(sortKey as string) || 0;
+						bv = b.matieres.get(sortKey as string) || 0;
+					}
+					return ((av as number) - (bv as number)) * dir;
+				});
+				const classement = rows.map((x, i) => ({ ...x, rang: i + 1 }));
+
+				// Matrice matière × examen (uniquement les examens de la classe)
+				const examensC = selectedOrdered.filter((ex) => ex.classeId === c.id);
+				const matrice = matieres.map((m) => {
+					const cours = coursC.find((cc) => cc.matiereId === m.id);
+					const parExamen = examensC.map((ex) => {
+						const val = cours ? moyenneClasseMatiere(els, coursById, cours.id, [ex.id]) : 0;
+						const sous = (ex.sousExamens || []).map((s) => {
+							let sum = 0;
+							let n = 0;
+							for (const e of els) {
+								const ns = e.notes.filter((nn) => nn.coursId === cours!.id && nn.sousExamenId === s.id);
+								if (ns.length) {
+									sum += round(ns.reduce((t, nn) => t + nn.valeur, 0) / ns.length);
+									n++;
+								}
+							}
+							return { sous: s, val: n ? round(sum / n) : 0 };
+						});
+						return { examen: ex, val, sous };
+					});
+					const vals = parExamen.map((p) => p.val).filter((v) => v > 0);
+					const moy = vals.length ? round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+					return { matiere: m, parExamen, moy };
+				});
+
+				// Points forts / faibles de la classe
+				const moyMat = matieres
+					.map((m) => {
+						const cm = coursC.find((cc) => cc.matiereId === m.id);
+						return { matiere: m, moy: cm ? moyenneClasseMatiere(els, coursById, cm.id, selectedExamens) : 0 };
+					})
+					.filter((x) => x.moy > 0)
+					.sort((a, b) => a.moy - b.moy);
+				const forts = [...moyMat].reverse().slice(0, 3);
+				const faiblesses = moyMat.slice(0, 3);
+
+				const moyenne = els.length
+					? round(classement.reduce((s, x) => s + (x.moy > 0 ? x.moy : 0), 0) / els.length)
+					: 0;
+				const taux = els.length
+					? Math.round((classement.filter((x) => x.moy >= 10).length / els.length) * 100)
+					: 0;
+				const abs = els.reduce((s, e) => s + e.absences.length, 0);
+				const ret = els.reduce((s, e) => s + e.retards.length, 0);
+				const inc = els.reduce((s, e) => s + e.incidents.length, 0);
+
+				return { classe: c, nb: els.length, moyenne, taux, abs, ret, inc, forts, faiblesses, classement, matrice };
+			});
 	});
 
 	// ---- Assiduité des enseignants (heures manquées) ----
@@ -370,13 +533,6 @@
 	}
 	const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1', '#f97316', '#0ea5e9'];
 
-	const matiereBars = $derived(
-		buildBars(
-			matiereHeures.map((m) => m.matiere.nom),
-			matiereHeures.map((m) => moyGlobaleMatiere(m.matiere.id)),
-			{ colors: matiereHeures.map((m) => m.matiere.couleur || palette[0]) }
-		)
-	);
 	const profBars = $derived(
 		buildBars(
 			profAnalyse.filter((p) => p.nom).map((p) => p.nom),
@@ -523,85 +679,6 @@
 				</div>
 			</CardUI>
 
-			<!-- Points forts / faibles -->
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<CardUI class="p-5">
-					<h2 class="mb-3 flex items-center gap-2 font-semibold"><Star class="size-4 text-emerald-500" /> Points forts (matières)</h2>
-					{#if classeForts.forts.length}
-						<ul class="space-y-2">
-							{#each classeForts.forts as m (m.matiere.id)}
-								<li class="flex items-center justify-between rounded-md border border-sidebar-border p-2">
-									<span class="text-sm font-medium">{m.matiere.nom}</span>
-									<span class="font-bold text-emerald-500">{formatFr(m.moy)}/20</span>
-								</li>
-							{/each}
-						</ul>
-					{:else}<p class="text-sm text-muted-foreground">Pas encore de moyenne.</p>{/if}
-				</CardUI>
-				<CardUI class="p-5">
-					<h2 class="mb-3 flex items-center gap-2 font-semibold"><ShieldAlert class="size-4 text-destructive" /> Points faibles (matières)</h2>
-					{#if classeForts.faiblesses.length}
-						<ul class="space-y-2">
-							{#each classeForts.faiblesses as m (m.matiere.id)}
-								<li class="flex items-center justify-between rounded-md border border-sidebar-border p-2">
-									<span class="text-sm font-medium">{m.matiere.nom}</span>
-									<span class="font-bold text-destructive">{formatFr(m.moy)}/20</span>
-								</li>
-							{/each}
-						</ul>
-					{:else}<p class="text-sm text-muted-foreground">Pas encore de moyenne.</p>{/if}
-				</CardUI>
-			</div>
-
-			<!-- Matrice matière × examen -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-					<h2 class="font-semibold">Notes par matière et par examen (moyenne de classe)</h2>
-					<Button variant="outline" size="sm" onclick={() => (showSousExamens = !showSousExamens)}>
-						{showSousExamens ? 'Masquer' : 'Afficher'} les sous-examens
-					</Button>
-				</div>
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Matière</Table.Head>
-								{#each selectedOrdered as ex (ex.id)}
-									<Table.Head class="text-center">{formatExamenNom(ex)}</Table.Head>
-									{#if showSousExamens}
-										{#each ex.sousExamens as s (s.id)}
-											<Table.Head class="text-center text-[11px] text-muted-foreground">{s.nom}</Table.Head>
-										{/each}
-									{/if}
-								{/each}
-								<Table.Head class="text-center">Moy.</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each matrice as row (row.matiere.id)}
-								<Table.Row>
-									<Table.Cell class="font-medium">
-										<span class="inline-flex items-center gap-2">
-											{#if row.matiere.couleur}<span class="size-2.5 rounded-full" style="background-color: {row.matiere.couleur}"></span>{/if}
-											{row.matiere.nom}
-										</span>
-									</Table.Cell>
-									{#each row.parExamen as pe (pe.examen.id)}
-										<Table.Cell class="text-center {pe.val === 0 ? 'opacity-40' : ''}">{pe.val > 0 ? formatFr(pe.val) : '—'}</Table.Cell>
-										{#if showSousExamens}
-											{#each pe.sous as su (su.sous.id)}
-												<Table.Cell class="text-center text-[11px] {su.val === 0 ? 'opacity-40' : ''}">{su.val > 0 ? formatFr(su.val) : '—'}</Table.Cell>
-											{/each}
-										{/if}
-									{/each}
-									<Table.Cell class="text-center font-bold">{formatFr(moyGlobaleMatiere(row.matiere.id))}</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-			</CardUI>
-
 			<!-- Évolution de la moyenne globale -->
 			<CardUI class="p-5">
 				<h2 class="mb-3 font-semibold">Évolution de la moyenne globale par examen</h2>
@@ -628,68 +705,57 @@
 				{/if}
 			</CardUI>
 
-			<!-- Moyenne par matière -->
+			<!-- Comparaison des classes (un seul graphe, matières choisies) -->
 			<CardUI class="p-5">
-				<h2 class="mb-3 font-semibold">Moyenne par matière (toutes classes confondues)</h2>
-				{#if matiereBars.bars.some((b) => b.value > 0)}
+				<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+					<h2 class="font-semibold">Comparaison des classes (moyenne par matière)</h2>
+					<span class="text-xs text-muted-foreground">
+						Choisissez les matières à afficher — tout tient dans un seul graphe.
+					</span>
+				</div>
+				<div class="mb-3 flex flex-wrap gap-2">
+					{#each matieres as m (m.id)}
+						<button
+							type="button"
+							onclick={() => toggleMatiereCompare(m.id)}
+							class="rounded-full border px-3 py-1 text-xs transition-colors {matieresCompareesList.includes(m.id)
+								? 'border-primary bg-primary/15 text-primary'
+								: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
+						>
+							{m.nom}
+						</button>
+					{/each}
+				</div>
+				{#if compGraph.bars.length}
 					<div class="overflow-x-auto">
-						<svg viewBox="0 0 {matiereBars.chartW} {matiereBars.H}" class="mx-auto block h-auto w-full">
+						<svg viewBox="0 0 {compGraph.chartW} {compGraph.H}" class="mx-auto block h-auto w-full">
 							{#each [0, 5, 10, 15, 20] as grid}
-								{@const y = matiereBars.padT + matiereBars.plotH * (1 - grid / 20)}
-								<line x1={matiereBars.padL} y1={y} x2={matiereBars.chartW - matiereBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-								<text x={matiereBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
+								{@const y = compGraph.padT + compGraph.plotH * (1 - grid / 20)}
+								<line x1={compGraph.padL} y1={y} x2={compGraph.chartW - compGraph.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
+								<text x={compGraph.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
 							{/each}
-							{#each matiereBars.bars as b (b.label)}
-								<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill={b.color} rx="3" opacity="0.85" />
-								{#if b.value > 0}<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(b.value)}</text>{/if}
-								<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
+							{#each compGraph.bars as b (b.x + b.classeId)}
+								<rect x={b.x} y={b.y} width={b.barW} height={Math.max(b.h, 1)} fill={b.color} rx="3" opacity="0.85" />
+								<text x={b.x + b.barW / 2} y={b.y - 4} text-anchor="middle" class="fill-foreground text-[9px] font-semibold">{formatFr(b.val)}</text>
+							{/each}
+							{#each compGraph.ms as m, gi (m.id)}
+								{@const cx = compGraph.padL + compGraph.slot * gi + compGraph.slot / 2}
+								<text transform="rotate(-35 {cx} {compGraph.H - compGraph.padB + 14})" x={cx} y={compGraph.H - compGraph.padB + 14} text-anchor="end" class="fill-muted-foreground text-[10px]">{m.nom}</text>
 							{/each}
 						</svg>
 					</div>
-				{:else}<p class="text-sm text-muted-foreground">Aucune note.</p>{/if}
-			</CardUI>
-
-			<!-- Comparaison par classe et par matière -->
-			<CardUI class="p-5">
-				<h2 class="mb-1 font-semibold">Comparaison des moyennes par classe et par matière</h2>
-				<p class="mb-3 text-xs text-muted-foreground">
-					Permet de repérer une classe (ou un enseignant) en difficulté avant de conclure à un
-					problème général.
-				</p>
-				<div class="space-y-4">
-					{#each comparaisonClasses as cmp (cmp.matiere.id)}
-						{@const vals = cmp.parClasse.map((p) => p.val).filter((v): v is number => v !== null)}
-						{#if vals.length > 0}
-							{@const maxY = Math.max(20, ...vals)}
-							{@const n = cmp.parClasse.length}
-							{@const slot = (BAR.chartW - BAR.padL - BAR.padR) / n}
-							{@const barW = Math.min(BAR.barMax, slot * 0.6)}
-							<div>
-								<p class="mb-1 text-sm font-medium">{cmp.matiere.nom}</p>
-								<div class="overflow-x-auto">
-									<svg viewBox="0 0 {BAR.chartW} {BAR.H}" class="mx-auto block h-auto w-full max-w-[760px]">
-										{#each [0, 5, 10, 15, 20] as grid}
-											{@const y = BAR.padT + (BAR.H - BAR.padT - BAR.padB) * (1 - grid / maxY)}
-											<line x1={BAR.padL} y1={y} x2={BAR.chartW - BAR.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-											<text x={BAR.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
-										{/each}
-										{#each cmp.parClasse as p, i (p.classe.id)}
-											{#if p.val !== null}
-												{@const x = BAR.padL + slot * i + (slot - barW) / 2}
-												{@const h = (p.val / maxY) * (BAR.H - BAR.padT - BAR.padB)}
-												{@const y = BAR.padT + (BAR.H - BAR.padT - BAR.padB) - h}
-												{@const cx = x + barW / 2}
-												<rect x={x} y={y} width={barW} height={Math.max(h, 1)} fill={palette[i % palette.length]} rx="3" opacity="0.85" />
-												<text x={cx} y={y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(p.val)}</text>
-												<text transform="rotate(-35 {cx} {BAR.H - BAR.padB + 14})" x={cx} y={BAR.H - BAR.padB + 14} text-anchor="end" class="fill-muted-foreground text-[10px]">{formatClasseNom(p.classe.niveau, p.classe.nom)}</text>
-											{/if}
-										{/each}
-									</svg>
-								</div>
+					<div class="mt-2 flex flex-wrap gap-3">
+						{#each compGraph.cls as c, i (c.id)}
+							<div class="flex items-center gap-2 text-xs">
+								<span class="h-2.5 w-2.5 rounded-full" style="background-color: {palette[i % palette.length]}"></span>
+								<span class="text-muted-foreground">{formatClasseNom(c.niveau, c.nom)}</span>
+								{#if c.titulaire}<span class="text-muted-foreground opacity-70">· {c.titulaire}</span>{/if}
 							</div>
-						{/if}
-					{/each}
-				</div>
+						{/each}
+					</div>
+				{:else}
+					<p class="text-sm text-muted-foreground">Aucune note disponible pour la sélection.</p>
+				{/if}
 			</CardUI>
 
 			<!-- Assiduité des enseignants -->
@@ -740,13 +806,13 @@
 				{/if}
 			</CardUI>
 
-			<!-- Classement des élèves -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-					<h2 class="font-semibold">Classement des élèves</h2>
+			<!-- Contrôles de tri (appliqués à chaque classe) -->
+			<CardUI class="p-4">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<h2 class="font-semibold">Analyse détaillée par classe</h2>
 					<div class="flex flex-wrap items-center gap-2">
 						<div class="w-44">
-							<Input placeholder="Rechercher..." bind:value={searchEleve} />
+							<Input placeholder="Rechercher un élève..." bind:value={searchEleve} />
 						</div>
 						<select
 							class="rounded-md border border-sidebar-border bg-card px-2 py-1.5 text-sm"
@@ -759,45 +825,142 @@
 								<option value={m.id}>{m.nom}</option>
 							{/each}
 						</select>
+						<Button variant="outline" size="sm" onclick={toggleDir}>
+							{sortDir === 'desc' ? 'Décroissant ↓' : 'Croissant ↑'}
+						</Button>
 					</div>
 				</div>
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Rang</Table.Head>
-								<Table.Head>Élève</Table.Head>
-								<Table.Head>Classe</Table.Head>
-								<Table.Head class="text-center">Moy. gén.</Table.Head>
-								<Table.Head class="text-center">Absences</Table.Head>
-								<Table.Head class="text-center">Retards</Table.Head>
-								<Table.Head class="text-center">Erreurs</Table.Head>
-								<Table.Head class="text-center">Incidents</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each classement as r (r.eleve.id)}
-								<Table.Row class="cursor-pointer hover:bg-muted/40" onclick={() => goto(`/analyse/eleve/${r.eleve.id}`)}>
-									<Table.Cell class="font-bold">{r.rang}</Table.Cell>
-									<Table.Cell class="font-medium">
-										{r.eleve.prenom} {r.eleve.nom}
-										{#if r.eleve.im}<span class="block text-[11px] text-muted-foreground">{r.eleve.im}</span>{/if}
-									</Table.Cell>
-									<Table.Cell class="text-muted-foreground">{formatClasseNom(r.eleve.classeNiveau, r.eleve.classeNom)}</Table.Cell>
-									<Table.Cell class="text-center font-bold">{r.moy > 0 ? formatFr(r.moy) : '—'}</Table.Cell>
-									<Table.Cell class="text-center">{r.absences}</Table.Cell>
-									<Table.Cell class="text-center">{r.retards}</Table.Cell>
-									<Table.Cell class="text-center {r.erreurs > 0 ? 'text-destructive' : ''}">{r.erreurs}</Table.Cell>
-									<Table.Cell class="text-center">{r.incidents}</Table.Cell>
-								</Table.Row>
-							{:else}
-								<Table.Row><Table.Cell colspan={8} class="py-6 text-center text-muted-foreground">Aucun élève.</Table.Cell></Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-				<p class="mt-2 text-xs text-muted-foreground">Cliquez sur un élève pour ouvrir son analyse détaillée (parcours, notes, erreurs, absences).</p>
 			</CardUI>
+
+			{#each analysesParClasse as ac (ac.classe.id)}
+				<CardUI class="p-5">
+					<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+						<div>
+							<h2 class="font-semibold">{formatClasseNom(ac.classe.niveau, ac.classe.nom)}</h2>
+							{#if ac.classe.titulaire}
+								<p class="text-xs text-muted-foreground">Prof titulaire : {ac.classe.titulaire}</p>
+							{/if}
+						</div>
+						<div class="flex flex-wrap gap-4 text-sm">
+							<span><span class="font-bold">{formatFr(ac.moyenne)}</span>/20 moy.</span>
+							<span><span class="font-bold">{ac.taux}%</span> réussite</span>
+							<span><span class="font-bold text-amber-500">{ac.abs}</span> abs.</span>
+							<span><span class="font-bold text-orange-500">{ac.ret}</span> ret.</span>
+							<span><span class="font-bold text-destructive">{ac.inc}</span> inc.</span>
+						</div>
+					</div>
+
+					<!-- Points forts / faibles de la classe -->
+					<div class="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+						<div class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+							<p class="mb-2 text-sm font-semibold text-emerald-600">Points forts</p>
+							{#if ac.forts.length}
+								<ul class="space-y-1">
+									{#each ac.forts as m (m.matiere.id)}
+										<li class="flex items-center justify-between text-sm"><span>{m.matiere.nom}</span><span class="font-bold text-emerald-500">{formatFr(m.moy)}/20</span></li>
+									{/each}
+								</ul>
+							{:else}<p class="text-xs text-muted-foreground">Pas de moyenne.</p>{/if}
+						</div>
+						<div class="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+							<p class="mb-2 text-sm font-semibold text-destructive">Points faibles</p>
+							{#if ac.faiblesses.length}
+								<ul class="space-y-1">
+									{#each ac.faiblesses as m (m.matiere.id)}
+										<li class="flex items-center justify-between text-sm"><span>{m.matiere.nom}</span><span class="font-bold text-destructive">{formatFr(m.moy)}/20</span></li>
+									{/each}
+								</ul>
+							{:else}<p class="text-xs text-muted-foreground">Pas de moyenne.</p>{/if}
+						</div>
+					</div>
+
+					<!-- Classement de la classe -->
+					<h3 class="mb-2 text-sm font-semibold">Classement ({ac.nb} élèves)</h3>
+					<div class="mb-4 overflow-x-auto">
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.Head>Rang</Table.Head>
+									<Table.Head>Élève</Table.Head>
+									<Table.Head class="text-center">Moy. gén.</Table.Head>
+									{#if sortMatiere}
+										<Table.Head class="text-center">Note {sortMatiere.nom}</Table.Head>
+									{/if}
+									<Table.Head class="text-center">Absences</Table.Head>
+									<Table.Head class="text-center">Retards</Table.Head>
+									<Table.Head class="text-center">Erreurs</Table.Head>
+									<Table.Head class="text-center">Incidents</Table.Head>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{#each ac.classement as r (r.eleve.id)}
+									<Table.Row class="cursor-pointer hover:bg-muted/40" onclick={() => goto(`/analyse/eleve/${r.eleve.id}`)}>
+										<Table.Cell class="font-bold">{r.rang}</Table.Cell>
+										<Table.Cell class="font-medium">
+											{r.eleve.nom} {r.eleve.prenom}
+											{#if r.eleve.im}<span class="block text-[11px] text-muted-foreground">{r.eleve.im}</span>{/if}
+										</Table.Cell>
+										<Table.Cell class="text-center font-bold">{r.moy > 0 ? formatFr(r.moy) : '—'}</Table.Cell>
+										{#if sortMatiere}
+											<Table.Cell class="text-center font-bold text-primary">
+												{((r.matieres.get(sortKey as string) || 0) > 0) ? formatFr(r.matieres.get(sortKey as string) || 0) : '—'}
+											</Table.Cell>
+										{/if}
+										<Table.Cell class="text-center">{r.absences}</Table.Cell>
+										<Table.Cell class="text-center">{r.retards}</Table.Cell>
+										<Table.Cell class="text-center {r.erreurs > 0 ? 'text-destructive' : ''}">{r.erreurs}</Table.Cell>
+										<Table.Cell class="text-center">{r.incidents}</Table.Cell>
+									</Table.Row>
+								{:else}
+									<Table.Row><Table.Cell colspan={sortMatiere ? 8 : 7} class="py-6 text-center text-muted-foreground">Aucun élève.</Table.Cell></Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					</div>
+
+					<!-- Matrice matière × examen de la classe -->
+					<h3 class="mb-2 text-sm font-semibold">Notes par matière et par examen</h3>
+					<div class="overflow-x-auto">
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.Head>Matière</Table.Head>
+									{#each ac.matrice[0]?.parExamen ?? [] as pe, i (pe.examen.id)}
+										<Table.Head class="text-center">{formatExamenNom(pe.examen)}</Table.Head>
+										{#if showSousExamens}
+											{#each pe.sous as s (s.sous.id)}
+												<Table.Head class="text-center text-[11px] text-muted-foreground">{s.sous.nom}</Table.Head>
+											{/each}
+										{/if}
+									{/each}
+									<Table.Head class="text-center">Moy.</Table.Head>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{#each ac.matrice as row (row.matiere.id)}
+									<Table.Row>
+										<Table.Cell class="font-medium">
+											<span class="inline-flex items-center gap-2">
+												{#if row.matiere.couleur}<span class="size-2.5 rounded-full" style="background-color: {row.matiere.couleur}"></span>{/if}
+												{row.matiere.nom}
+											</span>
+										</Table.Cell>
+										{#each row.parExamen as pe (pe.examen.id)}
+											<Table.Cell class="text-center {pe.val === 0 ? 'opacity-40' : ''}">{pe.val > 0 ? formatFr(pe.val) : '—'}</Table.Cell>
+											{#if showSousExamens}
+												{#each pe.sous as su (su.sous.id)}
+													<Table.Cell class="text-center text-[11px] {su.val === 0 ? 'opacity-40' : ''}">{su.val > 0 ? formatFr(su.val) : '—'}</Table.Cell>
+												{/each}
+											{/if}
+										{/each}
+										<Table.Cell class="text-center font-bold">{formatFr(row.moy)}</Table.Cell>
+									</Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					</div>
+				</CardUI>
+			{/each}
 		{/if}
 	</div>
 </div>
