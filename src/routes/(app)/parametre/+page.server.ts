@@ -4,6 +4,7 @@ import {
 	getActiveAnneeScolaire,
 	createAnneeScolaire,
 	setActiveAnneeScolaire,
+	getSeries,
 	prisma
 } from '$lib/server/prisma';
 import type { StatutCompte, RoleCompte } from '@prisma/client';
@@ -12,6 +13,7 @@ import { logActivity } from '$lib/server/activity';
 import { broadcastNotification, type NotificationScope } from '$lib/server/notifications';
 import { broadcastRealtime } from '$lib/server/realtime';
 import { hasAdminPower } from '$lib/permissions';
+import { mergeSeries, SERIES_PAR_DEFAUT } from '$lib/utils';
 import { fail, redirect } from '@sveltejs/kit';
 
 function genererMotDePasse(longueur = 6): string {
@@ -31,6 +33,67 @@ interface CompteView {
 	role: string;
 	dateCreation: string;
 	statut: 'en_attente' | 'actif' | 'bloque';
+}
+
+/**
+ * Compare la moyenne d'une matière au seuil d'une condition de règle d'affectation.
+ * Opérateurs supportés : '>=', '>', '<=', '<', '=='. Par défaut '>='.
+ */
+function comparerMoyenne(moyenne: number, op: string, seuil: number): boolean {
+	switch (op) {
+		case '>':
+			return moyenne > seuil;
+		case '>=':
+			return moyenne >= seuil;
+		case '<':
+			return moyenne < seuil;
+		case '<=':
+			return moyenne <= seuil;
+		case '==':
+			return Math.abs(moyenne - seuil) < 1e-9;
+		default:
+			return moyenne >= seuil;
+	}
+}
+
+/**
+ * Retourne la moyenne (sur 20) d'une matière pour la classe donnée, à partir
+ * des moyennes par cours. Renvoie 0 si la matière n'est pas enseignée ou notée.
+ */
+function moyParMatiereClasse(
+	moyParCours: Map<string, number>,
+	coursList: { id: string; classeId: string; matiereId: string | null }[],
+	classeId: string | undefined | null,
+	matiereId: string
+): number {
+	if (!classeId) return 0;
+	const cours = coursList.find((c) => c.classeId === classeId && c.matiereId === matiereId);
+	if (cours && moyParCours.has(cours.id)) return moyParCours.get(cours.id) as number;
+	return 0;
+}
+
+/**
+ * Calcule la moyenne par cours (pondérée par le coefficient de la note ou du
+ * cours) à partir d'un ensemble de notes filtré.
+ */
+function calculerMoyParCours(
+	notes: { coursId: string; valeur: number; coefficient: number }[],
+	coefCours: Map<string, number>
+): Map<string, number> {
+	const parMatiere = new Map<string, { pts: number; coef: number }>();
+	for (const n of notes) {
+		const coef = n.coefficient || coefCours.get(n.coursId) || 0;
+		if (coef <= 0) continue;
+		const m = parMatiere.get(n.coursId) ?? { pts: 0, coef: 0 };
+		m.pts += n.valeur * coef;
+		m.coef += coef;
+		parMatiere.set(n.coursId, m);
+	}
+	const moy = new Map<string, number>();
+	for (const [coursId, m] of parMatiere) {
+		if (m.coef > 0) moy.set(coursId, m.pts / m.coef);
+	}
+	return moy;
 }
 
 export const load: PageServerLoad = async () => {
@@ -87,7 +150,24 @@ export const load: PageServerLoad = async () => {
 		done: n.actionType === 'PASSWORD_RESET_DONE'
 	}));
 
-	return { comptes, listeAnnees, demandesReset };
+	const anneeActive = await getActiveAnneeScolaire();
+	const series = anneeActive ? await getSeries(anneeActive.id) : mergeSeries(SERIES_PAR_DEFAUT);
+	const matieres = anneeActive
+		? await prisma.matiere.findMany({
+				where: { anneeId: anneeActive.id },
+				select: { id: true, nom: true },
+				orderBy: { nom: 'asc' }
+			})
+		: [];
+	const examens = anneeActive
+		? await prisma.examen.findMany({
+				where: { anneeId: anneeActive.id },
+				select: { id: true, nom: true, periode: true, date: true },
+				orderBy: { date: 'asc' }
+			})
+		: [];
+
+	return { comptes, listeAnnees, demandesReset, series, matieres, examens };
 };
 
 export const actions: Actions = {
@@ -202,43 +282,73 @@ export const actions: Actions = {
 			return fail(403, { error: 'Réservé à l’administrateur' });
 		}
 
+		const formData = await request.formData();
+
+		// Règles d'affectation de série (saisies dans le formulaire de clôture).
+		// Structure : { examens: { tous, ids }, series: [{ serie, conditions: [...] }] }
+		const reglesRaw = (formData.get('regles') as string) || '';
+		let reglesConfig: {
+			examens?: { tous: boolean; ids: string[] };
+			series?: { serie: string; conditions: { matiereId: string; op: string; valeur: number }[] }[];
+		} = { examens: { tous: false, ids: [] }, series: [] };
+		if (reglesRaw) {
+			try {
+				const parsed = JSON.parse(reglesRaw);
+				if (parsed && typeof parsed === 'object') reglesConfig = parsed;
+			} catch {
+				// Règles invalides : on ignore et on ne fait que le recalcul.
+			}
+		}
+		const examensConfig = reglesConfig.examens ?? { tous: false, ids: [] };
+		const regles = reglesConfig.series ?? [];
+
 		const annee = await getActiveAnneeScolaire();
 		if (!annee) return fail(400, { error: 'Aucune année scolaire active' });
 
+		// Ensemble des examens autorisés pour le calcul des moyennes de matière.
+		const examenIdsAnnee = (
+			await prisma.examen.findMany({ where: { anneeId: annee.id }, select: { id: true } })
+		).map((e) => e.id);
+		const examensAutorises = new Set<string>(
+			examenIdsAnnee.filter((id) => examensConfig.tous || examensConfig.ids.includes(id))
+		);
+
 		const inscriptions = await prisma.inscription.findMany({
 			where: { anneeId: annee.id, actif: true },
-			include: { eleve: { include: { notes: true } } }
+			include: {
+				eleve: { include: { notes: true } },
+				classe: { select: { id: true, niveau: true, serie: true } }
+			}
 		});
 
-		// Coefficients des cours de l'année pour calculer la moyenne générale.
-		const cours = await prisma.cours.findMany({
+		// Coefficients des cours + matières enseignées par classe (pour la moyenne par matière).
+		const coursList = await prisma.cours.findMany({
 			where: { anneeId: annee.id },
-			select: { id: true, coefficient: true }
+			select: { id: true, classeId: true, matiereId: true, coefficient: true }
 		});
-		const coefCours = new Map<string, number>(cours.map((c) => [c.id, c.coefficient || 0]));
+		const coefCours = new Map<string, number>(coursList.map((c) => [c.id, c.coefficient || 0]));
 
 		let majeres = 0;
 		let redoublants = 0;
+		let seriesAttribuees = 0;
 		for (const ins of inscriptions) {
+			const classe = ins.classe;
 			const notes = (ins.eleve.notes ?? []).filter((n) => coefCours.has(n.coursId));
 
-			// Moyenne par matière (pondérée par le coefficient de la note ou du cours).
-			const parMatiere = new Map<string, { pts: number; coef: number }>();
-			for (const n of notes) {
-				const coef = n.coefficient || coefCours.get(n.coursId) || 0;
-				if (coef <= 0) continue;
-				const m = parMatiere.get(n.coursId) ?? { pts: 0, coef: 0 };
-				m.pts += n.valeur * coef;
-				m.coef += coef;
-				parMatiere.set(n.coursId, m);
-			}
+			// Moyennes par cours sur l'ensemble des notes (pour la moyenne générale / passation).
+			const moyParCours = calculerMoyParCours(notes, coefCours);
 
+			// Moyennes par cours restreintes aux examens sélectionnés (pour les règles de série).
+			const notesExam = notes.filter((n) => n.examenId && examensAutorises.has(n.examenId));
+			const moyParCoursExam = calculerMoyParCours(notesExam, coefCours);
+
+			// Moyenne générale (pondérée par le coefficient du cours).
 			let totalPts = 0;
 			let totalCoef = 0;
-			for (const [coursId, m] of parMatiere) {
-				if (m.coef <= 0) continue;
+			for (const [coursId, moy] of moyParCours) {
 				const cCoef = coefCours.get(coursId) || 0;
-				totalPts += (m.pts / m.coef) * cCoef;
+				if (cCoef <= 0) continue;
+				totalPts += moy * cCoef;
 				totalCoef += cCoef;
 			}
 
@@ -249,17 +359,38 @@ export const actions: Actions = {
 			const redoublant = moyenne < 10;
 			if (redoublant) redoublants++;
 
+			// Affectation de série : uniquement pour les 2nde (niveau 0) admis.
+			// Pour les 1ère/terminales, la série est déjà choisie (automatique) : on la conserve.
+			let serieAffectee: string | null = null;
+			if (!redoublant && classe?.niveau === 0 && regles.length > 0) {
+				for (const r of regles) {
+					const ok = (r.conditions ?? []).every((c) =>
+						comparerMoyenne(
+							moyParMatiereClasse(moyParCoursExam, coursList, classe?.id, c.matiereId),
+							c.op,
+							Number(c.valeur)
+						)
+					);
+					if (ok) {
+						serieAffectee = (r.serie || '').trim().toUpperCase() || null;
+						break;
+					}
+				}
+				if (serieAffectee) seriesAttribuees++;
+			}
+
 			await prisma.eleve.update({
 				where: { id: ins.eleve.id },
 				data: {
 					redoublant,
-					situation: redoublant ? 'R' : 'P'
+					situation: redoublant ? 'R' : 'P',
+					...(serieAffectee ? { serie: serieAffectee } : {})
 				}
 			});
 			majeres++;
 		}
 
-		return { termine: true, majeres, redoublants };
+		return { termine: true, majeres, redoublants, seriesAttribuees };
 	},
 
 	traiterReset: async ({ request, locals }) => {

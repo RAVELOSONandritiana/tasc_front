@@ -9,7 +9,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchInput from '$lib/components/user/SearchInput.svelte';
-	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock, KeyRound } from '@lucide/svelte/icons';
+	import { Settings, Shield, CalendarRange, Plus, Check, Ban, Lock, KeyRound, Trash2 } from '@lucide/svelte/icons';
 	import { loadingForm } from '$lib/actions/loadingForm';
 	import type { PageProps } from './$types';
 
@@ -44,6 +44,41 @@
 	);
 
 	let confirmTerminer = $state(false);
+
+	// Règles d'affectation de série (élèves de 2nde admis) saisies lors de la clôture.
+	type Condition = { matiereId: string; op: string; valeur: string };
+	let conditionsParSerie = $state<Record<string, Condition[]>>(
+		Object.fromEntries((data.series ?? []).map((s) => [s, []]))
+	);
+
+	// Sélection des examens prise en compte (globale à toutes les séries).
+	let tousLesExamens = $state(false);
+	let examensSelectionnes = $state<string[]>([]);
+
+	function ajouterCondition(serie: string) {
+		conditionsParSerie[serie] = [
+			...(conditionsParSerie[serie] ?? []),
+			{ matiereId: '', op: '>=', valeur: '' }
+		];
+	}
+	function supprimerCondition(serie: string, idx: number) {
+		conditionsParSerie[serie] = (conditionsParSerie[serie] ?? []).filter((_, i) => i !== idx);
+	}
+
+	// Sérialise les règles (séries ayant au moins une condition complète) pour l'envoi.
+	const reglesJSON = $derived(
+		JSON.stringify({
+			examens: { tous: tousLesExamens, ids: tousLesExamens ? [] : examensSelectionnes },
+			series: (data.series ?? [])
+				.map((s) => ({
+					serie: s,
+					conditions: (conditionsParSerie[s] ?? [])
+						.filter((c) => c.matiereId && c.valeur !== '')
+						.map((c) => ({ matiereId: c.matiereId, op: c.op, valeur: Number(c.valeur) }))
+				}))
+				.filter((r) => r.conditions.length > 0)
+		})
+	);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col bg-background text-foreground">
@@ -280,7 +315,7 @@
 						<AlertDialog.Trigger class={buttonVariants({ variant: 'destructive', size: 'sm' })}>
 							Terminer l'année scolaire
 						</AlertDialog.Trigger>
-						<AlertDialog.Content>
+						<AlertDialog.Content class="max-w-2xl">
 							<AlertDialog.Header>
 								<AlertDialog.Title>Terminer l'année scolaire ?</AlertDialog.Title>
 								<AlertDialog.Description>
@@ -289,9 +324,120 @@
 									autres en <strong>Passant</strong>. Les élèves sans note ne sont pas modifiés.
 								</AlertDialog.Description>
 							</AlertDialog.Header>
+
+							<div class="max-h-[55vh] space-y-3 overflow-y-auto rounded-lg border border-sidebar-border p-3">
+								<p class="text-xs text-muted-foreground">
+									<strong>Règles d'affectation des séries</strong> (élèves de 2nde admis).
+									Pour chaque série, définissez des conditions sur la moyenne d'une matière
+									(issues des examens choisis) : un élève est affecté à la
+									<strong>première série</strong> dont <strong>toutes</strong> les conditions
+									sont vraies. Si aucune règle ne correspond, la série reste à renseigner
+									manuellement en délibération.
+								</p>
+
+								<!-- Sélection des examens : globale à toutes les séries -->
+								<div class="rounded-lg border border-primary/30 bg-primary/5 p-3">
+									<p class="text-xs font-medium">Périodes prises en compte (global à toutes les séries)</p>
+									<label class="mt-2 flex w-fit items-center gap-2 text-sm">
+										<input type="checkbox" bind:checked={tousLesExamens} class="size-4" />
+										Inclure tous les examens
+									</label>
+									{#if !tousLesExamens}
+										<div class="mt-2 flex flex-wrap gap-2">
+											{#each (data.examens ?? []) as ex (ex.id)}
+												<label
+													class="flex items-center gap-1.5 rounded-md border border-input bg-background px-2.5 py-1 text-xs"
+												>
+													<input type="checkbox" value={ex.id} bind:group={examensSelectionnes} class="size-3.5" />
+													<span class="font-medium">{ex.nom}</span>
+													{#if ex.periode}<span class="text-muted-foreground">· {ex.periode}</span>{/if}
+													<span class="text-muted-foreground"
+														>{new Date(ex.date).toLocaleDateString('fr-FR')}</span
+													>
+												</label>
+											{/each}
+										</div>
+										{#if (data.examens ?? []).length === 0}
+											<p class="mt-2 text-xs italic text-muted-foreground">Aucun examen disponible.</p>
+										{/if}
+									{/if}
+								</div>
+
+								{#if (data.series ?? []).length === 0}
+									<p class="text-xs italic text-muted-foreground">Aucune série disponible dans l'établissement.</p>
+								{/if}
+
+								{#each (data.series ?? []) as serie (serie)}
+									<div class="rounded-lg border border-sidebar-border p-3">
+										<div class="flex items-center justify-between gap-2">
+											<span class="text-sm font-semibold">Série {serie.toUpperCase()}</span>
+											<Button
+												type="button"
+												size="sm"
+												variant="outline"
+												class="h-7 gap-1 text-xs"
+												onclick={() => ajouterCondition(serie)}
+											>
+												<Plus class="size-3" /> Condition
+											</Button>
+										</div>
+
+										{#each (conditionsParSerie[serie] ?? []) as cond, i (i)}
+											<div class="mt-2 flex flex-wrap items-center gap-2">
+												<select
+													class="h-8 min-w-[10rem] rounded-md border border-input bg-background px-3 text-sm"
+													bind:value={cond.matiereId}
+												>
+													<option value="">Matière…</option>
+													{#each (data.matieres ?? []) as mat (mat.id)}
+														<option value={mat.id}>{mat.nom}</option>
+													{/each}
+												</select>
+												<select
+													class="h-8 w-16 rounded-md border border-input bg-background px-3 text-sm"
+													bind:value={cond.op}
+												>
+													<option value=">=">≥</option>
+													<option value=">">&gt;</option>
+													<option value="<=">≤</option>
+													<option value="<">&lt;</option>
+													<option value="==">=</option>
+												</select>
+												<Input
+													type="number"
+													step="0.5"
+													min="0"
+													max="20"
+													placeholder="Moyenne"
+													class="h-8 w-28 px-3"
+													bind:value={cond.valeur}
+												/>
+												<Button
+													type="button"
+													size="sm"
+													variant="ghost"
+													class="h-7 px-2 text-destructive"
+													onclick={() => supprimerCondition(serie, i)}
+												>
+													<Trash2 class="size-3.5" />
+												</Button>
+											</div>
+										{/each}
+
+										{#if (conditionsParSerie[serie] ?? []).length === 0}
+											<p class="mt-2 text-xs italic text-muted-foreground">
+												Aucune condition : cette série ne sera pas attribuée automatiquement.
+											</p>
+										{/if}
+									</div>
+								{/each}
+
+								<input type="hidden" name="regles" value={reglesJSON} form="form-terminer" />
+							</div>
+
 							<AlertDialog.Footer>
 								<AlertDialog.Cancel>Annuler</AlertDialog.Cancel>
-								<form method="POST" action="?/terminerAnnee" use:loadingForm>
+								<form id="form-terminer" method="POST" action="?/terminerAnnee" use:loadingForm>
 									<AlertDialog.Action type="submit">Terminer l'année</AlertDialog.Action>
 								</form>
 							</AlertDialog.Footer>
@@ -304,6 +450,9 @@
 						<p class="font-medium text-emerald-600">Année clôturée.</p>
 						<p class="mt-1">
 							{form.majeres} élève(s) recalculé(s), dont {form.redoublants} en redoublant.
+							{#if form.seriesAttribuees}
+								{form.seriesAttribuees} élève(s) de 2nde ont été affecté(s) automatiquement à une série.
+							{/if}
 						</p>
 					</div>
 				{/if}

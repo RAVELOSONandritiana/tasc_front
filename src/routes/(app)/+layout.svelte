@@ -25,7 +25,8 @@
 		UserRoundSearch,
 		Settings,
 		LogOut,
-		FileText
+		FileText,
+		BarChart3
 	} from '@lucide/svelte/icons';
 
 	let { children, data } = $props();
@@ -76,6 +77,12 @@
 			label: 'Rapports',
 			icon: FileText,
 			roles: ['ADMINISTRATEUR', 'SURVEILLANT', 'ENSEIGNANT', 'OPERATEUR']
+		},
+		{
+			path: '/analyse',
+			label: 'Analyses',
+			icon: BarChart3,
+			roles: ['ADMINISTRATEUR', 'ENSEIGNAUT', 'SURVEILLANT', 'PERSONNEL', 'OPERATEUR']
 		},
 		{ path: '/parametre', label: 'Paramètres', icon: Settings, roles: ['ADMINISTRATEUR'] },
 		{
