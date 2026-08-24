@@ -37,17 +37,19 @@
 	function supprimerOperateur(id: string) {
 		listOperateur = listOperateur.filter((p) => p.id !== id);
 	}
-	const allPersonnel = $state<Personne[]>((data.personnel || []).map((p) => ({
-		id: p.id,
-		name: p.name,
-		lastname: p.lastname,
-		domicile: p.domicile ?? undefined,
-		fokontany: p.fokontany ?? undefined,
-		commune: p.commune ?? undefined,
-		phone: p.phone,
-		email: p.email,
-		compte: p.compte ?? undefined
-	})));
+	const allPersonnel = $state<Personne[]>(
+		(data.personnel || []).map((p) => ({
+			id: p.id,
+			name: p.name,
+			lastname: p.lastname,
+			domicile: p.domicile ?? undefined,
+			fokontany: p.fokontany ?? undefined,
+			commune: p.commune ?? undefined,
+			phone: p.phone,
+			email: p.email,
+			compte: p.compte ?? undefined
+		}))
+	);
 
 	let searchText = $state('');
 	let dialogOpen = $state(false);
@@ -66,7 +68,10 @@
 	const searchResults = $derived(
 		searchQuery.trim().length > 0 && !selectedPersonne
 			? allPersonnel.filter((p) =>
-					`${p.name} ${p.lastname} ${p.email} ${p.phone}`.toLowerCase().includes(searchQuery.toLowerCase())
+					`${p.name}${p.lastname}${p.email}${p.phone}`
+						.toLowerCase()
+						.replaceAll(/\s+/g, '')
+						.includes(searchQuery.toLowerCase().replaceAll(/\s+/g, ''))
 				)
 			: []
 	);
@@ -78,7 +83,7 @@
 	}
 
 	function onSearchChange(value: string) {
-		searchQuery = value.replaceAll(' ', '').toLowerCase();
+		searchQuery = value;
 	}
 
 	function selectPersonne(p: Personne) {
@@ -108,7 +113,10 @@
 					</div>
 					<Button
 						class="h-9 gap-2 rounded-lg px-5 text-sm font-medium"
-						onclick={() => { resetForm(); dialogOpen = true; }}
+						onclick={() => {
+							resetForm();
+							dialogOpen = true;
+						}}
 					>
 						<Plus class="size-3.5" />
 						Nouveau
@@ -122,11 +130,27 @@
 		</div>
 
 		<div class="p-4 md:p-6">
-			{#if listFiltered.length === 0}
-				<div class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+			{#if listOperateur.length === 0}
+				<div
+					class="animate-fade-in flex flex-col items-center justify-center py-16 text-muted-foreground"
+				>
 					<IdCard class="size-12 text-muted-foreground/30" />
 					<p class="mt-4 text-sm font-medium">Aucun opérateur enregistré</p>
 					<p class="mt-1 text-xs">Ajoutez un opérateur pour commencer.</p>
+					<Button
+						class="mt-4"
+						variant="outline"
+						onclick={() => {
+							resetForm();
+							dialogOpen = true;
+						}}>Nouveau</Button
+					>
+				</div>
+			{:else if listFiltered.length === 0}
+				<div class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+					<IdCard class="size-12 text-muted-foreground/30" />
+					<p class="mt-4 text-sm font-medium">Aucun résultat</p>
+					<p class="mt-1 text-xs">Aucun opérateur ne correspond à votre recherche.</p>
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -155,33 +179,40 @@
 
 <Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Content class="sm:max-w-106.25">
-		<form method="POST" action="?/createFromPersonne" use:enhance={() => {
-			submitting = true;
-			return async ({ result }: { result: ActionResult }) => {
-				submitting = false;
-				if (result.type === 'success') {
-					const newOp = result.data?.result;
-					if (newOp?.compte && newOp?.personne) {
-						const mappedOp = {
-							id: newOp.compte.id,
-							name: newOp.personne.name,
-							lastname: newOp.personne.lastname,
-							domicile: newOp.personne.domicile || '',
-							fokontany: newOp.personne.fokontany || '',
-							commune: newOp.personne.commune || '',
-							phone: newOp.personne.phone,
-							email: newOp.personne.email,
-							imageUrl: newOp.personne.imageUrl || null,
-							compte: newOp.compte,
-							personneId: newOp.personne.id
-						};
-						listOperateur = [...listOperateur, mappedOp];
+		<form
+			method="POST"
+			action="?/createFromPersonne"
+			use:enhance={() => {
+				submitting = true;
+				return async ({ result }: { result: ActionResult }) => {
+					submitting = false;
+					if (result.type === 'success') {
+						const newOp = result.data?.result;
+						if (newOp?.compte && newOp?.personne) {
+							const mappedOp = {
+								id: newOp.compte.id,
+								name: newOp.personne.name,
+								lastname: newOp.personne.lastname,
+								domicile: newOp.personne.domicile || '',
+								fokontany: newOp.personne.fokontany || '',
+								commune: newOp.personne.commune || '',
+								phone: newOp.personne.phone,
+								email: newOp.personne.email,
+								imageUrl: newOp.personne.imageUrl || null,
+								compte: newOp.compte,
+								personneId: newOp.personne.id
+							};
+							listOperateur = [...listOperateur, mappedOp];
+						}
+						success = true;
+						setTimeout(() => {
+							dialogOpen = false;
+							resetForm();
+						}, 800);
 					}
-					success = true;
-					setTimeout(() => { dialogOpen = false; resetForm(); }, 800);
-				}
-			};
-		}}>
+				};
+			}}
+		>
 			<Dialog.Header class="mb-1 space-y-1">
 				<Dialog.Title class="text-xl font-semibold">Ajouter un opérateur</Dialog.Title>
 				<Dialog.Description>
@@ -204,10 +235,15 @@
 							{#each searchResults as p (p.id)}
 								<button
 									type="button"
-									class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left hover:bg-muted transition-colors"
+									class="flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted"
 									onclick={() => selectPersonne(p)}
 								>
-									<PersonAvatar imageUrl={p.imageUrl} name={p.name} lastname={p.lastname} sizeClass="size-9" />
+									<PersonAvatar
+										imageUrl={p.imageUrl}
+										name={p.name}
+										lastname={p.lastname}
+										sizeClass="size-9"
+									/>
 									<div class="min-w-0">
 										<p class="text-sm font-medium">{p.name} {p.lastname}</p>
 										<p class="text-xs text-muted-foreground">{p.email || ''}</p>
@@ -222,9 +258,17 @@
 				{#if selectedPersonne}
 					<div class="flex items-center justify-between gap-2 rounded-md border p-3">
 						<div class="flex min-w-0 items-center gap-3">
-							<PersonAvatar imageUrl={selectedPersonne.imageUrl} name={selectedPersonne.name} lastname={selectedPersonne.lastname} sizeClass="size-9" />
+							<PersonAvatar
+								imageUrl={selectedPersonne.imageUrl}
+								name={selectedPersonne.name}
+								lastname={selectedPersonne.lastname}
+								sizeClass="size-9"
+							/>
 							<div class="min-w-0">
-								<p class="text-sm font-medium">{selectedPersonne.name} {selectedPersonne.lastname}</p>
+								<p class="text-sm font-medium">
+									{selectedPersonne.name}
+									{selectedPersonne.lastname}
+								</p>
 								<p class="text-xs text-muted-foreground">{selectedPersonne.email || ''}</p>
 								<p class="text-xs text-muted-foreground">{selectedPersonne.phone || ''}</p>
 							</div>
@@ -232,7 +276,11 @@
 						<button
 							type="button"
 							class="rounded-full p-1 hover:bg-muted"
-							onclick={() => { selectedPersonne = null; searchQuery = ''; matricule = ''; }}
+							onclick={() => {
+								selectedPersonne = null;
+								searchQuery = '';
+								matricule = '';
+							}}
 						>
 							<X class="size-4 text-muted-foreground" />
 						</button>
@@ -242,7 +290,12 @@
 				{#if selectedPersonne}
 					<div class="grid gap-2">
 						<Label for="matricule">Matricule</Label>
-						<Input id="matricule" name="matricule" bind:value={matricule} placeholder="Ex: OPE-047" />
+						<Input
+							id="matricule"
+							name="matricule"
+							bind:value={matricule}
+							placeholder="Ex: OPE-047"
+						/>
 					</div>
 				{/if}
 			</div>
@@ -251,8 +304,21 @@
 			<input type="hidden" name="matricule" value={matricule} />
 
 			<Dialog.Footer class="mt-2 gap-2 sm:justify-end">
-				<Button type="button" variant="outline" size="sm" onclick={() => { resetForm(); dialogOpen = false; }}>Annuler</Button>
-				<Button type="submit" variant="default" size="sm" disabled={submitting || success || !selectedPersonne}>
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onclick={() => {
+						resetForm();
+						dialogOpen = false;
+					}}>Annuler</Button
+				>
+				<Button
+					type="submit"
+					variant="default"
+					size="sm"
+					disabled={submitting || success || !selectedPersonne}
+				>
 					{#if submitting}
 						<Spinner class="mr-2 size-4" />
 						Création...

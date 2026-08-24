@@ -2,7 +2,13 @@ import 'dotenv/config';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { capitalize } from '$lib/actions/capitalize';
-import { formatClasseNom, mergeSeries, normalizeSerie, normalizeIp, SERIES_PAR_DEFAUT } from '$lib/utils';
+import {
+	formatClasseNom,
+	mergeSeries,
+	normalizeSerie,
+	normalizeIp,
+	SERIES_PAR_DEFAUT
+} from '$lib/utils';
 import type { EleveStats } from '$lib/types/Personne.type';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -21,7 +27,13 @@ function sortByLower<T>(items: T[], getKey: (item: T) => string | null | undefin
 	);
 }
 
-const STAFF_ROLES = ['ENSEIGNANT', 'SURVEILLANT', 'PERSONNEL', 'ADMINISTRATEUR', 'OPERATEUR'] as const;
+const STAFF_ROLES = [
+	'ENSEIGNANT',
+	'SURVEILLANT',
+	'PERSONNEL',
+	'ADMINISTRATEUR',
+	'OPERATEUR'
+] as const;
 
 // Une personne est un élève uniquement si elle n'est liée à aucun profil
 // personnel / professeur / surveillant, et si son compte (s'il existe) n'a
@@ -84,11 +96,15 @@ export async function getEleveById(id: string, anneeId?: string | null) {
 				orderBy: { date: 'desc' }
 			},
 			absences: {
-				where: anneeId ? { OR: [{ inscription: { anneeId } }, { inscriptionId: null }] } : undefined,
+				where: anneeId
+					? { OR: [{ inscription: { anneeId } }, { inscriptionId: null }] }
+					: undefined,
 				orderBy: { date: 'desc' }
 			},
 			retards: {
-				where: anneeId ? { OR: [{ inscription: { anneeId } }, { inscriptionId: null }] } : undefined,
+				where: anneeId
+					? { OR: [{ inscription: { anneeId } }, { inscriptionId: null }] }
+					: undefined,
 				orderBy: { date: 'desc' }
 			}
 		}
@@ -289,8 +305,10 @@ export async function getPersonnes() {
 export async function getAllPersonnesForSurveillant() {
 	const personnes = await prisma.personne.findMany({
 		where: {
+			eleve: null,
+			professeur: null,
 			surveillant: null,
-			compte: null
+			OR: [{ compte: null }, { compte: { role: 'PERSONNEL' } }]
 		},
 		include: {
 			compte: {
@@ -360,7 +378,8 @@ export async function getAllPersonnes() {
 		where: {
 			eleve: null,
 			professeur: null,
-			compte: null
+			surveillant: null,
+			OR: [{ compte: null }, { compte: { role: 'PERSONNEL' } }]
 		},
 		include: {
 			compte: {
@@ -905,7 +924,7 @@ export async function updateEleveInfos(
 		where: { id },
 		data: {
 			redoublant: data.redoublant,
-			situation: data.situation === undefined ? undefined : ((data.situation as any) || 'P'),
+			situation: data.situation === undefined ? undefined : (data.situation as any) || 'P',
 			dateNaissance: data.dateNaissance === undefined ? undefined : new Date(data.dateNaissance),
 			im: data.im === undefined ? undefined : data.im || null,
 			sexe: data.sexe === undefined ? undefined : data.sexe || null,
@@ -954,24 +973,23 @@ export async function getActiveAnneeScolaire() {
 }
 
 export async function createAnneeScolaire(nom: string, seuilAbsenceConvoc?: number) {
-  return prisma.$transaction(async (tx) => {
-    const hasActive = await tx.anneeScolaire.findFirst({ where: { active: true } });
-    // La nouvelle annee est inactive par defaut ; elle ne devient active
-    // qu'apres selection explicite. Si aucune annee n'est active, on l'active
-    // pour eviter de bloquer l'application.
-    const active = !hasActive;
-    if (active) {
-      await tx.anneeScolaire.updateMany({ data: { active: false } });
-    }
-    return tx.anneeScolaire.create({
-      data: {
-        nom,
-        active,
-        seuilAbsenceConvoc:
-          seuilAbsenceConvoc && seuilAbsenceConvoc > 0 ? seuilAbsenceConvoc : 3
-      }
-    });
-  });
+	return prisma.$transaction(async (tx) => {
+		const hasActive = await tx.anneeScolaire.findFirst({ where: { active: true } });
+		// La nouvelle annee est inactive par defaut ; elle ne devient active
+		// qu'apres selection explicite. Si aucune annee n'est active, on l'active
+		// pour eviter de bloquer l'application.
+		const active = !hasActive;
+		if (active) {
+			await tx.anneeScolaire.updateMany({ data: { active: false } });
+		}
+		return tx.anneeScolaire.create({
+			data: {
+				nom,
+				active,
+				seuilAbsenceConvoc: seuilAbsenceConvoc && seuilAbsenceConvoc > 0 ? seuilAbsenceConvoc : 3
+			}
+		});
+	});
 }
 
 export async function setActiveAnneeScolaire(id: string) {
@@ -1057,7 +1075,7 @@ export async function getElevesDisponiblesForClasse(classeId: string) {
 
 	// Un eleve dont la personne est aussi un personnel / professeur /
 	// surveillant ne doit jamais etre proposable pour une inscription en classe.
-		const eleves = await prisma.eleve.findMany({
+	const eleves = await prisma.eleve.findMany({
 		where: {
 			id: { notIn: [...inscritsIds] },
 			personne: elevePersonneFilter()
@@ -1384,7 +1402,10 @@ export async function deleteExamen(id: string) {
 		// Supprime d'abord les notes liees a l'examen ou a ses sous-examens
 		await tx.note.deleteMany({
 			where: {
-				OR: [{ examenId: id }, ...(sousExamenIds.length ? [{ sousExamenId: { in: sousExamenIds } }] : [])]
+				OR: [
+					{ examenId: id },
+					...(sousExamenIds.length ? [{ sousExamenId: { in: sousExamenIds } }] : [])
+				]
 			}
 		});
 		// La suppression de l'examen supprime ses sous-examens en cascade
