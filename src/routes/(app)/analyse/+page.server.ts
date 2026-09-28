@@ -1,5 +1,21 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
+import { fail } from '@sveltejs/kit';
 import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
+import { getEleveDetail } from '$lib/server/analyseEleve';
+import { moyenneGenerale, moyenneClasseMatiere, round } from '$lib/utils/analyse';
+import { formatClasseNom, formatExamenNom } from '$lib/utils';
+
+type CoursSel = {
+	id: string;
+	nom: string;
+	coefficient: number;
+	professeurId: string | null;
+	professeur: string;
+	participants: string[];
+	matiereId: string;
+	classeId: string;
+	matiere: { id: string; nom: string; couleur?: string };
+};
 
 function dureeHeures(heureDebut: string, heureFin: string): number {
 	const [dh, dm] = heureDebut.split(':').map(Number);
@@ -27,9 +43,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		niveau: c.niveau,
 		serie: c.serie,
 		titulaireId: c.titulaireId,
-		titulaire: c.titulaire
-			? `${c.titulaire.personne.name} ${c.titulaire.personne.lastname}`
-			: null
+		titulaire: c.titulaire ? `${c.titulaire.personne.name} ${c.titulaire.personne.lastname}` : null
 	}));
 
 	// ---- Classes sélectionnées (via ?classes=id,id) ----
@@ -48,7 +62,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		include: { matiere: true, professeur: { include: { personne: true } } }
 	});
 
-	const listeCours = coursList.map((c) => ({
+	const listeCours: CoursSel[] = coursList.map((c) => ({
 		id: c.id,
 		nom: c.matiere.nom,
 		coefficient: c.coefficient,
@@ -61,6 +75,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		classeId: c.classeId,
 		matiere: { id: c.matiere.id, nom: c.matiere.nom, couleur: c.matiere.couleur || undefined }
 	}));
+	const coursById = Object.fromEntries(listeCours.map((c) => [c.id, c])) as Record<
+		string,
+		CoursSel
+	>;
 
 	// ---- Examens des classes sélectionnées ----
 	const examens = await prisma.examen.findMany({
@@ -77,8 +95,9 @@ export const load: PageServerLoad = async ({ url }) => {
 		periode: e.periode || undefined,
 		sousExamens: (e.sousExamens || []).map((s) => ({ id: s.id, nom: s.nom, examenId: s.examenId }))
 	}));
+	const selectedExamens = listeExamens.map((e) => e.id);
 
-	// ---- Volume horaire (emploi du temps) des classes sélectionnées ----
+	// ---- Volume horaire (emploi du temps) ----
 	const edts = await prisma.emploiDuTemps.findMany({
 		where: { classeId: { in: selectedIds }, anneeId },
 		include: { seances: true }
@@ -114,7 +133,6 @@ export const load: PageServerLoad = async ({ url }) => {
 		}
 	});
 
-	// Justification des absences/retards (rapports)
 	const allAbsenceIds = inscriptions.flatMap((i) => i.eleve.absences?.map((a) => a.id) ?? []);
 	const allRetardIds = inscriptions.flatMap((i) => i.eleve.retards?.map((r) => r.id) ?? []);
 	const lignesJustifiees = await prisma.rapportLigne.findMany({
@@ -171,7 +189,99 @@ export const load: PageServerLoad = async ({ url }) => {
 		}))
 	}));
 
-	// ---- Assiduité des enseignants (pour repérer un professeur en difficulté) ----
+	// ---- Agrégations serveur (moyennes, rangs, comparaisons) ----
+	const matieresUniq = [...new Map(listeCours.map((c) => [c.matiereId, c.matiere])).values()].sort(
+		(a, b) => a.nom.localeCompare(b.nom, 'fr')
+	);
+
+	const classesComparison = selectedIds
+		.map((cid) => {
+			const cls = classesList.find((c) => c.id === cid)!;
+			const clsCours = listeCours.filter((c) => c.classeId === cid);
+			const clsEleves = eleves.filter((e) => e.classeId === cid);
+			const moy = clsEleves.length
+				? round(
+						clsEleves.reduce((s, e) => {
+							const m = moyenneGenerale(e, clsCours, coursById, selectedExamens);
+							return s + (m > 0 ? m : 0);
+						}, 0) / clsEleves.length
+					)
+				: 0;
+			const taux = clsEleves.length
+				? Math.round(
+						(clsEleves.filter((e) => moyenneGenerale(e, clsCours, coursById, selectedExamens) >= 10)
+							.length /
+							clsEleves.length) *
+							100
+					)
+				: 0;
+			return {
+				classeId: cid,
+				nom: formatClasseNom(cls.niveau, cls.nom),
+				moyenne: moy,
+				taux,
+				nb: clsEleves.length
+			};
+		})
+		.sort((a, b) => b.moyenne - a.moyenne)
+		.map((c, i) => ({ ...c, rang: i + 1 }));
+
+	const matiereComparison = matieresUniq.map((m) => {
+		const mc = listeCours.filter((c) => c.matiereId === m.id);
+		const perClasse = selectedIds
+			.map((cid) => {
+				const cls = classesList.find((c) => c.id === cid)!;
+				const clsCours = mc.filter((c) => c.classeId === cid);
+				const clsEleves = eleves.filter((e) => e.classeId === cid);
+				const moy = clsCours.length
+					? moyenneClasseMatiere(clsEleves, coursById, clsCours[0].id, selectedExamens)
+					: 0;
+				return { classeId: cid, nom: formatClasseNom(cls.niveau, cls.nom), moyenne: moy };
+			})
+			.filter((p) => p.moyenne > 0);
+		return { matiere: m, perClasse };
+	});
+
+	const evolution = listeExamens.map((ex) => {
+		const vals = eleves
+			.map((e) =>
+				moyenneGenerale(
+					e,
+					listeCours.filter((c) => c.classeId === e.classeId),
+					coursById,
+					[ex.id]
+				)
+			)
+			.filter((v) => v > 0);
+		return {
+			examenId: ex.id,
+			nom: formatExamenNom(ex),
+			moyenne: vals.length ? round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0
+		};
+	});
+
+	const classementGeneral = eleves
+		.map((e) => {
+			const cls = classesList.find((c) => c.id === e.classeId);
+			const moy = moyenneGenerale(
+				e,
+				listeCours.filter((c) => c.classeId === e.classeId),
+				coursById,
+				selectedExamens
+			);
+			return {
+				eleveId: e.id,
+				nom: e.nom,
+				prenom: e.prenom,
+				classeId: e.classeId,
+				classeNom: formatClasseNom(cls?.niveau ?? 0, cls?.nom ?? null),
+				moyenne: moy
+			};
+		})
+		.sort((a, b) => b.moyenne - a.moyenne)
+		.map((x, i) => ({ ...x, rang: i + 1 }));
+
+	// ---- Assiduité des enseignants ----
 	const coursIds = listeCours.map((c) => c.id);
 	const absencesProfBrutes =
 		anneeId && coursIds.length
@@ -191,7 +301,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			(a.coursId
 				? Math.round(
 						(edtSeances.filter((s) => s.coursId === a.coursId).reduce((t, x) => t + x.duree, 0) /
-							(Math.max(1, edtSeances.filter((s) => s.coursId === a.coursId).length))) *
+							Math.max(1, edtSeances.filter((s) => s.coursId === a.coursId).length)) *
 							100
 					) / 100
 				: 0);
@@ -243,6 +353,23 @@ export const load: PageServerLoad = async ({ url }) => {
 		eleves,
 		absencesProf,
 		pointages: pointagesBruts,
+		matieres: matieresUniq,
+		comparison: { classes: classesComparison, matieres: matiereComparison, evolution },
+		classementGeneral,
 		anneeActive: !!annee
 	};
+};
+
+export const actions: Actions = {
+	eleve: async ({ request }) => {
+		const fd = await request.formData();
+		const eleveId = fd.get('eleveId') as string;
+		if (!eleveId) return fail(400, { error: 'eleveId requis' });
+		try {
+			const detail = await getEleveDetail(eleveId);
+			return { detail };
+		} catch (e: unknown) {
+			return fail(500, { error: (e as Error)?.message || 'Erreur de chargement' });
+		}
+	}
 };

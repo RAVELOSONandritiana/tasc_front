@@ -879,8 +879,9 @@
 {/snippet}
 
 <div class="flex min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
-	<div class="flex-1 overflow-y-auto p-4 space-y-6">
-		<div class="flex flex-col gap-2">
+	<div class="flex-1 overflow-y-auto p-4">
+		<div class="mx-auto w-full max-w-7xl space-y-6">
+			<div class="flex flex-col gap-2">
 			<h1 class="text-2xl font-bold">Analyse de la classe</h1>
 			<p class="text-sm text-muted-foreground">
 				{data.classe ? formatClasseNom(data.classe.niveau, data.classe.nom) : ''}
@@ -1031,7 +1032,7 @@
 				{#if heuresParCours.some((h) => h.heures > 0)}
 					{@const vhN = heuresParCours.filter((h) => h.heures > 0).length}
 					<div class="overflow-x-auto">
-						<svg viewBox="0 0 {BAR.chartW} {BAR.H}" class="mx-auto block h-auto w-full max-w-[600px]">
+						<svg viewBox="0 0 {BAR.chartW} {BAR.H}" class="mx-auto block h-auto w-full max-w-[640px]">
 							{#each heuresParCours.filter((h) => h.heures > 0) as b, i (b.cours.id)}
 								{@const plotH = BAR.H - BAR.padT - BAR.padB}
 								{@const slot = (BAR.chartW - BAR.padL - BAR.padR) / (vhN || 1)}
@@ -1096,7 +1097,7 @@
 					<h2 class="mb-3 font-semibold">Moyenne par matière (classe)</h2>
 					{#if matiereBars.bars.length}
 						<div class="overflow-x-auto">
-							<svg viewBox="0 0 {matiereBars.chartW} {matiereBars.H}" class="mx-auto block h-auto w-full">
+							<svg viewBox="0 0 {matiereBars.chartW} {matiereBars.H}" class="mx-auto block h-auto w-full max-w-[640px]">
 								{#each [0, 5, 10, 15, 20] as grid}
 									{@const y = matiereBars.padT + matiereBars.plotH * (1 - grid / 20)}
 									<line x1={matiereBars.padL} y1={y} x2={matiereBars.chartW - matiereBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
@@ -1242,8 +1243,8 @@
 					</div>
 				</div>
 
-				{#if top5Series[0]?.points.length}
-					<svg viewBox="0 0 640 280" class="h-72 w-full">
+			{#if top5Series[0]?.points.length}
+				<svg viewBox="0 0 640 280" class="mx-auto block h-72 w-full max-w-[640px]">
 						{#each [0, 5, 10, 15, 20] as grid}
 							{@const y = lineChartVM.padT + (lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
 							<line x1={lineChartVM.padL} y1={y} x2={640 - lineChartVM.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
@@ -1281,7 +1282,7 @@
 					<h2 class="mb-3 font-semibold">Absences par mois</h2>
 					{#if absencesBars.bars.length}
 						<div class="overflow-x-auto">
-							<svg viewBox="0 0 {absencesBars.chartW} {absencesBars.H}" class="mx-auto block h-auto w-full">
+							<svg viewBox="0 0 {absencesBars.chartW} {absencesBars.H}" class="mx-auto block h-auto w-full max-w-[640px]">
 								{#each [0, 5, 10, 15, 20] as grid}
 									{@const y = absencesBars.padT + absencesBars.plotH * (1 - grid / 20)}
 									<line x1={absencesBars.padL} y1={y} x2={absencesBars.chartW - absencesBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
@@ -1434,6 +1435,8 @@
 				</p>
 			</CardUI>
 		{/if}
+			</div>
+		</div>
 	</div>
 </div>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CourseCard from '$lib/components/user/classe/CourseCard.svelte';
 	import CoursePageHeader from '$lib/components/user/classe/CoursePageHeader.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import CreateCourseDialog from '$lib/components/user/classe/CreateCourseDialog.svelte';
 	import CreateExamenDialog from '$lib/components/user/classe/CreateExamenDialog.svelte';
 	import CoefficientDialog from '$lib/components/user/classe/CoefficientDialog.svelte';
@@ -279,12 +280,21 @@
 
 	<div class="flex-1 overflow-y-auto p-4">
 		{#if listeCours.length === 0}
-			<div class="flex flex-col items-center justify-center py-12 text-center">
-				<BookOpen class="mb-4 size-12 text-muted-foreground" />
-				<p class="text-lg font-medium text-muted-foreground">Aucun cours configuré</p>
-				<p class="text-sm text-muted-foreground">
-					Commencez par ajouter des matières et des cours à cette classe.
-				</p>
+			<div
+				class="animate-fade-in flex flex-col items-center justify-center py-16 text-muted-foreground"
+			>
+				<BookOpen class="size-12 text-muted-foreground/30" />
+				<p class="mt-4 text-sm font-medium">Aucun cours configuré</p>
+				<p class="mt-1 text-xs">Commencez par ajouter une matière et un cours à cette classe.</p>
+				<Button class="mt-4" variant="outline" onclick={() => (openCoursDialog = true)}
+					>Nouveau cours</Button
+				>
+			</div>
+		{:else if coursFiltres.length === 0}
+			<div class="flex flex-col items-center justify-center py-16 text-muted-foreground">
+				<BookOpen class="size-12 text-muted-foreground/30" />
+				<p class="mt-4 text-sm font-medium">Aucun résultat</p>
+				<p class="mt-1 text-xs">Aucun cours ne correspond à votre recherche.</p>
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
