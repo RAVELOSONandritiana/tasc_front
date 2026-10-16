@@ -22,8 +22,10 @@
 		ChevronUp,
 		Medal,
 		Search,
-		X
+		X,
+		Check
 	} from '@lucide/svelte';
+	import * as Popover from '$lib/components/ui/popover';
 	import EleveFiche from '$lib/components/analyse/EleveFiche.svelte';
 	import { formatClasseNom, formatExamenNom } from '$lib/utils';
 	import { goto } from '$app/navigation';
@@ -154,6 +156,37 @@
 	const selectedExamens = $derived(examensChoisis ?? listeExamens.map((e) => e.id));
 	const selectedOrdered = $derived(listeExamens.filter((e) => selectedExamens.includes(e.id)));
 
+	// Examens regroupés par classe (ordre des classes sélectionnées, puis le reste).
+	// Dans un groupe, on retire le nom de classe en fin de libellé : il est déjà
+	// affiché par le tag du groupe, sinon chaque pilule le répète inutilement.
+	const examensParClasse = $derived.by(() => {
+		const ordre = [...classes.map((c) => c.id)];
+		for (const e of listeExamens) if (!ordre.includes(e.classeId)) ordre.push(e.classeId);
+		const groupes: {
+			classeId: string;
+			label: string;
+			examens: { ex: ExamenSel; label: string }[];
+		}[] = [];
+		for (const classeId of ordre) {
+			const examens = listeExamens.filter((e) => e.classeId === classeId);
+			if (!examens.length) continue;
+			const classe = classes.find((c) => c.id === classeId);
+			const suffixe = classe?.nom
+				? new RegExp(`\\s*-\\s*${classe.nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i')
+				: null;
+			groupes.push({
+				classeId,
+				label: classe ? formatClasseNom(classe.niveau, classe.nom) : 'Autres',
+				examens: examens.map((ex) => {
+					const complet = formatExamenNom(ex);
+					const base = complet.replace(suffixe ?? /$^/, '').trim();
+					return { ex, label: base || complet };
+				})
+			});
+		}
+		return groupes;
+	});
+
 	function toggleExamen(id: string) {
 		const courant = selectedExamens;
 		if (courant.includes(id)) {
@@ -190,7 +223,9 @@
 
 	// Moyenne d'un élève pour une matière (via le cours de sa classe).
 	function moyEleveMatiere(eleve: EleveSel, matiereId: string): number {
-		const cours = listeCours.find((c) => c.classeId === eleve.classeId && c.matiereId === matiereId);
+		const cours = listeCours.find(
+			(c) => c.classeId === eleve.classeId && c.matiereId === matiereId
+		);
 		if (!cours) return 0;
 		return moyenneMatiere(eleve.notes, coursById, cours.id, selectedExamens);
 	}
@@ -254,7 +289,9 @@
 	function matchSearch(e: { nom: string; prenom: string; im?: string | null }): boolean {
 		const q = searchEleve.trim().toLowerCase();
 		if (!q) return true;
-		return `${e.nom} ${e.prenom}`.toLowerCase().includes(q) || (e.im || '').toLowerCase().includes(q);
+		return (
+			`${e.nom} ${e.prenom}`.toLowerCase().includes(q) || (e.im || '').toLowerCase().includes(q)
+		);
 	}
 
 	const sortMatiere = $derived(matieres.find((m) => m.id === sortKey) ?? null);
@@ -274,7 +311,9 @@
 			: 0
 	);
 	const tauxReussite = $derived(
-		nbEleves ? Math.round((eleves.filter((e) => moyGeneraleEleve(e) >= 10).length / nbEleves) * 100) : 0
+		nbEleves
+			? Math.round((eleves.filter((e) => moyGeneraleEleve(e) >= 10).length / nbEleves) * 100)
+			: 0
 	);
 	const totalAbsences = $derived(eleves.reduce((s, e) => s + e.absences.length, 0));
 	const totalRetards = $derived(eleves.reduce((s, e) => s + e.retards.length, 0));
@@ -283,9 +322,7 @@
 	// ---- Top / Flop élèves (analyse immédiate) ----
 	const genAvecMoy = $derived((data.classementGeneral || []).filter((r) => r.moyenne > 0));
 	const topEleves = $derived(genAvecMoy.slice(0, 5));
-	const flopEleves = $derived(
-		[...genAvecMoy].sort((a, b) => a.moyenne - b.moyenne).slice(0, 5)
-	);
+	const flopEleves = $derived([...genAvecMoy].sort((a, b) => a.moyenne - b.moyenne).slice(0, 5));
 
 	// ---- Volume horaire par matière + professeur titulaire ----
 	const matiereHeures = $derived.by(() => {
@@ -489,6 +526,28 @@
 
 	// ---- Matrice (sous-examens) ----
 	let showSousExamens = $state(false);
+
+	// ---- Évaluation /10 des enseignants (année active) ----
+	const evaluationsProf = $derived<Record<string, EvaluationProfUI>>(data.evaluationsProf || {});
+	type EvaluationProfUI = {
+		note: number;
+		noteAssiduite: number | null;
+		noteReussite: number | null;
+		heuresPrevues: number;
+		heuresManquees: number;
+		nbAbsences: number;
+		moyenneEleves: number;
+		nbCours: number;
+		nbEleves: number;
+	};
+	function classeNote(n: number): string {
+		if (n >= 8) return 'text-emerald-500';
+		if (n >= 5) return 'text-amber-500';
+		return 'text-destructive';
+	}
+	function formatNote(n: number): string {
+		return n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+	}
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col bg-sidebar text-sidebar-foreground">
@@ -538,9 +597,14 @@
 		</div>
 
 		<!-- Sélecteur de classes + examens -->
-		<div class="grid grid-cols-1 gap-2 xl:grid-cols-[auto_1fr]">
+		<div class="space-y-1.5">
 			<div class="flex flex-wrap items-center gap-1.5">
-				<Layers class="mr-0.5 size-4 shrink-0 text-primary" />
+				<span
+					class="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
+					title="Classes affichées"
+				>
+					<Layers class="size-3.5 shrink-0 text-primary" /> Classes
+				</span>
 				{#each classes as c (c.id)}
 					<button
 						type="button"
@@ -559,21 +623,70 @@
 				>
 			</div>
 			{#if selectedIds.length && listeExamens.length}
-				<div class="flex flex-wrap items-center gap-1.5 xl:justify-end">
-					<Filter class="mr-0.5 size-4 shrink-0 text-primary" />
-					{#each listeExamens as ex (ex.id)}
-						<button
-							type="button"
-							onclick={() => toggleExamen(ex.id)}
-							class="rounded-full border px-2.5 py-1 text-xs transition-colors {selectedExamens.includes(
-								ex.id
-							)
+				<div class="flex flex-wrap items-center gap-1.5">
+					<span
+						class="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
+						title="Examens inclus dans les moyennes"
+					>
+						<Filter class="size-3.5 shrink-0 text-primary" /> Examens
+					</span>
+					<Popover.Root>
+						<Popover.Trigger
+							class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors {selectedExamens.length ===
+							listeExamens.length
 								? 'border-primary bg-primary/15 font-medium text-primary'
 								: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
+							title="Choisir les examens inclus dans les moyennes"
 						>
-							{formatExamenNom(ex)}
-						</button>
-					{/each}
+							{selectedExamens.length}<span class="text-muted-foreground"
+								>/{listeExamens.length}</span
+							>
+							<ChevronDown class="size-3.5" />
+						</Popover.Trigger>
+						<Popover.Content align="start" class="w-80 gap-0 p-0">
+							<div class="flex items-center justify-between border-b px-3 py-2">
+								<span class="text-sm font-semibold">Examens analysés</span>
+								<button
+									type="button"
+									class="text-xs font-medium text-primary hover:underline"
+									onclick={() => (examensChoisis = null)}>Tout sélectionner</button
+								>
+							</div>
+							<div class="max-h-72 overflow-y-auto p-3">
+								{#each examensParClasse as groupe (groupe.classeId)}
+									<p
+										class="mt-3 mb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase first:mt-0"
+									>
+										{groupe.label}
+									</p>
+									<div class="space-y-0.5">
+										{#each groupe.examens as { ex, label } (ex.id)}
+											<button
+												type="button"
+												onclick={() => toggleExamen(ex.id)}
+												title={formatExamenNom(ex)}
+												class="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-muted/50"
+											>
+												<span
+													class="flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors {selectedExamens.includes(
+														ex.id
+													)
+														? 'border-primary bg-primary text-primary-foreground'
+														: 'border-input bg-background'}"
+												>
+													{#if selectedExamens.includes(ex.id)}<Check class="size-3" />{/if}
+												</span>
+												<span class="min-w-0 flex-1 truncate">{label}</span>
+											</button>
+										{/each}
+									</div>
+								{/each}
+							</div>
+						</Popover.Content>
+					</Popover.Root>
+					{#if selectedExamens.length < listeExamens.length}
+						<Button variant="ghost" size="sm" onclick={() => (examensChoisis = null)}>Tous</Button>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -937,6 +1050,7 @@
 										<Table.Header>
 											<Table.Row>
 												<Table.Head>Enseignant</Table.Head>
+												<Table.Head class="text-center">Évaluation</Table.Head>
 												<Table.Head class="text-center">H. manquées</Table.Head>
 												<Table.Head class="text-center">Absences décl.</Table.Head>
 												<Table.Head class="text-center">Heures non complètes</Table.Head>
@@ -946,6 +1060,23 @@
 											{#each profAnalyse.filter((p) => p.nom) as p (p.id)}
 												<Table.Row class={p.heures > 0 ? 'bg-destructive/5' : ''}>
 													<Table.Cell class="font-medium">{p.nom}</Table.Cell>
+													{@const ev = evaluationsProf[p.id]}
+													<Table.Cell class="text-center">
+														{#if ev}
+															<span
+																class="font-bold {classeNote(ev.note)}"
+																title={`Assiduité ${ev.noteAssiduite?.toFixed(1) ?? '—'}/10 · Réussite élèves ${
+																	ev.noteReussite?.toFixed(1) ?? '—'
+																}/10 · ${ev.nbCours} cours · ${ev.nbEleves} élèves`}
+															>
+																{formatNote(ev.note)}<span
+																	class="text-[10px] font-normal text-muted-foreground">/10</span
+																>
+															</span>
+														{:else}
+															<span class="text-xs text-muted-foreground">—</span>
+														{/if}
+													</Table.Cell>
 													<Table.Cell
 														class="text-center font-bold {p.heures > 0
 															? 'text-destructive'
@@ -968,12 +1099,14 @@
 				</Collapsible.Root>
 			</CardUI>
 		{:else if activeClasse}
-		{@const ac = activeClasse}
+			{@const ac = activeClasse}
 			<!-- ==================== DÉTAIL D'UNE CLASSE ==================== -->
 			<CardUI class="p-5">
 				<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
 					<div>
-						<h2 class="text-lg font-semibold">{formatClasseNom(ac.classe.niveau, ac.classe.nom)}</h2>
+						<h2 class="text-lg font-semibold">
+							{formatClasseNom(ac.classe.niveau, ac.classe.nom)}
+						</h2>
 						{#if ac.classe.titulaire}
 							<p class="text-xs text-muted-foreground">Prof titulaire : {ac.classe.titulaire}</p>
 						{/if}
@@ -1042,13 +1175,9 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<div class="relative w-48">
 							<Search
-								class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+								class="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
 							/>
-							<Input
-								placeholder="Rechercher un élève..."
-								bind:value={searchEleve}
-								class="pl-8"
-							/>
+							<Input placeholder="Rechercher un élève..." bind:value={searchEleve} class="pl-8" />
 						</div>
 						<select
 							class="rounded-md border border-sidebar-border bg-card px-2 py-1.5 text-sm"
@@ -1131,7 +1260,8 @@
 										</span>
 									</Table.Cell>
 									<Table.Cell class="py-1.5 font-medium">
-										{r.eleve.nom} {r.eleve.prenom}
+										{r.eleve.nom}
+										{r.eleve.prenom}
 										{#if r.eleve.im}<span class="ml-1.5 text-[11px] text-muted-foreground"
 												>{r.eleve.im}</span
 											>{/if}
@@ -1148,7 +1278,8 @@
 									{/if}
 									<Table.Cell class="text-center">{r.absences}</Table.Cell>
 									<Table.Cell class="text-center">{r.retards}</Table.Cell>
-									<Table.Cell class="text-center {r.erreurs > 0 ? 'font-bold text-destructive' : ''}"
+									<Table.Cell
+										class="text-center {r.erreurs > 0 ? 'font-bold text-destructive' : ''}"
 										>{r.erreurs}</Table.Cell
 									>
 									<Table.Cell class="text-center">{r.incidents}</Table.Cell>

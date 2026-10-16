@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { prisma, getActiveAnneeScolaire } from '$lib/server/prisma';
 import { getEleveDetail } from '$lib/server/analyseEleve';
+import { evaluerProfesseurs } from '$lib/server/evaluationProf';
 import { moyenneGenerale, moyenneClasseMatiere, round } from '$lib/utils/analyse';
 import { formatClasseNom, formatExamenNom } from '$lib/utils';
 
@@ -344,6 +345,10 @@ export const load: PageServerLoad = async ({ url }) => {
 				: 0
 	}));
 
+	// Évaluation /10 par enseignant (assiduité + réussite des élèves),
+	// recalculée à chaque chargement pour l'année scolaire active.
+	const evaluationsProf = await evaluerProfesseurs(anneeId);
+
 	return {
 		classes: classesList,
 		selectedIds,
@@ -356,6 +361,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		matieres: matieresUniq,
 		comparison: { classes: classesComparison, matieres: matiereComparison, evolution },
 		classementGeneral,
+		evaluationsProf,
 		anneeActive: !!annee
 	};
 };

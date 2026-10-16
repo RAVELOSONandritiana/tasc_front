@@ -5,8 +5,24 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as Accordion from '$lib/components/ui/accordion/index.js';
+	import * as Popover from '$lib/components/ui/popover';
 	import AbsenceProfDialog from '$lib/components/user/classe/AbsenceProfDialog.svelte';
-	import { TrendingUp, TrendingDown, BarChart3, Users, CalendarClock, AlertTriangle, Gavel, ShieldAlert, Star, Clock3, UserX, Trash2 } from '@lucide/svelte';
+	import {
+		TrendingUp,
+		TrendingDown,
+		BarChart3,
+		Users,
+		CalendarClock,
+		AlertTriangle,
+		Gavel,
+		ShieldAlert,
+		Star,
+		Clock3,
+		UserX,
+		Trash2,
+		Check,
+		ChevronDown
+	} from '@lucide/svelte';
 	import { formatClasseNom, formatExamenNom } from '$lib/utils';
 	import { invalidateAll } from '$app/navigation';
 	import { deserialize } from '$app/forms';
@@ -24,7 +40,14 @@
 		im: string | null;
 		situation: string;
 		dateNaissance: string;
-		notes: { id: string; valeur: number; coefficient: number; coursId: string; examenId: string | null; sousExamenId: string | null }[];
+		notes: {
+			id: string;
+			valeur: number;
+			coefficient: number;
+			coursId: string;
+			examenId: string | null;
+			sousExamenId: string | null;
+		}[];
 		absences: { id: string; date: string; justifie: boolean; motif: string | null }[];
 		retards: { id: string; date: string; duree: string; justifie: boolean; motif: string | null }[];
 	};
@@ -32,14 +55,28 @@
 	const listeCours = $derived<Cours[]>(data.listeCours || []);
 	const listeExamens = $derived<Examen[]>(data.listeExamens || []);
 	const eleves = $derived<EleveAnalyse[]>(data.eleves || []);
-	const incidentsByEleve = $derived<Record<string, { INFO: number; ERREUR: number; NOTE: number; ABSENT: number; total: number }>>(
-		data.incidentsByEleve || {}
-	);
+	const incidentsByEleve = $derived<
+		Record<string, { INFO: number; ERREUR: number; NOTE: number; ABSENT: number; total: number }>
+	>(data.incidentsByEleve || {});
 	const edtSeances = $derived<
-		{ id: string; coursId: string; jour: string; heureDebut: string; heureFin: string; duree: number }[]
+		{
+			id: string;
+			coursId: string;
+			jour: string;
+			heureDebut: string;
+			heureFin: string;
+			duree: number;
+		}[]
 	>(data.edtSeances || []);
 	const seanceCours = $derived<
-		{ id: string; coursId: string; professeurId: string | null; statut: string; dateDebut: string; dateFin: string | null }[]
+		{
+			id: string;
+			coursId: string;
+			professeurId: string | null;
+			statut: string;
+			dateDebut: string;
+			dateFin: string | null;
+		}[]
 	>(data.seanceCours || []);
 
 	const pointages = $derived<
@@ -214,11 +251,13 @@
 	);
 
 	function heuresSemaineEleve(eleveId: string): number {
-		return Math.round(
-			heuresParCours
-				.filter((x) => estParticipant(x.cours.id, eleveId))
-				.reduce((s, x) => s + x.heures, 0) * 100
-		) / 100;
+		return (
+			Math.round(
+				heuresParCours
+					.filter((x) => estParticipant(x.cours.id, eleveId))
+					.reduce((s, x) => s + x.heures, 0) * 100
+			) / 100
+		);
 	}
 
 	// Points forts / faiblesses de la classe (matières les mieux/mal réussies)
@@ -282,7 +321,8 @@
 		const profs = [...profCours.values()].map((p) => {
 			const coursIds = new Set(p.coursIds);
 			const seancesEDT = edtSeances.filter((s) => coursIds.has(s.coursId));
-			const heuresPrevues = Math.round(seancesEDT.reduce((s, x) => s + (x.duree || 0), 0) * 100) / 100;
+			const heuresPrevues =
+				Math.round(seancesEDT.reduce((s, x) => s + (x.duree || 0), 0) * 100) / 100;
 			const seancesCours = seanceCours.filter((s) => coursIds.has(s.coursId));
 			const effectuees = seancesCours.filter((s) => s.statut === 'TERMINE');
 
@@ -357,7 +397,9 @@
 				alert: statut !== 'assidu'
 			};
 		});
-		return profs.sort((a, b) => b.heuresManquees - a.heuresManquees || a.nom.localeCompare(b.nom, 'fr'));
+		return profs.sort(
+			(a, b) => b.heuresManquees - a.heuresManquees || a.nom.localeCompare(b.nom, 'fr')
+		);
 	});
 
 	const totalHeuresManquees = $derived(
@@ -559,7 +601,15 @@
 	);
 
 	// Tableau classement (triable)
-	type SortKey = 'nom' | 'moy' | 'rang' | 'evolution' | 'absences' | 'retards' | 'incidents' | 'heures';
+	type SortKey =
+		| 'nom'
+		| 'moy'
+		| 'rang'
+		| 'evolution'
+		| 'absences'
+		| 'retards'
+		| 'incidents'
+		| 'heures';
 	let sortKey = $state<SortKey>('moy');
 	let sortDir = $state<'asc' | 'desc'>('desc');
 
@@ -606,7 +656,16 @@
 		}
 	}
 
-	const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
+	const palette = [
+		'#3b82f6',
+		'#ef4444',
+		'#10b981',
+		'#f59e0b',
+		'#8b5cf6',
+		'#ec4899',
+		'#14b8a6',
+		'#6366f1'
+	];
 
 	// ---- Helpers graphiques SVG ----
 	function linePath(points: { x: number; y: number }[]): string {
@@ -644,7 +703,12 @@
 
 	const BAR = { padL: 46, padR: 18, padT: 18, padB: 74, H: 280, chartW: 640, barMax: 48 };
 
-	function buildBars(labels: string[], values: number[], colors?: string[], opts?: { barW?: number }) {
+	function buildBars(
+		labels: string[],
+		values: number[],
+		colors?: string[],
+		opts?: { barW?: number }
+	) {
 		const { padL, padR, padT, padB, H, chartW, barMax } = BAR;
 		const plotW = chartW - padL - padR;
 		const plotH = H - padT - padB;
@@ -734,7 +798,9 @@
 			</h2>
 			<div class="flex items-center gap-3">
 				<span class="text-sm text-muted-foreground">
-					{totalAbsencesProf} absence{totalAbsencesProf > 1 ? 's' : ''} · {formatFr(totalHeuresManquees)} h manquées
+					{totalAbsencesProf} absence{totalAbsencesProf > 1 ? 's' : ''} · {formatFr(
+						totalHeuresManquees
+					)} h manquées
 				</span>
 				{#if canGererAbsenceProf}
 					<Button
@@ -748,13 +814,14 @@
 				{/if}
 			</div>
 		</div>
-			{#if erreurAbsence}
-				<div class="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-					{erreurAbsence}
-				</div>
-			{/if}
-			{#if profAnalyse.length}
-
+		{#if erreurAbsence}
+			<div
+				class="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+			>
+				{erreurAbsence}
+			</div>
+		{/if}
+		{#if profAnalyse.length}
 			<div class="overflow-x-auto">
 				<Table.Root>
 					<Table.Header>
@@ -776,11 +843,17 @@
 								<Table.Cell class="text-center">
 									{p.nbAbsences}
 									{#if p.absencesJustifiees > 0}
-										<span class="text-[11px] text-muted-foreground"> ({p.absencesJustifiees} just.)</span>
+										<span class="text-[11px] text-muted-foreground">
+											({p.absencesJustifiees} just.)</span
+										>
 									{/if}
 								</Table.Cell>
 								<Table.Cell class="text-center">
-									<span class="font-bold {p.heuresManquees > 0 ? 'text-destructive' : 'text-emerald-500'}">
+									<span
+										class="font-bold {p.heuresManquees > 0
+											? 'text-destructive'
+											: 'text-emerald-500'}"
+									>
 										{formatFr(p.heuresManquees)}
 									</span>
 									{#if p.heuresPartielles > 0}
@@ -791,11 +864,20 @@
 								</Table.Cell>
 								<Table.Cell class="text-center">
 									{#if p.statut === 'assidu'}
-										<span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-500">Assidu</span>
+										<span
+											class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-500"
+											>Assidu</span
+										>
 									{:else if p.statut === 'attention'}
-										<span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600">Attention</span>
+										<span
+											class="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600"
+											>Attention</span
+										>
 									{:else}
-										<span class="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive">À surveiller</span>
+										<span
+											class="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive"
+											>À surveiller</span
+										>
 									{/if}
 								</Table.Cell>
 							</Table.Row>
@@ -805,8 +887,8 @@
 			</div>
 
 			<p class="mt-2 text-xs text-muted-foreground">
-				Les heures manquées correspondent aux séances de l'emploi du temps non assurées
-				(absences déclarées) et aux heures non complètes relevées lors des pointages.
+				Les heures manquées correspondent aux séances de l'emploi du temps non assurées (absences
+				déclarées) et aux heures non complètes relevées lors des pointages.
 			</p>
 
 			{#if detailAbsencesParProf.length > 0}
@@ -815,7 +897,9 @@
 					<Accordion.Root type="multiple" class="space-y-2">
 						{#each detailAbsencesParProf as prof (prof.id)}
 							<Accordion.Item value={prof.id} class="rounded-lg border border-sidebar-border">
-								<Accordion.Trigger class="flex w-full items-center justify-between px-3 py-2 text-sm">
+								<Accordion.Trigger
+									class="flex w-full items-center justify-between px-3 py-2 text-sm"
+								>
 									<span class="font-medium">{prof.nom}</span>
 									<span class="text-[11px] text-muted-foreground">
 										{prof.nbAbsences} absence(s) · {formatFr(prof.heuresManquees)} h
@@ -824,20 +908,27 @@
 								<Accordion.Content class="px-3 pb-3">
 									<ul class="space-y-1.5">
 										{#each prof.absences as a (a.id)}
-											<li class="flex items-start justify-between gap-3 rounded-md bg-card/70 px-3 py-2 text-sm">
+											<li
+												class="flex items-start justify-between gap-3 rounded-md bg-card/70 px-3 py-2 text-sm"
+											>
 												<span class="min-w-0">
 													<span class="font-medium">{formatDateFr(a.date)}</span>
 													<span class="text-muted-foreground">
-														· {a.jour} {a.heureDebut}{a.heureFin ? `-${a.heureFin}` : ''} · {a.coursNom}
+														· {a.jour}
+														{a.heureDebut}{a.heureFin ? `-${a.heureFin}` : ''} · {a.coursNom}
 													</span>
 													{#if a.motif}
 														<span class="block text-[11px] text-muted-foreground">{a.motif}</span>
 													{/if}
 												</span>
 												<span class="flex shrink-0 items-center gap-2">
-													<span class="font-semibold text-destructive">−{formatFr(a.heures)} h</span>
+													<span class="font-semibold text-destructive">−{formatFr(a.heures)} h</span
+													>
 													{#if a.justifie}
-														<span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">Justifiée</span>
+														<span
+															class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600"
+															>Justifiée</span
+														>
 													{/if}
 													{#if canGererAbsenceProf}
 														<button
@@ -854,14 +945,20 @@
 											</li>
 										{/each}
 										{#each prof.heuresIncompletes as h, i (i)}
-											<li class="flex items-start justify-between gap-3 rounded-md bg-card/70 px-3 py-2 text-sm">
+											<li
+												class="flex items-start justify-between gap-3 rounded-md bg-card/70 px-3 py-2 text-sm"
+											>
 												<span class="min-w-0">
-													<span class="font-medium">{new Date(h.date).toLocaleDateString('fr-FR')}</span>
+													<span class="font-medium"
+														>{new Date(h.date).toLocaleDateString('fr-FR')}</span
+													>
 													<span class="text-muted-foreground"> · Heure non complète</span>
 													<span class="block text-[11px] text-muted-foreground">{h.motif}</span>
 												</span>
 												<span class="shrink-0 font-semibold text-amber-600">
-													{h.manque > 0 ? `−${formatFr(h.manque)} h` : `${formatFr(h.heures)} h faites`}
+													{h.manque > 0
+														? `−${formatFr(h.manque)} h`
+														: `${formatFr(h.heures)} h faites`}
 												</span>
 											</li>
 										{/each}
@@ -882,560 +979,851 @@
 	<div class="flex-1 overflow-y-auto p-4">
 		<div class="mx-auto w-full max-w-7xl space-y-6">
 			<div class="flex flex-col gap-2">
-			<h1 class="text-2xl font-bold">Analyse de la classe</h1>
-			<p class="text-sm text-muted-foreground">
-				{data.classe ? formatClasseNom(data.classe.niveau, data.classe.nom) : ''}
-				{data.classe?.anneeScolaire ? ` · ${data.classe.anneeScolaire.nom}` : ''}
-				— vue complète : performances, absences, retards, incidents, points forts, volume
-				horaire et assiduité des enseignants.
-			</p>
-		</div>
-
-		{#if listeExamens.length === 0}
-			<CardUI class="p-8 text-center">
-				<p class="text-muted-foreground">
-					Aucun examen n'a encore été créé pour cette classe : l'analyse des notes sera disponible
-					dès le premier examen.
+				<h1 class="text-2xl font-bold">Analyse de la classe</h1>
+				<p class="text-sm text-muted-foreground">
+					{data.classe ? formatClasseNom(data.classe.niveau, data.classe.nom) : ''}
+					{data.classe?.anneeScolaire ? ` · ${data.classe.anneeScolaire.nom}` : ''}
+					— vue complète : performances, absences, retards, incidents, points forts, volume horaire et
+					assiduité des enseignants.
 				</p>
-			</CardUI>
-
-			{@render assiduiteEnseignants()}
-		{:else}
-			<!-- Sélection des examens -->
-			<CardUI class="p-4">
-				<div class="mb-2 flex items-center gap-2">
-					<CalendarClock class="size-4 text-primary" />
-					<span class="text-sm font-semibold">Examens analysés</span>
-				</div>
-				<div class="flex flex-wrap gap-2">
-					{#each listeExamens as ex (ex.id)}
-						<button
-							type="button"
-							onclick={() => toggleExamen(ex.id)}
-							class="rounded-full border px-3 py-1 text-xs transition-colors {selectedExamens.includes(ex.id)
-								? 'border-primary bg-primary/15 text-primary'
-								: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
-						>
-							{formatExamenNom(ex)}
-						</button>
-					{/each}
-				</div>
-			</CardUI>
-
-			<!-- KPIs -->
-			<div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
-				<CardUI class="p-4">
-					<div class="flex items-center gap-2 text-muted-foreground">
-						<Users class="size-4" /><span class="text-xs">Élèves</span>
-					</div>
-					<p class="mt-1 text-2xl font-bold">{eleves.length}</p>
-				</CardUI>
-				<CardUI class="p-4">
-					<div class="flex items-center gap-2 text-muted-foreground">
-						<BarChart3 class="size-4" /><span class="text-xs">Moy. classe</span>
-					</div>
-					<p class="mt-1 text-2xl font-bold">{formatFr(classeAvgAnnuelle)}/20</p>
-				</CardUI>
-				<CardUI class="p-4">
-					<div class="flex items-center gap-2 text-muted-foreground">
-						<TrendingUp class="size-4 text-emerald-500" /><span class="text-xs">Réussite ≥10</span>
-					</div>
-					<p class="mt-1 text-2xl font-bold">{tauxReussite}%</p>
-				</CardUI>
-				<CardUI class="p-4">
-					<div class="flex items-center gap-2 text-muted-foreground">
-						<AlertTriangle class="size-4 text-amber-500" /><span class="text-xs">Absences</span>
-					</div>
-					<p class="mt-1 text-2xl font-bold">{totalAbsences}</p>
-					<p class="text-[11px] text-muted-foreground">{totalJustifiees} justifiées</p>
-				</CardUI>
-				<CardUI class="p-4">
-					<div class="flex items-center gap-2 text-muted-foreground">
-						<CalendarClock class="size-4 text-orange-500" /><span class="text-xs">Retards</span>
-					</div>
-					<p class="mt-1 text-2xl font-bold">{totalRetards}</p>
-				</CardUI>
-				<CardUI class="p-4">
-					<div class="flex items-center gap-2 text-muted-foreground">
-						<ShieldAlert class="size-4 text-destructive" /><span class="text-xs">Incidents</span>
-					</div>
-					<p class="mt-1 text-2xl font-bold">{totalIncidents}</p>
-				</CardUI>
 			</div>
 
-			<!-- Incidents de la classe -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex items-center justify-between">
-					<h2 class="font-semibold">Incidents & comportements</h2>
-					<span class="text-sm text-muted-foreground">{totalIncidents} au total</span>
-				</div>
-				{#if totalIncidents > 0}
-					<div class="flex flex-wrap gap-3">
-						{#each [{ k: 'NOTE', label: 'Notes positives', c: 'text-emerald-500', bg: 'bg-emerald-500/15' }, { k: 'INFO', label: 'Infos', c: 'text-sky-500', bg: 'bg-sky-500/15' }, { k: 'ABSENT', label: 'Absences signalées', c: 'text-orange-500', bg: 'bg-orange-500/15' }, { k: 'ERREUR', label: 'Erreurs / fautes', c: 'text-destructive', bg: 'bg-destructive/15' }] as t (t.k)}
-							<div class="flex min-w-32 flex-1 items-center gap-3 rounded-lg border border-sidebar-border p-3 {t.bg}">
-								<div class="text-2xl font-bold {t.c}">{incidentDistribution[t.k as keyof typeof incidentDistribution]}</div>
-								<div class="text-xs text-muted-foreground">{t.label}</div>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">Aucun incident enregistré pour cette classe cette année.</p>
-				{/if}
-			</CardUI>
-
-			<!-- Points forts / faiblesses de la classe -->
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<CardUI class="p-5">
-					<h2 class="mb-3 flex items-center gap-2 font-semibold">
-						<Star class="size-4 text-emerald-500" /> Points forts de la classe
-					</h2>
-					{#if classeForts.forts.length}
-						<ul class="space-y-2">
-							{#each classeForts.forts as m (m.cours.id)}
-								<li class="flex items-center justify-between rounded-md border border-sidebar-border p-2">
-									<span class="text-sm font-medium">{m.cours.nom}</span>
-									<span class="font-bold text-emerald-500">{formatFr(m.moy)}/20</span>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="text-sm text-muted-foreground">Pas encore de moyenne par matière.</p>
-					{/if}
+			{#if listeExamens.length === 0}
+				<CardUI class="p-8 text-center">
+					<p class="text-muted-foreground">
+						Aucun examen n'a encore été créé pour cette classe : l'analyse des notes sera disponible
+						dès le premier examen.
+					</p>
 				</CardUI>
-				<CardUI class="p-5">
-					<h2 class="mb-3 flex items-center gap-2 font-semibold">
-						<ShieldAlert class="size-4 text-destructive" /> Points faibles de la classe
-					</h2>
-					{#if classeForts.faiblesses.length}
-						<ul class="space-y-2">
-							{#each classeForts.faiblesses as m (m.cours.id)}
-								<li class="flex items-center justify-between rounded-md border border-sidebar-border p-2">
-									<span class="text-sm font-medium">{m.cours.nom}</span>
-									<span class="font-bold text-destructive">{formatFr(m.moy)}/20</span>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="text-sm text-muted-foreground">Pas encore de moyenne par matière.</p>
-					{/if}
-				</CardUI>
-			</div>
 
-			<!-- Volume horaire hebdomadaire -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex items-center justify-between">
-					<h2 class="flex items-center gap-2 font-semibold">
-						<Clock3 class="size-4 text-primary" /> Volume horaire hebdomadaire
-					</h2>
-					<span class="text-sm text-muted-foreground">Total : {formatFr(totalHeuresSemaine)} h / semaine</span>
-				</div>
-				{#if heuresParCours.some((h) => h.heures > 0)}
-					{@const vhN = heuresParCours.filter((h) => h.heures > 0).length}
-					<div class="overflow-x-auto">
-						<svg viewBox="0 0 {BAR.chartW} {BAR.H}" class="mx-auto block h-auto w-full max-w-[640px]">
-							{#each heuresParCours.filter((h) => h.heures > 0) as b, i (b.cours.id)}
-								{@const plotH = BAR.H - BAR.padT - BAR.padB}
-								{@const slot = (BAR.chartW - BAR.padL - BAR.padR) / (vhN || 1)}
-								{@const barW = Math.min(BAR.barMax, slot * 0.8)}
-								{@const x = BAR.padL + slot * i + (slot - barW) / 2}
-								{@const h = (b.heures / Math.max(1, ...heuresParCours.map((x) => x.heures))) * plotH}
-								{@const y = BAR.padT + plotH - h}
-								{@const cx = x + barW / 2}
-								{@const baseY = BAR.H - BAR.padB + 14}
-								<rect x={x} y={y} width={barW} height={Math.max(h, 1)} fill="#8b5cf6" rx="3" opacity="0.85" />
-								<text x={cx} y={y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(b.heures)}h</text>
-								<text transform="rotate(-35 {cx} {baseY})" x={cx} y={baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.cours.nom}</text>
-							{/each}
-						</svg>
-					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">Aucun emploi du temps défini pour cette classe.</p>
-				{/if}
-			</CardUI>
-
-			{@render assiduiteEnseignants()}
-
-			<!-- Évolution de la classe -->
-			<CardUI class="p-5">
-				<h2 class="mb-3 font-semibold">Évolution de la moyenne de la classe par examen</h2>
-				{#if evolutionSeries[0]?.points.length}
-					<svg viewBox="0 0 640 280" class="h-72 w-full">
-						{#each [0, 5, 10, 15, 20] as grid}
-							{@const y = lineChartVM.padT + (lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
-							<line x1={lineChartVM.padL} y1={y} x2={640 - lineChartVM.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-							<text x={lineChartVM.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
-						{/each}
-						{#each evolutionSeries as s (s.name)}
-							<path d={linePath(s.points)} fill="none" stroke={s.color} stroke-width="2.5" />
-							{#each s.points as p (p.x)}
-								<circle cx={p.x} cy={p.y} r="3" fill={s.color} />
-							{/each}
-						{/each}
-						{#each selectedOrdered as ex, i (ex.id)}
-							{@const x = evolutionSeries[0].points[i]?.x}
-							{#if x !== undefined}
-								<text x={x} y={280 - lineChartVM.padB + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">{formatExamenNom(ex)}</text>
+				{@render assiduiteEnseignants()}
+			{:else}
+				<!-- Sélection des examens -->
+				<CardUI class="p-3">
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<div class="flex items-center gap-2">
+							<CalendarClock class="size-4 text-primary" />
+							<span class="text-sm font-semibold">Examens analysés</span>
+						</div>
+						<div class="flex items-center gap-1.5">
+							<Popover.Root>
+								<Popover.Trigger
+									class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors {selectedExamens.length ===
+									listeExamens.length
+										? 'border-primary bg-primary/15 font-medium text-primary'
+										: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
+									title="Choisir les examens inclus dans l'analyse"
+								>
+									{selectedExamens.length}<span class="text-muted-foreground"
+										>/{listeExamens.length}</span
+									>
+									<ChevronDown class="size-3.5" />
+								</Popover.Trigger>
+								<Popover.Content align="end" class="w-72 gap-0 p-0">
+									<div class="flex items-center justify-between border-b px-3 py-2">
+										<span class="text-sm font-semibold">Examens</span>
+										<button
+											type="button"
+											class="text-xs font-medium text-primary hover:underline"
+											onclick={() => (examensChoisis = null)}>Tout sélectionner</button
+										>
+									</div>
+									<div class="max-h-72 overflow-y-auto p-2">
+										{#each listeExamens as ex (ex.id)}
+											<button
+												type="button"
+												onclick={() => toggleExamen(ex.id)}
+												title={formatExamenNom(ex)}
+												class="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-muted/50"
+											>
+												<span
+													class="flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors {selectedExamens.includes(
+														ex.id
+													)
+														? 'border-primary bg-primary text-primary-foreground'
+														: 'border-input bg-background'}"
+												>
+													{#if selectedExamens.includes(ex.id)}<Check class="size-3" />{/if}
+												</span>
+												<span class="min-w-0 flex-1 truncate">{formatExamenNom(ex)}</span>
+												<span class="shrink-0 text-[10px] text-muted-foreground">{ex.date}</span>
+											</button>
+										{/each}
+									</div>
+								</Popover.Content>
+							</Popover.Root>
+							{#if selectedExamens.length < listeExamens.length}
+								<Button variant="ghost" size="sm" onclick={() => (examensChoisis = null)}
+									>Tous</Button
+								>
 							{/if}
-						{/each}
-					</svg>
-					<div class="mt-2 flex gap-4">
-						{#each evolutionSeries as s (s.name)}
-							<div class="flex items-center gap-2 text-xs">
-								<span class="h-2.5 w-2.5 rounded-full" style="background-color: {s.color}"></span>
-								<span class="text-muted-foreground">{s.name}</span>
-							</div>
-						{/each}
+						</div>
 					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">Aucune donnée de note disponible.</p>
-				{/if}
-			</CardUI>
+				</CardUI>
 
-			<!-- Deux graphiques : matières + distribution -->
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<!-- KPIs -->
+				<div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+					<CardUI class="p-4">
+						<div class="flex items-center gap-2 text-muted-foreground">
+							<Users class="size-4" /><span class="text-xs">Élèves</span>
+						</div>
+						<p class="mt-1 text-2xl font-bold">{eleves.length}</p>
+					</CardUI>
+					<CardUI class="p-4">
+						<div class="flex items-center gap-2 text-muted-foreground">
+							<BarChart3 class="size-4" /><span class="text-xs">Moy. classe</span>
+						</div>
+						<p class="mt-1 text-2xl font-bold">{formatFr(classeAvgAnnuelle)}/20</p>
+					</CardUI>
+					<CardUI class="p-4">
+						<div class="flex items-center gap-2 text-muted-foreground">
+							<TrendingUp class="size-4 text-emerald-500" /><span class="text-xs">Réussite ≥10</span
+							>
+						</div>
+						<p class="mt-1 text-2xl font-bold">{tauxReussite}%</p>
+					</CardUI>
+					<CardUI class="p-4">
+						<div class="flex items-center gap-2 text-muted-foreground">
+							<AlertTriangle class="size-4 text-amber-500" /><span class="text-xs">Absences</span>
+						</div>
+						<p class="mt-1 text-2xl font-bold">{totalAbsences}</p>
+						<p class="text-[11px] text-muted-foreground">{totalJustifiees} justifiées</p>
+					</CardUI>
+					<CardUI class="p-4">
+						<div class="flex items-center gap-2 text-muted-foreground">
+							<CalendarClock class="size-4 text-orange-500" /><span class="text-xs">Retards</span>
+						</div>
+						<p class="mt-1 text-2xl font-bold">{totalRetards}</p>
+					</CardUI>
+					<CardUI class="p-4">
+						<div class="flex items-center gap-2 text-muted-foreground">
+							<ShieldAlert class="size-4 text-destructive" /><span class="text-xs">Incidents</span>
+						</div>
+						<p class="mt-1 text-2xl font-bold">{totalIncidents}</p>
+					</CardUI>
+				</div>
+
+				<!-- Incidents de la classe -->
 				<CardUI class="p-5">
-					<h2 class="mb-3 font-semibold">Moyenne par matière (classe)</h2>
-					{#if matiereBars.bars.length}
-						<div class="overflow-x-auto">
-							<svg viewBox="0 0 {matiereBars.chartW} {matiereBars.H}" class="mx-auto block h-auto w-full max-w-[640px]">
-								{#each [0, 5, 10, 15, 20] as grid}
-									{@const y = matiereBars.padT + matiereBars.plotH * (1 - grid / 20)}
-									<line x1={matiereBars.padL} y1={y} x2={matiereBars.chartW - matiereBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-									<text x={matiereBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
+					<div class="mb-3 flex items-center justify-between">
+						<h2 class="font-semibold">Incidents & comportements</h2>
+						<span class="text-sm text-muted-foreground">{totalIncidents} au total</span>
+					</div>
+					{#if totalIncidents > 0}
+						<div class="flex flex-wrap gap-3">
+							{#each [{ k: 'NOTE', label: 'Notes positives', c: 'text-emerald-500', bg: 'bg-emerald-500/15' }, { k: 'INFO', label: 'Infos', c: 'text-sky-500', bg: 'bg-sky-500/15' }, { k: 'ABSENT', label: 'Absences signalées', c: 'text-orange-500', bg: 'bg-orange-500/15' }, { k: 'ERREUR', label: 'Erreurs / fautes', c: 'text-destructive', bg: 'bg-destructive/15' }] as t (t.k)}
+								<div
+									class="flex min-w-32 flex-1 items-center gap-3 rounded-lg border border-sidebar-border p-3 {t.bg}"
+								>
+									<div class="text-2xl font-bold {t.c}">
+										{incidentDistribution[t.k as keyof typeof incidentDistribution]}
+									</div>
+									<div class="text-xs text-muted-foreground">{t.label}</div>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-muted-foreground">
+							Aucun incident enregistré pour cette classe cette année.
+						</p>
+					{/if}
+				</CardUI>
+
+				<!-- Points forts / faiblesses de la classe -->
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<CardUI class="p-5">
+						<h2 class="mb-3 flex items-center gap-2 font-semibold">
+							<Star class="size-4 text-emerald-500" /> Points forts de la classe
+						</h2>
+						{#if classeForts.forts.length}
+							<ul class="space-y-2">
+								{#each classeForts.forts as m (m.cours.id)}
+									<li
+										class="flex items-center justify-between rounded-md border border-sidebar-border p-2"
+									>
+										<span class="text-sm font-medium">{m.cours.nom}</span>
+										<span class="font-bold text-emerald-500">{formatFr(m.moy)}/20</span>
+									</li>
 								{/each}
-								{#each matiereBars.bars as b (b.label)}
-									<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill={b.color} rx="3" opacity="0.85" />
-									{#if b.value > 0}
-										<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{formatFr(b.value)}</text>
-									{/if}
-									<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
+							</ul>
+						{:else}
+							<p class="text-sm text-muted-foreground">Pas encore de moyenne par matière.</p>
+						{/if}
+					</CardUI>
+					<CardUI class="p-5">
+						<h2 class="mb-3 flex items-center gap-2 font-semibold">
+							<ShieldAlert class="size-4 text-destructive" /> Points faibles de la classe
+						</h2>
+						{#if classeForts.faiblesses.length}
+							<ul class="space-y-2">
+								{#each classeForts.faiblesses as m (m.cours.id)}
+									<li
+										class="flex items-center justify-between rounded-md border border-sidebar-border p-2"
+									>
+										<span class="text-sm font-medium">{m.cours.nom}</span>
+										<span class="font-bold text-destructive">{formatFr(m.moy)}/20</span>
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="text-sm text-muted-foreground">Pas encore de moyenne par matière.</p>
+						{/if}
+					</CardUI>
+				</div>
+
+				<!-- Volume horaire hebdomadaire -->
+				<CardUI class="p-5">
+					<div class="mb-3 flex items-center justify-between">
+						<h2 class="flex items-center gap-2 font-semibold">
+							<Clock3 class="size-4 text-primary" /> Volume horaire hebdomadaire
+						</h2>
+						<span class="text-sm text-muted-foreground"
+							>Total : {formatFr(totalHeuresSemaine)} h / semaine</span
+						>
+					</div>
+					{#if heuresParCours.some((h) => h.heures > 0)}
+						{@const vhN = heuresParCours.filter((h) => h.heures > 0).length}
+						<div class="overflow-x-auto">
+							<svg
+								viewBox="0 0 {BAR.chartW} {BAR.H}"
+								class="mx-auto block h-auto w-full max-w-[640px]"
+							>
+								{#each heuresParCours.filter((h) => h.heures > 0) as b, i (b.cours.id)}
+									{@const plotH = BAR.H - BAR.padT - BAR.padB}
+									{@const slot = (BAR.chartW - BAR.padL - BAR.padR) / (vhN || 1)}
+									{@const barW = Math.min(BAR.barMax, slot * 0.8)}
+									{@const x = BAR.padL + slot * i + (slot - barW) / 2}
+									{@const h =
+										(b.heures / Math.max(1, ...heuresParCours.map((x) => x.heures))) * plotH}
+									{@const y = BAR.padT + plotH - h}
+									{@const cx = x + barW / 2}
+									{@const baseY = BAR.H - BAR.padB + 14}
+									<rect
+										{x}
+										{y}
+										width={barW}
+										height={Math.max(h, 1)}
+										fill="#8b5cf6"
+										rx="3"
+										opacity="0.85"
+									/>
+									<text
+										x={cx}
+										y={y - 5}
+										text-anchor="middle"
+										class="fill-foreground text-[10px] font-semibold">{formatFr(b.heures)}h</text
+									>
+									<text
+										transform="rotate(-35 {cx} {baseY})"
+										x={cx}
+										y={baseY}
+										text-anchor="end"
+										class="fill-muted-foreground text-[10px]">{b.cours.nom}</text
+									>
 								{/each}
 							</svg>
+						</div>
+					{:else}
+						<p class="text-sm text-muted-foreground">
+							Aucun emploi du temps défini pour cette classe.
+						</p>
+					{/if}
+				</CardUI>
+
+				{@render assiduiteEnseignants()}
+
+				<!-- Évolution de la classe -->
+				<CardUI class="p-5">
+					<h2 class="mb-3 font-semibold">Évolution de la moyenne de la classe par examen</h2>
+					{#if evolutionSeries[0]?.points.length}
+						<svg viewBox="0 0 640 280" class="h-72 w-full">
+							{#each [0, 5, 10, 15, 20] as grid}
+								{@const y =
+									lineChartVM.padT +
+									(lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
+								<line
+									x1={lineChartVM.padL}
+									y1={y}
+									x2={640 - lineChartVM.padR}
+									y2={y}
+									stroke="currentColor"
+									class="text-sidebar-border"
+									stroke-width="1"
+								/>
+								<text
+									x={lineChartVM.padL - 6}
+									y={y + 4}
+									text-anchor="end"
+									class="fill-muted-foreground text-[10px]">{grid}</text
+								>
+							{/each}
+							{#each evolutionSeries as s (s.name)}
+								<path d={linePath(s.points)} fill="none" stroke={s.color} stroke-width="2.5" />
+								{#each s.points as p (p.x)}
+									<circle cx={p.x} cy={p.y} r="3" fill={s.color} />
+								{/each}
+							{/each}
+							{#each selectedOrdered as ex, i (ex.id)}
+								{@const x = evolutionSeries[0].points[i]?.x}
+								{#if x !== undefined}
+									<text
+										{x}
+										y={280 - lineChartVM.padB + 16}
+										text-anchor="middle"
+										class="fill-muted-foreground text-[10px]">{formatExamenNom(ex)}</text
+									>
+								{/if}
+							{/each}
+						</svg>
+						<div class="mt-2 flex gap-4">
+							{#each evolutionSeries as s (s.name)}
+								<div class="flex items-center gap-2 text-xs">
+									<span class="h-2.5 w-2.5 rounded-full" style="background-color: {s.color}"></span>
+									<span class="text-muted-foreground">{s.name}</span>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-muted-foreground">Aucune donnée de note disponible.</p>
+					{/if}
+				</CardUI>
+
+				<!-- Deux graphiques : matières + distribution -->
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<CardUI class="p-5">
+						<h2 class="mb-3 font-semibold">Moyenne par matière (classe)</h2>
+						{#if matiereBars.bars.length}
+							<div class="overflow-x-auto">
+								<svg
+									viewBox="0 0 {matiereBars.chartW} {matiereBars.H}"
+									class="mx-auto block h-auto w-full max-w-[640px]"
+								>
+									{#each [0, 5, 10, 15, 20] as grid}
+										{@const y = matiereBars.padT + matiereBars.plotH * (1 - grid / 20)}
+										<line
+											x1={matiereBars.padL}
+											y1={y}
+											x2={matiereBars.chartW - matiereBars.padR}
+											y2={y}
+											stroke="currentColor"
+											class="text-sidebar-border"
+											stroke-width="1"
+										/>
+										<text
+											x={matiereBars.padL - 6}
+											y={y + 4}
+											text-anchor="end"
+											class="fill-muted-foreground text-[10px]">{grid}</text
+										>
+									{/each}
+									{#each matiereBars.bars as b (b.label)}
+										<rect
+											x={b.x}
+											y={b.y}
+											width={b.barW}
+											height={b.h}
+											fill={b.color}
+											rx="3"
+											opacity="0.85"
+										/>
+										{#if b.value > 0}
+											<text
+												x={b.cx}
+												y={b.y - 5}
+												text-anchor="middle"
+												class="fill-foreground text-[10px] font-semibold">{formatFr(b.value)}</text
+											>
+										{/if}
+										<text
+											transform="rotate(-35 {b.cx} {b.baseY})"
+											x={b.cx}
+											y={b.baseY}
+											text-anchor="end"
+											class="fill-muted-foreground text-[10px]">{b.label}</text
+										>
+									{/each}
+								</svg>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">Aucune donnée.</p>
+						{/if}
+					</CardUI>
+
+					<CardUI class="p-5">
+						<h2 class="mb-3 font-semibold">Distribution des notes</h2>
+						{#if distBars.bars.some((b) => b.value > 0)}
+							<div class="overflow-x-auto">
+								<svg
+									viewBox="0 0 {distBars.chartW} {distBars.H}"
+									class="mx-auto block h-auto w-full"
+								>
+									{#each [0, 5, 10, 15, 20] as grid}
+										{@const y = distBars.padT + distBars.plotH * (1 - grid / 20)}
+										<line
+											x1={distBars.padL}
+											y1={y}
+											x2={distBars.chartW - distBars.padR}
+											y2={y}
+											stroke="currentColor"
+											class="text-sidebar-border"
+											stroke-width="1"
+										/>
+										<text
+											x={distBars.padL - 6}
+											y={y + 4}
+											text-anchor="end"
+											class="fill-muted-foreground text-[10px]">{grid}</text
+										>
+									{/each}
+									{#each distBars.bars as b (b.label)}
+										<rect
+											x={b.x}
+											y={b.y}
+											width={b.barW}
+											height={b.h}
+											fill={b.color}
+											rx="3"
+											opacity="0.85"
+										/>
+										<text
+											x={b.cx}
+											y={b.y - 5}
+											text-anchor="middle"
+											class="fill-foreground text-[10px] font-semibold">{b.value}</text
+										>
+										<text
+											transform="rotate(-35 {b.cx} {b.baseY})"
+											x={b.cx}
+											y={b.baseY}
+											text-anchor="end"
+											class="fill-muted-foreground text-[10px]">{b.label}</text
+										>
+									{/each}
+								</svg>
+							</div>
+						{:else}
+							<p class="text-sm text-muted-foreground">Aucune note saisie.</p>
+						{/if}
+					</CardUI>
+				</div>
+
+				<!-- Tableau matières x examens -->
+				<CardUI class="p-5">
+					<div class="mb-3 flex items-center justify-between">
+						<h2 class="font-semibold">Moyennes par matière et par examen</h2>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => (matiereSortDir = matiereSortDir === 'desc' ? 'asc' : 'desc')}
+						>
+							Trier par moyenne {matiereSortDir === 'desc' ? '↓' : '↑'}
+						</Button>
+					</div>
+					<div class="overflow-x-auto">
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.Head>Matière</Table.Head>
+									{#each selectedOrdered as ex (ex.id)}
+										<Table.Head class="text-center">{formatExamenNom(ex)}</Table.Head>
+									{/each}
+									<Table.Head class="text-center">Moyenne</Table.Head>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{#each matiereRows as row (row.cours.id)}
+									<Table.Row>
+										<Table.Cell class="font-medium">{row.cours.nom}</Table.Cell>
+										{#each row.parExamen as pe (pe.examen.id)}
+											<Table.Cell class="text-center {pe.moy === 0 ? 'opacity-40' : ''}">
+												{pe.moy > 0 ? formatFr(pe.moy) : '—'}
+											</Table.Cell>
+										{/each}
+										<Table.Cell class="text-center font-bold">{formatFr(row.globale)}</Table.Cell>
+									</Table.Row>
+								{:else}
+									<Table.Row>
+										<Table.Cell
+											colspan={selectedOrdered.length + 2}
+											class="py-6 text-center text-muted-foreground"
+										>
+											Aucune matière.
+										</Table.Cell>
+									</Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					</div>
+				</CardUI>
+
+				<!-- Meilleur élève par examen -->
+				<CardUI class="p-5">
+					<h2 class="mb-3 font-semibold">Meilleur(s) élève(s) par examen</h2>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+						{#each selectedOrdered as ex (ex.id)}
+							{@const tops = topElevesParExamen(ex.id, 3)}
+							<div class="rounded-lg border border-sidebar-border p-3">
+								<p class="mb-2 text-sm font-semibold">{formatExamenNom(ex)}</p>
+								{#if tops.length === 0}
+									<p class="text-xs text-muted-foreground">Aucune note.</p>
+								{:else}
+									<ol class="space-y-1">
+										{#each tops as t, i (t.eleve.id)}
+											<li class="flex items-center justify-between text-sm">
+												<span class="flex items-center gap-2">
+													<span
+														class="flex size-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary"
+														>{i + 1}</span
+													>
+													{t.eleve.nom}
+													{t.eleve.prenom}
+												</span>
+												<span class="font-bold">{formatFr(t.moy)}</span>
+											</li>
+										{/each}
+									</ol>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</CardUI>
+
+				<!-- Évolution individuelle des élèves sélectionnés -->
+				<CardUI class="p-5">
+					<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+						<h2 class="font-semibold">
+							Évolution des élèves sélectionnés par examen
+							<span class="text-sm font-normal text-muted-foreground">
+								({selectedElevesList.length} affiché{selectedElevesList.length > 1 ? 's' : ''})
+							</span>
+						</h2>
+						<div class="flex items-center gap-2">
+							<Button variant="outline" size="sm" onclick={() => (elevesChoisis = null)}
+								>Tous</Button
+							>
+							<Button variant="outline" size="sm" onclick={() => (elevesChoisis = [])}>Aucun</Button
+							>
+						</div>
+					</div>
+
+					<!-- Sélecteur d'élèves -->
+					<div class="mb-4 rounded-lg border border-sidebar-border p-3">
+						<Input placeholder="Filtrer les élèves..." bind:value={searchSelectEleve} />
+						<div class="mt-2 flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+							{#each elevesFiltresChoix as e (e.id)}
+								<button
+									type="button"
+									onclick={() => toggleEleve(e.id)}
+									class="rounded-full border px-3 py-1 text-xs transition-colors {selectedElevesSet.has(
+										e.id
+									)
+										? 'border-primary bg-primary/15 text-primary'
+										: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
+								>
+									{e.nom}
+									{e.prenom}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					{#if top5Series[0]?.points.length}
+						<svg viewBox="0 0 640 280" class="mx-auto block h-72 w-full max-w-[640px]">
+							{#each [0, 5, 10, 15, 20] as grid}
+								{@const y =
+									lineChartVM.padT +
+									(lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
+								<line
+									x1={lineChartVM.padL}
+									y1={y}
+									x2={640 - lineChartVM.padR}
+									y2={y}
+									stroke="currentColor"
+									class="text-sidebar-border"
+									stroke-width="1"
+								/>
+								<text
+									x={lineChartVM.padL - 6}
+									y={y + 4}
+									text-anchor="end"
+									class="fill-muted-foreground text-[10px]">{grid}</text
+								>
+							{/each}
+							{#each top5Series as s (s.name)}
+								<path d={linePath(s.points)} fill="none" stroke={s.color} stroke-width="2" />
+								{#each s.points as p (p.x)}
+									<circle cx={p.x} cy={p.y} r="2.5" fill={s.color} />
+								{/each}
+							{/each}
+							{#each selectedOrdered as ex, i (ex.id)}
+								{@const x = top5Series[0].points[i]?.x}
+								{#if x !== undefined}
+									<text
+										{x}
+										y={280 - lineChartVM.padB + 16}
+										text-anchor="middle"
+										class="fill-muted-foreground text-[10px]">{formatExamenNom(ex)}</text
+									>
+								{/if}
+							{/each}
+						</svg>
+						<div class="mt-2 flex flex-wrap gap-3">
+							{#each top5Series as s (s.name)}
+								<div class="flex items-center gap-2 text-xs">
+									<span class="h-2.5 w-2.5 rounded-full" style="background-color: {s.color}"></span>
+									<span class="text-muted-foreground">{s.name}</span>
+								</div>
+							{/each}
 						</div>
 					{:else}
 						<p class="text-sm text-muted-foreground">Aucune donnée.</p>
 					{/if}
 				</CardUI>
 
-				<CardUI class="p-5">
-					<h2 class="mb-3 font-semibold">Distribution des notes</h2>
-					{#if distBars.bars.some((b) => b.value > 0)}
-						<div class="overflow-x-auto">
-							<svg viewBox="0 0 {distBars.chartW} {distBars.H}" class="mx-auto block h-auto w-full">
-								{#each [0, 5, 10, 15, 20] as grid}
-									{@const y = distBars.padT + distBars.plotH * (1 - grid / 20)}
-									<line x1={distBars.padL} y1={y} x2={distBars.chartW - distBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-									<text x={distBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
-								{/each}
-								{#each distBars.bars as b (b.label)}
-									<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill={b.color} rx="3" opacity="0.85" />
-									<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value}</text>
-									<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
-								{/each}
-							</svg>
-						</div>
-					{:else}
-						<p class="text-sm text-muted-foreground">Aucune note saisie.</p>
-					{/if}
-				</CardUI>
-			</div>
-
-			<!-- Tableau matières x examens -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex items-center justify-between">
-					<h2 class="font-semibold">Moyennes par matière et par examen</h2>
-					<Button variant="outline" size="sm" onclick={() => (matiereSortDir = matiereSortDir === 'desc' ? 'asc' : 'desc')}>
-						Trier par moyenne {matiereSortDir === 'desc' ? '↓' : '↑'}
-					</Button>
-				</div>
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Matière</Table.Head>
-								{#each selectedOrdered as ex (ex.id)}
-									<Table.Head class="text-center">{formatExamenNom(ex)}</Table.Head>
-								{/each}
-								<Table.Head class="text-center">Moyenne</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each matiereRows as row (row.cours.id)}
-								<Table.Row>
-									<Table.Cell class="font-medium">{row.cours.nom}</Table.Cell>
-									{#each row.parExamen as pe (pe.examen.id)}
-										<Table.Cell class="text-center {pe.moy === 0 ? 'opacity-40' : ''}">
-											{pe.moy > 0 ? formatFr(pe.moy) : '—'}
-										</Table.Cell>
+				<!-- Absences -->
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<CardUI class="p-5">
+						<h2 class="mb-3 font-semibold">Absences par mois</h2>
+						{#if absencesBars.bars.length}
+							<div class="overflow-x-auto">
+								<svg
+									viewBox="0 0 {absencesBars.chartW} {absencesBars.H}"
+									class="mx-auto block h-auto w-full max-w-[640px]"
+								>
+									{#each [0, 5, 10, 15, 20] as grid}
+										{@const y = absencesBars.padT + absencesBars.plotH * (1 - grid / 20)}
+										<line
+											x1={absencesBars.padL}
+											y1={y}
+											x2={absencesBars.chartW - absencesBars.padR}
+											y2={y}
+											stroke="currentColor"
+											class="text-sidebar-border"
+											stroke-width="1"
+										/>
+										<text
+											x={absencesBars.padL - 6}
+											y={y + 4}
+											text-anchor="end"
+											class="fill-muted-foreground text-[10px]">{grid}</text
+										>
 									{/each}
-									<Table.Cell class="text-center font-bold">{formatFr(row.globale)}</Table.Cell>
-								</Table.Row>
-							{:else}
-								<Table.Row>
-									<Table.Cell colspan={selectedOrdered.length + 2} class="py-6 text-center text-muted-foreground">
-										Aucune matière.
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-			</CardUI>
-
-			<!-- Meilleur élève par examen -->
-			<CardUI class="p-5">
-				<h2 class="mb-3 font-semibold">Meilleur(s) élève(s) par examen</h2>
-				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-					{#each selectedOrdered as ex (ex.id)}
-						{@const tops = topElevesParExamen(ex.id, 3)}
-						<div class="rounded-lg border border-sidebar-border p-3">
-							<p class="mb-2 text-sm font-semibold">{formatExamenNom(ex)}</p>
-							{#if tops.length === 0}
-								<p class="text-xs text-muted-foreground">Aucune note.</p>
-							{:else}
-								<ol class="space-y-1">
-									{#each tops as t, i (t.eleve.id)}
-										<li class="flex items-center justify-between text-sm">
-											<span class="flex items-center gap-2">
-												<span class="flex size-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">{i + 1}</span>
-												{t.eleve.nom} {t.eleve.prenom}
-											</span>
-											<span class="font-bold">{formatFr(t.moy)}</span>
-										</li>
+									{#each absencesBars.bars as b (b.label)}
+										<rect
+											x={b.x}
+											y={b.y}
+											width={b.barW}
+											height={b.h}
+											fill="#f59e0b"
+											rx="3"
+											opacity="0.85"
+										/>
+										<text
+											x={b.cx}
+											y={b.y - 5}
+											text-anchor="middle"
+											class="fill-foreground text-[10px] font-semibold">{b.value}</text
+										>
+										<text
+											transform="rotate(-35 {b.cx} {b.baseY})"
+											x={b.cx}
+											y={b.baseY}
+											text-anchor="end"
+											class="fill-muted-foreground text-[10px]">{b.label}</text
+										>
 									{/each}
-								</ol>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			</CardUI>
-
-			<!-- Évolution individuelle des élèves sélectionnés -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-					<h2 class="font-semibold">
-						Évolution des élèves sélectionnés par examen
-						<span class="text-sm font-normal text-muted-foreground">
-							({selectedElevesList.length} affiché{selectedElevesList.length > 1 ? 's' : ''})
-						</span>
-					</h2>
-					<div class="flex items-center gap-2">
-						<Button variant="outline" size="sm" onclick={() => (elevesChoisis = null)}>Tous</Button>
-						<Button variant="outline" size="sm" onclick={() => (elevesChoisis = [])}>Aucun</Button>
-					</div>
-				</div>
-
-				<!-- Sélecteur d'élèves -->
-				<div class="mb-4 rounded-lg border border-sidebar-border p-3">
-					<Input placeholder="Filtrer les élèves..." bind:value={searchSelectEleve} />
-					<div class="mt-2 flex max-h-40 flex-wrap gap-2 overflow-y-auto">
-						{#each elevesFiltresChoix as e (e.id)}
-							<button
-								type="button"
-								onclick={() => toggleEleve(e.id)}
-								class="rounded-full border px-3 py-1 text-xs transition-colors {selectedElevesSet.has(e.id)
-									? 'border-primary bg-primary/15 text-primary'
-									: 'border-sidebar-border text-muted-foreground hover:bg-muted/30'}"
-							>
-								{e.nom} {e.prenom}
-							</button>
-						{/each}
-					</div>
-				</div>
-
-			{#if top5Series[0]?.points.length}
-				<svg viewBox="0 0 640 280" class="mx-auto block h-72 w-full max-w-[640px]">
-						{#each [0, 5, 10, 15, 20] as grid}
-							{@const y = lineChartVM.padT + (lineChartVM.H - lineChartVM.padT - lineChartVM.padB) * (1 - grid / 20)}
-							<line x1={lineChartVM.padL} y1={y} x2={640 - lineChartVM.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-							<text x={lineChartVM.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
-						{/each}
-						{#each top5Series as s (s.name)}
-							<path d={linePath(s.points)} fill="none" stroke={s.color} stroke-width="2" />
-							{#each s.points as p (p.x)}
-								<circle cx={p.x} cy={p.y} r="2.5" fill={s.color} />
-							{/each}
-						{/each}
-						{#each selectedOrdered as ex, i (ex.id)}
-							{@const x = top5Series[0].points[i]?.x}
-							{#if x !== undefined}
-								<text x={x} y={280 - lineChartVM.padB + 16} text-anchor="middle" class="fill-muted-foreground text-[10px]">{formatExamenNom(ex)}</text>
-							{/if}
-						{/each}
-					</svg>
-					<div class="mt-2 flex flex-wrap gap-3">
-						{#each top5Series as s (s.name)}
-							<div class="flex items-center gap-2 text-xs">
-								<span class="h-2.5 w-2.5 rounded-full" style="background-color: {s.color}"></span>
-								<span class="text-muted-foreground">{s.name}</span>
+								</svg>
 							</div>
-						{/each}
-					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">Aucune donnée.</p>
-				{/if}
-			</CardUI>
-
-			<!-- Absences -->
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<CardUI class="p-5">
-					<h2 class="mb-3 font-semibold">Absences par mois</h2>
-					{#if absencesBars.bars.length}
-						<div class="overflow-x-auto">
-							<svg viewBox="0 0 {absencesBars.chartW} {absencesBars.H}" class="mx-auto block h-auto w-full max-w-[640px]">
-								{#each [0, 5, 10, 15, 20] as grid}
-									{@const y = absencesBars.padT + absencesBars.plotH * (1 - grid / 20)}
-									<line x1={absencesBars.padL} y1={y} x2={absencesBars.chartW - absencesBars.padR} y2={y} stroke="currentColor" class="text-sidebar-border" stroke-width="1" />
-									<text x={absencesBars.padL - 6} y={y + 4} text-anchor="end" class="fill-muted-foreground text-[10px]">{grid}</text>
-								{/each}
-								{#each absencesBars.bars as b (b.label)}
-									<rect x={b.x} y={b.y} width={b.barW} height={b.h} fill="#f59e0b" rx="3" opacity="0.85" />
-									<text x={b.cx} y={b.y - 5} text-anchor="middle" class="fill-foreground text-[10px] font-semibold">{b.value}</text>
-									<text transform="rotate(-35 {b.cx} {b.baseY})" x={b.cx} y={b.baseY} text-anchor="end" class="fill-muted-foreground text-[10px]">{b.label}</text>
-								{/each}
-							</svg>
-						</div>
-					{:else}
-						<p class="text-sm text-muted-foreground">Aucune absence enregistrée.</p>
-					{/if}
-				</CardUI>
-
-				<CardUI class="p-5">
-					<h2 class="mb-3 font-semibold">Récapitulatif des absences</h2>
-					<div class="space-y-2">
-						<div class="flex items-center justify-between rounded-md border border-sidebar-border p-3">
-							<span class="text-sm">Total absences</span>
-							<span class="text-lg font-bold">{totalAbsences}</span>
-						</div>
-						<div class="flex items-center justify-between rounded-md border border-sidebar-border p-3">
-							<span class="text-sm">Justifiées</span>
-							<span class="text-lg font-bold text-emerald-500">{totalJustifiees}</span>
-						</div>
-						<div class="flex items-center justify-between rounded-md border border-sidebar-border p-3">
-							<span class="text-sm">Non justifiées</span>
-							<span class="text-lg font-bold text-destructive">{totalAbsences - totalJustifiees}</span>
-						</div>
-						<div class="flex items-center justify-between rounded-md border border-sidebar-border p-3">
-							<span class="text-sm">Total retards</span>
-							<span class="text-lg font-bold text-orange-500">{totalRetards}</span>
-						</div>
-					</div>
-				</CardUI>
-			</div>
-
-			<!-- Tableau classement triable -->
-			<CardUI class="p-5">
-				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-					<h2 class="font-semibold">Classement des élèves</h2>
-					<div class="w-48">
-						<Input placeholder="Rechercher un élève..." bind:value={searchEleve} />
-					</div>
-				</div>
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>
-									<button class="flex items-center gap-1" onclick={() => setSort('nom')}>
-										Élève {sortKey === 'nom' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-									</button>
-								</Table.Head>
-								<Table.Head class="text-center">
-									<button class="flex items-center justify-center gap-1" onclick={() => setSort('moy')}>
-										Moyenne {sortKey === 'moy' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-									</button>
-								</Table.Head>
-								<Table.Head class="text-center">
-									<button class="flex items-center justify-center gap-1" onclick={() => setSort('rang')}>
-										Rang {sortKey === 'rang' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-									</button>
-								</Table.Head>
-								<Table.Head class="text-center">
-									<button class="flex items-center justify-center gap-1" onclick={() => setSort('evolution')}>
-										Évolution {sortKey === 'evolution' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-									</button>
-								</Table.Head>
-								<Table.Head class="text-center">
-									<button class="flex items-center justify-center gap-1" onclick={() => setSort('absences')}>
-										Absences {sortKey === 'absences' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-									</button>
-								</Table.Head>
-							<Table.Head class="text-center">
-								<button class="flex items-center justify-center gap-1" onclick={() => setSort('retards')}>
-									Retards {sortKey === 'retards' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-								</button>
-							</Table.Head>
-							<Table.Head class="text-center">
-								<button class="flex items-center justify-center gap-1" onclick={() => setSort('incidents')}>
-									Incidents {sortKey === 'incidents' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-								</button>
-							</Table.Head>
-							<Table.Head class="text-center">
-								<button class="flex items-center justify-center gap-1" onclick={() => setSort('heures')}>
-									H./sem. {sortKey === 'heures' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-								</button>
-							</Table.Head>
-							<Table.Head class="text-center">Point fort</Table.Head>
-							<Table.Head class="text-center">Situation</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each tableRows as r (r.eleve.id)}
-							<Table.Row>
-								<Table.Cell class="font-medium">
-									{r.eleve.nom} {r.eleve.prenom}
-									{#if r.eleve.im}<span class="block text-[11px] text-muted-foreground">{r.eleve.im}</span>{/if}
-								</Table.Cell>
-								<Table.Cell class="text-center font-bold">{r.moy > 0 ? formatFr(r.moy) : '—'}</Table.Cell>
-								<Table.Cell class="text-center">{r.rang}</Table.Cell>
-								<Table.Cell class="text-center">
-									{#if selectedOrdered.length >= 2}
-										<span class="inline-flex items-center gap-1 {r.evolution >= 0 ? 'text-emerald-500' : 'text-destructive'}">
-											{#if r.evolution >= 0}<TrendingUp class="size-3.5" />{:else}<TrendingDown class="size-3.5" />{/if}
-											{Math.abs(r.evolution)}%
-										</span>
-									{:else}
-										—
-									{/if}
-								</Table.Cell>
-								<Table.Cell class="text-center">
-									{r.absences}
-									<span class="text-[11px] text-muted-foreground">({r.justifiees})</span>
-								</Table.Cell>
-								<Table.Cell class="text-center">{r.retards}</Table.Cell>
-								<Table.Cell class="text-center">
-									<span class="font-bold {r.incidents > 0 ? 'text-destructive' : 'text-emerald-500'}">{r.incidents}</span>
-								</Table.Cell>
-								<Table.Cell class="text-center">{formatFr(r.heures)}h</Table.Cell>
-								<Table.Cell class="text-center">
-									{@const pf = pointFortEleve(r.eleve)}
-									{#if pf}
-										<span class="text-xs font-semibold text-emerald-600">{pf.nom} ({formatFr(pf.moy)})</span>
-									{:else}
-										<span class="text-xs text-muted-foreground">—</span>
-									{/if}
-								</Table.Cell>
-								<Table.Cell class="text-center">
-									<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{r.situation}</span>
-								</Table.Cell>
-							</Table.Row>
 						{:else}
-							<Table.Row>
-								<Table.Cell colspan={11} class="py-6 text-center text-muted-foreground">
-									Aucun élève.
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
-					</Table.Root>
+							<p class="text-sm text-muted-foreground">Aucune absence enregistrée.</p>
+						{/if}
+					</CardUI>
+
+					<CardUI class="p-5">
+						<h2 class="mb-3 font-semibold">Récapitulatif des absences</h2>
+						<div class="space-y-2">
+							<div
+								class="flex items-center justify-between rounded-md border border-sidebar-border p-3"
+							>
+								<span class="text-sm">Total absences</span>
+								<span class="text-lg font-bold">{totalAbsences}</span>
+							</div>
+							<div
+								class="flex items-center justify-between rounded-md border border-sidebar-border p-3"
+							>
+								<span class="text-sm">Justifiées</span>
+								<span class="text-lg font-bold text-emerald-500">{totalJustifiees}</span>
+							</div>
+							<div
+								class="flex items-center justify-between rounded-md border border-sidebar-border p-3"
+							>
+								<span class="text-sm">Non justifiées</span>
+								<span class="text-lg font-bold text-destructive"
+									>{totalAbsences - totalJustifiees}</span
+								>
+							</div>
+							<div
+								class="flex items-center justify-between rounded-md border border-sidebar-border p-3"
+							>
+								<span class="text-sm">Total retards</span>
+								<span class="text-lg font-bold text-orange-500">{totalRetards}</span>
+							</div>
+						</div>
+					</CardUI>
 				</div>
-				<p class="mt-2 text-xs text-muted-foreground">
-					L'évolution est calculée en % entre le premier et le dernier examen sélectionné.
-					Cliquez sur un en-tête pour trier.
-				</p>
-			</CardUI>
-		{/if}
-			</div>
+
+				<!-- Tableau classement triable -->
+				<CardUI class="p-5">
+					<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+						<h2 class="font-semibold">Classement des élèves</h2>
+						<div class="w-48">
+							<Input placeholder="Rechercher un élève..." bind:value={searchEleve} />
+						</div>
+					</div>
+					<div class="overflow-x-auto">
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.Head>
+										<button class="flex items-center gap-1" onclick={() => setSort('nom')}>
+											Élève {sortKey === 'nom' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('moy')}
+										>
+											Moyenne {sortKey === 'moy' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('rang')}
+										>
+											Rang {sortKey === 'rang' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('evolution')}
+										>
+											Évolution {sortKey === 'evolution' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('absences')}
+										>
+											Absences {sortKey === 'absences' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('retards')}
+										>
+											Retards {sortKey === 'retards' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('incidents')}
+										>
+											Incidents {sortKey === 'incidents' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">
+										<button
+											class="flex items-center justify-center gap-1"
+											onclick={() => setSort('heures')}
+										>
+											H./sem. {sortKey === 'heures' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+										</button>
+									</Table.Head>
+									<Table.Head class="text-center">Point fort</Table.Head>
+									<Table.Head class="text-center">Situation</Table.Head>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{#each tableRows as r (r.eleve.id)}
+									<Table.Row>
+										<Table.Cell class="font-medium">
+											{r.eleve.nom}
+											{r.eleve.prenom}
+											{#if r.eleve.im}<span class="block text-[11px] text-muted-foreground"
+													>{r.eleve.im}</span
+												>{/if}
+										</Table.Cell>
+										<Table.Cell class="text-center font-bold"
+											>{r.moy > 0 ? formatFr(r.moy) : '—'}</Table.Cell
+										>
+										<Table.Cell class="text-center">{r.rang}</Table.Cell>
+										<Table.Cell class="text-center">
+											{#if selectedOrdered.length >= 2}
+												<span
+													class="inline-flex items-center gap-1 {r.evolution >= 0
+														? 'text-emerald-500'
+														: 'text-destructive'}"
+												>
+													{#if r.evolution >= 0}<TrendingUp class="size-3.5" />{:else}<TrendingDown
+															class="size-3.5"
+														/>{/if}
+													{Math.abs(r.evolution)}%
+												</span>
+											{:else}
+												—
+											{/if}
+										</Table.Cell>
+										<Table.Cell class="text-center">
+											{r.absences}
+											<span class="text-[11px] text-muted-foreground">({r.justifiees})</span>
+										</Table.Cell>
+										<Table.Cell class="text-center">{r.retards}</Table.Cell>
+										<Table.Cell class="text-center">
+											<span
+												class="font-bold {r.incidents > 0
+													? 'text-destructive'
+													: 'text-emerald-500'}">{r.incidents}</span
+											>
+										</Table.Cell>
+										<Table.Cell class="text-center">{formatFr(r.heures)}h</Table.Cell>
+										<Table.Cell class="text-center">
+											{@const pf = pointFortEleve(r.eleve)}
+											{#if pf}
+												<span class="text-xs font-semibold text-emerald-600"
+													>{pf.nom} ({formatFr(pf.moy)})</span
+												>
+											{:else}
+												<span class="text-xs text-muted-foreground">—</span>
+											{/if}
+										</Table.Cell>
+										<Table.Cell class="text-center">
+											<span class="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold"
+												>{r.situation}</span
+											>
+										</Table.Cell>
+									</Table.Row>
+								{:else}
+									<Table.Row>
+										<Table.Cell colspan={11} class="py-6 text-center text-muted-foreground">
+											Aucun élève.
+										</Table.Cell>
+									</Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					</div>
+					<p class="mt-2 text-xs text-muted-foreground">
+						L'évolution est calculée en % entre le premier et le dernier examen sélectionné. Cliquez
+						sur un en-tête pour trier.
+					</p>
+				</CardUI>
+			{/if}
 		</div>
 	</div>
 </div>

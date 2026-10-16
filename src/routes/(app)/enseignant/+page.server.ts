@@ -1,10 +1,19 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getProfesseurs, getAllPersonnes, createProfesseurFromPersonne, deleteProfesseur, isForeignKeyError, FOREIGN_KEY_MESSAGE, getCoursByProfesseurId } from '$lib/server/prisma';
+import {
+	getProfesseurs,
+	getAllPersonnes,
+	createProfesseurFromPersonne,
+	deleteProfesseur,
+	isForeignKeyError,
+	FOREIGN_KEY_MESSAGE,
+	getCoursByProfesseurId
+} from '$lib/server/prisma';
 import type { Professeur } from '$lib/types/Personne.type';
 import type { Personne } from '$lib/types/Personne.type';
 import { fail } from '@sveltejs/kit';
 import { logActivity } from '$lib/server/activity';
 import { broadcastRealtime } from '$lib/server/realtime';
+import { evaluerProfesseurs } from '$lib/server/evaluationProf';
 
 type PrismaProfesseurShape = {
 	id: string;
@@ -40,7 +49,9 @@ function mapProfesseur(prismaProf: PrismaProfesseurShape): Professeur {
 		phone: prismaProf.personne.phone,
 		email: prismaProf.personne.email,
 		imageUrl: prismaProf.personne.imageUrl || null,
-		compte: prismaProf.personne.compte as { id: string; role: string; matricule: string } | undefined,
+		compte: prismaProf.personne.compte as
+			| { id: string; role: string; matricule: string }
+			| undefined,
 		personneId: prismaProf.personne.id,
 		matiere: prismaProf.matiere,
 		cours: [],
@@ -64,6 +75,10 @@ export const load: PageServerLoad = async () => {
 			return prof;
 		})
 	);
+	// Évaluation /10 de chaque enseignant pour l'année scolaire active
+	// (assiduité + réussite des élèves). Repart de zéro chaque année.
+	const evaluations = await evaluerProfesseurs();
+
 	const personnel = await getAllPersonnes();
 	const personnelList: Personne[] = personnel.map((personne) => ({
 		id: personne.id,
@@ -79,7 +94,8 @@ export const load: PageServerLoad = async () => {
 	}));
 	return {
 		professeur: listProfesseur,
-		personnel: personnelList
+		personnel: personnelList,
+		evaluations
 	};
 };
 
@@ -106,7 +122,11 @@ export const actions: Actions = {
 				`Création de l'enseignant ${result.personne.name} ${result.personne.lastname}`
 			).catch(() => {});
 
-			broadcastRealtime({ entity: 'enseignant', action: 'create', id: result.professeur?.id ?? '' });
+			broadcastRealtime({
+				entity: 'enseignant',
+				action: 'create',
+				id: result.professeur?.id ?? ''
+			});
 
 			return { success: true, result };
 		} catch (e: unknown) {
@@ -119,11 +139,9 @@ export const actions: Actions = {
 		if (!id) return fail(400, { error: 'ID requis' });
 		try {
 			await deleteProfesseur(id);
-			logActivity(
-				locals.user,
-				'suppression_enseignant',
-				'Suppression de l\'enseignant'
-			).catch(() => {});
+			logActivity(locals.user, 'suppression_enseignant', "Suppression de l'enseignant").catch(
+				() => {}
+			);
 			broadcastRealtime({ entity: 'enseignant', action: 'delete', id });
 			return { success: true };
 		} catch (e: unknown) {

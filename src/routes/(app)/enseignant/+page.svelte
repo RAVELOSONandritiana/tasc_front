@@ -34,6 +34,28 @@
 
 	let listProfesseur = $state(data.professeur);
 
+	// Évaluation /10 de chaque enseignant (année scolaire active).
+	type EvaluationProf = {
+		note: number;
+		noteAssiduite: number | null;
+		noteReussite: number | null;
+		heuresPrevues: number;
+		heuresManquees: number;
+		nbAbsences: number;
+		moyenneEleves: number;
+		nbCours: number;
+		nbEleves: number;
+	};
+	const evaluations = $derived(data.evaluations || {});
+	function evaluationDe(profId: string): EvaluationProf | null {
+		return evaluations[profId] ?? null;
+	}
+	function classeNote(n: number): string {
+		if (n >= 8) return 'text-emerald-500';
+		if (n >= 5) return 'text-amber-500';
+		return 'text-destructive';
+	}
+
 	function supprimerProf(id: string) {
 		listProfesseur = listProfesseur.filter((p) => p.id !== id);
 	}
@@ -155,6 +177,7 @@
 			{:else}
 				<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{#each listFiltered as prof, i (i)}
+						{@const ev = evaluationDe(prof.id)}
 						<div
 							class="animate-slide-up opacity-0"
 							style="animation-delay: {Math.min(i * 50, 400)}ms"
@@ -162,13 +185,57 @@
 							<PersonCard
 								personne={prof}
 								role="ENSEIGNANT"
-								detail={`Matière - ${[...new Set(prof.cours?.map((c) => c.matiereNom) || [])].join(', ') || '—'}`}
 								email={prof.email}
 								phone={prof.phone}
 								domicile={prof.domicile}
 								hrefProfil={`/profil/${prof.compte?.id || prof.personneId}`}
 								onDelete={supprimerProf}
-							/>
+							>
+								{#snippet extra()}
+									<p class="text-xs text-muted-foreground">
+										Matière -
+										{[...new Set(prof.cours?.map((c) => c.matiereNom) || [])].join(', ') || '—'}
+									</p>
+									{#if ev && (ev.nbCours > 0 || ev.nbAbsences > 0)}
+										<div
+											class="mt-2 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5"
+											title="Assiduité + réussite des élèves · recalculé chaque année scolaire"
+										>
+											<span class="text-[11px] font-medium text-muted-foreground"
+												>Évaluation annuelle</span
+											>
+											<span class="text-sm font-bold {classeNote(ev.note)}">
+												{ev.note.toLocaleString('fr-FR', {
+													minimumFractionDigits: 1,
+													maximumFractionDigits: 2
+												})}<span class="text-[11px] font-normal text-muted-foreground">/10</span>
+											</span>
+										</div>
+										<div class="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
+											<span title="Assiduité : heures assurées / heures prévues">
+												Assiduité
+												{#if ev.noteAssiduite !== null}
+													<span class="font-semibold">{ev.noteAssiduite.toFixed(1)}</span>
+												{:else}
+													—
+												{/if}
+											</span>
+											<span title="Réussite : moyenne des élèves dans ses cours">
+												Réussite
+												{#if ev.noteReussite !== null}
+													<span class="font-semibold">{ev.noteReussite.toFixed(1)}</span>
+												{:else}
+													—
+												{/if}
+											</span>
+										</div>
+									{:else}
+										<p class="mt-2 text-[11px] text-muted-foreground/60">
+											Évaluation annuelle : pas encore de données cette année.
+										</p>
+									{/if}
+								{/snippet}
+							</PersonCard>
 						</div>
 					{/each}
 				</div>

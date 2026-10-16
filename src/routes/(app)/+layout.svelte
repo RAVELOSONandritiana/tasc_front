@@ -118,7 +118,11 @@
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header class="p-5">
 				<div class="flex items-center gap-2.5">
-					<img src="/logos/logo-right.png" alt="Logo Tasc" class="size-9 rounded-lg object-contain" />
+					<img
+						src="/logos/logo-right.png"
+						alt="Logo Tasc"
+						class="size-9 rounded-lg object-contain"
+					/>
 					<div>
 						<span class="text-lg font-bold tracking-tight">Tasc</span>
 						<p class="text-xs text-sidebar-foreground/60">Gestion scolaire</p>
@@ -171,10 +175,10 @@
 			</Sidebar.Footer>
 		</Sidebar.Root>
 
-		<div class="app-main flex flex-1 flex-col min-h-0 bg-background text-foreground">
-		<header
-			class="relative z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm print:hidden"
-		>
+		<div class="app-main flex min-h-0 min-w-0 flex-1 flex-col bg-background text-foreground">
+			<header
+				class="relative z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-sidebar-border bg-card/80 px-4 text-sidebar-foreground backdrop-blur-sm print:hidden"
+			>
 				<div class="flex items-center gap-3">
 					<Sidebar.Trigger />
 					{#if data.annees?.length}

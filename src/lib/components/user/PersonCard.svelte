@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import CardUI from '$lib/components/ui/card-ui.svelte';
@@ -23,7 +24,8 @@
 		phone = '',
 		domicile = '',
 		hrefProfil = '#',
-		onDelete
+		onDelete,
+		extra
 	}: {
 		personne: Person;
 		role?: string;
@@ -33,6 +35,8 @@
 		domicile?: string;
 		hrefProfil?: string;
 		onDelete?: (id: string) => void;
+		/** Contenu additionnel affiché sous le détail (ex : évaluation). */
+		extra?: Snippet;
 	} = $props();
 
 	let submittingDelete = $state(false);
@@ -142,6 +146,9 @@
 		</div>
 		{#if detail}
 			<span class="text-xs text-muted-foreground">{detail}</span>
+		{/if}
+		{#if extra}
+			{@render extra()}
 		{/if}
 
 		{#if hasContact}
