@@ -19,13 +19,8 @@
 	);
 	const total = $derived(elevesClasse.length);
 
-	// La série s'applique uniquement aux classes de 2nde (0) et de 1ère (1) :
-	// c'est à ce stade que l'élève est orienté vers une série du niveau suivant.
-	const classeAvecSerie = $derived(data.classe?.niveau === 0 || data.classe?.niveau === 1);
-	// Libellé du niveau suivant (affiché dans le bulletin : « admis en PREMIER S »).
-	const niveauSuivant = $derived(
-		data.classe?.niveau === 0 ? 'PREMIER' : data.classe?.niveau === 1 ? 'TERMINAL' : ''
-	);
+	// La série est préremplie (auto) avec la valeur enregistrée de l'élève,
+	// pour tous les niveaux, et reste modifiable à la main.
 
 	let serieValue = $state<string>('');
 	// Synchronise le champ série avec l'élève sélectionné.
@@ -238,7 +233,7 @@
 					>
 						<div class="flex items-center gap-2 text-sm">
 							<Gavel class="size-4 text-primary" />
-							<span class="font-semibold">Décision calculée :</span>
+							<span class="font-semibold">Décision calculée (auto) :</span>
 							<span
 								class="rounded-full px-3 py-0.5 text-sm font-bold {moyenneG >= 10
 									? 'bg-emerald-500/15 text-emerald-600'
@@ -249,35 +244,69 @@
 								{decision(moyenneG)}
 							</span>
 						</div>
+
+						<!-- Décision modifiable du conseil : passer / renvoyer / en attente -->
+						<form
+							method="POST"
+							action="?/setResultat"
+							class="flex flex-wrap items-center gap-2 text-sm"
+							use:enhance={() =>
+								({ update }) =>
+									update({ reset: false })}
+						>
+							<input type="hidden" name="inscriptionId" value={selected.inscriptionId} />
+							<span class="font-semibold">Décision du conseil :</span>
+							{#each [{ valeur: 'ADMIS', label: 'Faire passer' }, { valeur: 'AJOURNE', label: 'Renvoyer' }, { valeur: 'EN_ATTENTE', label: 'En attente' }] as choix (choix.valeur)}
+								<button
+									type="submit"
+									name="resultat"
+									value={choix.valeur}
+									class="rounded-md border px-2.5 py-1 text-xs font-medium transition-colors {selected.resultat ===
+									choix.valeur
+										? choix.valeur === 'ADMIS'
+											? 'border-emerald-500 bg-emerald-500/15 text-emerald-600'
+											: choix.valeur === 'AJOURNE'
+												? 'border-destructive bg-destructive/15 text-destructive'
+												: 'border-muted-foreground bg-muted text-foreground'
+										: 'border-sidebar-border bg-muted/30 hover:bg-muted'}"
+								>
+									{choix.label}
+								</button>
+							{/each}
+							{#if form?.success && form?.resultat !== undefined}
+								<span class="text-xs text-emerald-600">Résultat enregistré.</span>
+							{/if}
+						</form>
+
 						<div class="flex items-center gap-2 text-sm">
 							<span class="font-semibold">Mention :</span>
 							<span class="font-semibold text-foreground">{appreciation(moyenneG) || '—'}</span>
 						</div>
 
-						{#if classeAvecSerie}
-							<form
-								method="POST"
-								action="?/setSerie"
-								class="flex items-center gap-2 text-sm"
-								use:enhance={() =>
-									({ update }) =>
-										update({ reset: false })}
+						<form
+							method="POST"
+							action="?/setSerie"
+							class="flex items-center gap-2 text-sm"
+							use:enhance={() =>
+								({ update }) =>
+									update({ reset: false })}
+						>
+							<input type="hidden" name="eleveId" value={selected.id} />
+							<label class="font-semibold" for="serie-input"
+								>Série (précomplétée, modifiable) :</label
 							>
-								<input type="hidden" name="eleveId" value={selected.id} />
-								<label class="font-semibold" for="serie-input">Série :</label>
-								<input
-									id="serie-input"
-									name="serie"
-									bind:value={serieValue}
-									placeholder="Ex: S, L, ES"
-									class="h-8 w-20 rounded-md border border-input bg-background px-2 text-sm uppercase"
-								/>
-								<Button type="submit" size="sm" variant="outline">Enregistrer</Button>
-								{#if form?.success && form?.serie !== undefined}
-									<span class="text-xs text-emerald-600">Série enregistrée.</span>
-								{/if}
-							</form>
-						{/if}
+							<input
+								id="serie-input"
+								name="serie"
+								bind:value={serieValue}
+								placeholder="Ex: S, L, ES"
+								class="h-8 w-20 rounded-md border border-input bg-background px-2 text-sm uppercase"
+							/>
+							<Button type="submit" size="sm" variant="outline">Enregistrer</Button>
+							{#if form?.success && form?.serie !== undefined}
+								<span class="text-xs text-emerald-600">Série enregistrée.</span>
+							{/if}
+						</form>
 					</div>
 				</div>
 

@@ -31,7 +31,8 @@ export type ActivityAction =
 	| 'deliberation'
 	| 'changement_mot_de_passe'
 	| 'pointage_cours'
-	| 'absence_enseignant';
+	| 'absence_enseignant'
+	| 'modification_personnel';
 
 type ActivitySession = Session & {
 	ip?: string;

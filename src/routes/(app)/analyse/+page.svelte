@@ -320,8 +320,30 @@
 	const totalIncidents = $derived(eleves.reduce((s, e) => s + e.incidents.length, 0));
 
 	// ---- Top / Flop élèves (analyse immédiate) ----
+	// Top 3 de chaque classe : on ne compare pas un élève de 2nde à un
+	// terminale, donc le classement est calculé classe par classe.
 	const genAvecMoy = $derived((data.classementGeneral || []).filter((r) => r.moyenne > 0));
-	const topEleves = $derived(genAvecMoy.slice(0, 5));
+	type LigneClassement = (typeof genAvecMoy)[number];
+	const topParClasse = $derived.by(() => {
+		// clé de regroupement : identifiant de classe (ou 'sans-classe' si null)
+		const parClasse = new Map<string, string>();
+		const elevesParCle = new Map<string, LigneClassement[]>();
+		for (const r of genAvecMoy) {
+			const cle = r.classeId ?? 'sans-classe';
+			if (!parClasse.has(cle)) {
+				parClasse.set(cle, r.classeNom || 'Classe');
+				elevesParCle.set(cle, []);
+			}
+			elevesParCle.get(cle)!.push(r);
+		}
+		return [...parClasse.entries()]
+			.map(([cle, classeNom]) => ({
+				classeId: cle === 'sans-classe' ? null : cle,
+				classeNom,
+				eleves: [...(elevesParCle.get(cle) ?? [])].sort((a, b) => b.moyenne - a.moyenne).slice(0, 3)
+			}))
+			.filter((g) => g.eleves.length > 0);
+	});
 	const flopEleves = $derived([...genAvecMoy].sort((a, b) => a.moyenne - b.moyenne).slice(0, 5));
 
 	// ---- Volume horaire par matière + professeur titulaire ----
@@ -742,33 +764,44 @@
 			<div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
 				<div class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
 					<p class="mb-2 flex items-center gap-2 text-sm font-semibold text-emerald-600">
-						<TrendingUp class="size-4" /> Top 5 élèves (toutes classes)
+						<TrendingUp class="size-4" /> Top 3 de chaque classe
 					</p>
-					{#if topEleves.length}
-						<ul class="space-y-0.5">
-							{#each topEleves as r (r.eleveId)}
-								<li>
-									<button
-										type="button"
-										class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/50"
-										onclick={() => openEleve(r.eleveId)}
+					{#if topParClasse.length}
+						<div class="space-y-3">
+							{#each topParClasse as g (g.classeId)}
+								<div>
+									<p
+										class="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
 									>
-										{#if r.rang <= 3}
-											<Medal class="size-4 shrink-0 text-amber-500" />
-										{:else}
-											<span class="w-4 shrink-0 text-center text-xs text-muted-foreground"
-												>{r.rang}</span
-											>
-										{/if}
-										<span class="min-w-0 flex-1 truncate font-medium">{r.nom} {r.prenom}</span>
-										<span class="shrink-0 text-xs text-muted-foreground">{r.classeNom}</span>
-										<span class="shrink-0 font-bold {moyColor(r.moyenne)}"
-											>{formatFr(r.moyenne)}</span
-										>
-									</button>
-								</li>
+										{g.classeNom}
+									</p>
+									<ul class="space-y-0.5">
+										{#each g.eleves as r, i (r.eleveId)}
+											<li>
+												<button
+													type="button"
+													class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/50"
+													onclick={() => openEleve(r.eleveId)}
+												>
+													{#if i === 0}
+														<Medal class="size-4 shrink-0 text-amber-500" />
+													{:else}
+														<span class="w-4 shrink-0 text-center text-xs text-muted-foreground"
+															>{i + 1}</span
+														>
+													{/if}
+													<span class="min-w-0 flex-1 truncate font-medium">{r.nom} {r.prenom}</span
+													>
+													<span class="shrink-0 font-bold {moyColor(r.moyenne)}"
+														>{formatFr(r.moyenne)}</span
+													>
+												</button>
+											</li>
+										{/each}
+									</ul>
+								</div>
 							{/each}
-						</ul>
+						</div>
 					{:else}
 						<p class="text-xs text-muted-foreground">Aucune moyenne disponible.</p>
 					{/if}

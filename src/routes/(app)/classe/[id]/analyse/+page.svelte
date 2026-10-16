@@ -260,13 +260,14 @@
 		);
 	}
 
-	// Points forts / faiblesses de la classe (matières les mieux/mal réussies)
+	// Points forts / faiblesses de la classe : TOUTES les matières sont
+	// affichées, triées de la plus réussie à la moins réussie.
 	const classeForts = $derived.by(() => {
 		const avecMoy = moyParMatiere.filter((m) => m.moy > 0);
 		const tri = [...avecMoy].sort((a, b) => a.moy - b.moy);
 		return {
-			faiblesses: tri.slice(0, 3),
-			forts: [...tri].reverse().slice(0, 3)
+			faiblesses: tri,
+			forts: [...tri].reverse()
 		};
 	});
 
@@ -743,14 +744,6 @@
 					name: 'Moyenne classe',
 					color: '#3b82f6',
 					values: evolutionClasse.map((x) => x.moy)
-				},
-				{
-					name: 'Meilleur élève',
-					color: '#10b981',
-					values: selectedOrdered.map((ex) => {
-						const t = topElevesParExamen(ex.id, 1);
-						return t.length ? t[0].moy : 0;
-					})
 				}
 			]
 		)

@@ -21,11 +21,6 @@
 	const filles = data.filles as Ligne[];
 	const garcons = data.garcons as Ligne[];
 
-	// Numéros entourés (décoratifs, comme sur la fiche papier) pour quelques
-	// lignes — valeurs statiques de présentation, sans signification métier.
-	const cerclesF = new Set([3, 8, 18]);
-	const cerclesG = new Set([3, 8, 18]);
-
 	function sit(e: Ligne): 'P' | 'R' {
 		if (e.redoublant) return 'R';
 		const s = (e.situation || '').toUpperCase();
@@ -59,13 +54,13 @@
 
 <div class="fiche-papier mx-auto max-w-4xl bg-white p-8 text-black shadow print:shadow-none">
 	<div class="bandeau-titre mb-6 text-center">
-		<h1 class="titre-oldstyle text-xl font-bold uppercase tracking-wide">
+		<h1 class="titre-oldstyle text-xl font-bold tracking-wide uppercase">
 			{data.classe} — ANNEE SCOLAIRE {data.annee}
 		</h1>
 		<p class="mt-1 text-left text-sm">Date : …/…/…</p>
 	</div>
 
-	{#each [{ titre: 'Filles', lignes: filles, cercles: cerclesF, sexe: 'F' }, { titre: 'Garçons', lignes: garcons, cercles: cerclesG, sexe: 'G' }] as bloc, i (bloc.sexe)}
+	{#each [{ titre: 'Filles', lignes: filles, sexe: 'F' }, { titre: 'Garçons', lignes: garcons, sexe: 'G' }] as bloc, i (bloc.sexe)}
 		<table class="fiche-table w-full border-collapse text-sm {i === 0 ? 'mb-6' : 'mt-2'}">
 			{#if i === 0}
 				<thead>
@@ -84,7 +79,7 @@
 			<tbody>
 				{#each bloc.lignes as e (e.id)}
 					<tr>
-						<td class="w-8 text-center {bloc.cercles.has(e.numero) ? 'cercle' : ''}">{e.numero}</td>
+						<td class="w-8 text-center">{e.numero}</td>
 						<td class="w-12 text-center">{bloc.sexe}</td>
 						<td class="w-16 text-center">{e.im ?? ''}</td>
 						<td class="w-40 font-semibold">{e.nom}</td>
@@ -102,7 +97,6 @@
 			</tbody>
 		</table>
 	{/each}
-
 </div>
 
 <style>
@@ -135,14 +129,6 @@
 	.prenom-souligne {
 		text-decoration-color: #1d4ed8;
 		text-underline-offset: 2px;
-	}
-	.cercle {
-		display: inline-block;
-		border: 1.5px solid #1d4ed8;
-		border-radius: 9999px;
-		width: 22px;
-		height: 22px;
-		line-height: 20px;
 	}
 	.badge-sit {
 		display: inline-block;
